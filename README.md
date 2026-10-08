@@ -20,3 +20,7 @@ make lint
 ```
 
 Version is read from `VERSION`; build number is the git commit count.
+
+## License
+
+[MIT](LICENSE)
