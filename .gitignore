@@ -2,6 +2,7 @@
 .build/
 .swiftpm/
 build/
+*.bun-build
 *.xcodeproj/
 *.p12
 *.pem
