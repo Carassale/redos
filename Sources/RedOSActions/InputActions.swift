@@ -30,7 +30,8 @@ struct TypeTextAction: Action {
 
 struct ScrollAction: Action {
     let id = "scroll"
-    let summary = "Scroll the content under the mouse pointer by a number of lines."
+    let summary = "Scroll the content under the pointer up, down, left or right"
+        + " (go to the bottom, go back up, move sideways)."
     let risk = RiskLevel.safe
     let parameters = [
         ActionParameter("direction", .oneOf(["up", "down", "left", "right"]), description: "Scroll direction"),
@@ -57,7 +58,7 @@ struct ScrollAction: Action {
 
 struct MoveMouseAction: Action {
     let id = "mouse.move"
-    let summary = "Move the mouse pointer to absolute screen coordinates (points, origin top-left)."
+    let summary = "Move the mouse pointer to explicit numeric screen coordinates."
     let risk = RiskLevel.safe
     let parameters = [
         ActionParameter("x", .integer, description: "Horizontal screen coordinate in points"),
@@ -74,7 +75,7 @@ struct MoveMouseAction: Action {
 
 struct ClickAction: Action {
     let id = "mouse.click"
-    let summary = "Click at the given screen coordinates, or at the current pointer position if omitted."
+    let summary = "Click at the current pointer position or at explicit numeric coordinates. Cannot find named buttons."
     let risk = RiskLevel.moderate
     let parameters = [
         ActionParameter("x", .integer, required: false, description: "Horizontal screen coordinate, only if stated"),

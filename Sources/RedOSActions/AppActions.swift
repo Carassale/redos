@@ -41,7 +41,7 @@ struct OpenAppAction: Action {
 
 struct QuitAppAction: Action {
     let id = "app.quit"
-    let summary = "Quit a running application by name."
+    let summary = "Quit, close or turn off a running application by name. Not the computer itself."
     let risk = RiskLevel.moderate
     let parameters = [ActionParameter("name", description: "Application name, as written by the user")]
 

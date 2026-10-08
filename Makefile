@@ -18,7 +18,7 @@ TOOLCHAIN_DIR := $(if $(findstring CommandLineTools,$(DEV_DIR)),$(DEV_DIR),$(DEV
 TESTING_FW    := $(DEV_DIR)/Library/Developer/Frameworks
 TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) -Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays)
 
-.PHONY: all build app sign run install test test-live lint format clean cert models localjev localjev-run
+.PHONY: all build app sign run install test test-live eval lint format clean cert models localjev localjev-run
 
 all: app
 
@@ -64,6 +64,11 @@ test-live:
 
 models:
 	ollama pull $(SYSTEM_ONE_MODEL)
+
+# System One accuracy, safety and latency on eval/commands.jsonl; EVAL_FLAGS e.g. --no-chain.
+eval:
+	swift run -c release RedOSEval --model $(SYSTEM_ONE_MODEL) \
+		--out eval/runs/$$(date +%Y%m%d-%H%M%S)-$(subst :,_,$(SYSTEM_ONE_MODEL)).jsonl $(EVAL_FLAGS)
 
 # Optional Jev-compatible backend; RedOS uses it when the `systemOne.jevURL` default is set.
 localjev:

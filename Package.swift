@@ -11,6 +11,7 @@ let package = Package(
         .target(name: "RedOSCore"),
         .target(name: "RedOSActions", dependencies: ["RedOSCore"]),
         .executableTarget(name: "RedOS", dependencies: ["RedOSCore", "RedOSActions"]),
+        .executableTarget(name: "RedOSEval", dependencies: ["RedOSCore", "RedOSActions"]),
         .testTarget(name: "RedOSCoreTests", dependencies: ["RedOSCore", "RedOSActions"]),
     ]
 )

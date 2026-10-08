@@ -42,8 +42,22 @@ Le probabilità di LocalJev sono auto-dichiarate dal modello (non logit): le sog
 
 Estrazione argomenti: JSON mode (+~1.3 s). Lo schema JSON per richiesta costa ~1 s di compilazione
 grammatica in Ollama, quindi la validazione stretta resta in `ActionRegistry`.
-Totale tipico: 2-4 s. Ottimizzazioni per M2.5: riuso KV-cache (`OLLAMA_NUM_PARALLEL`), runner MLX,
-prompt più corti.
+
+### Eval M2.5 (`make eval`, 70 comandi it/en in `eval/commands.jsonl`, 26 da NON eseguire)
+
+| Variante | Accuratezza | Azioni errate eseguite | Latenza p50 / p95 |
+|---|---|---|---|
+| Baseline M2 | 88.6% | 5/26 "none" eseguiti | 1.41 / 1.93 s |
+| + catalogo con confini chiari, fast path senza comandi composti | 94.3% | 1 (coordinate inventate) | 1.48 / 1.93 s |
+| **+ numeri ammessi solo se detti dall'utente** (default) | **94.3%** | **0** | **1.49 / 1.93 s** |
+| LocalJev patchato, stesso modello | 38.6% | 2 | 4.03 / 4.76 s |
+
+- Soglia default **0.5**: copertura 95.5% delle azioni attese, precisione 100%, Brier 0.058.
+- Estrazione "a catena" (riusa la conversazione della decisione): stessa latenza, ma argomenti migliori
+  (senza catena: "batti il testo grazie mille" → testo sbagliato, coordinate inventate 960,540).
+- La latenza da 2-4 s di M2 dipendeva dal carico macchina: a regime decisione 0.8 s + estrazione 0.75 s.
+- Limite: catalogo tarato sullo stesso set (rischio overfitting). Da ampliare con comandi reali
+  presi dal registro azioni (`route`, `confidence` sono già registrati).
 
 ## Architettura
 
@@ -97,7 +111,7 @@ RedOS da VS Code / altri agenti.
 | M0 | Repo, SwiftPM, menu bar, onboarding permessi, firma stabile, Makefile, localizzazione | ✅ |
 | M1 | Pannello testo stile Spotlight, hotkey globale, ActionRegistry, executor base, Policy, audit log, fast path it/en | ✅ |
 | M2 | System One: protocollo Jev, decisione via logprob su Ollama, estrazione argomenti, LocalJev opzionale | ✅ |
-| M2.5 | Eval su comandi reali it/en, scelta modello, soglie | |
+| M2.5 | Eval su comandi reali it/en, scelta modello, soglie | ✅ |
 | M3 | System Two: provider cloud + locale, Portachiavi | |
 | M4 | Voce: push-to-talk, SpeechAnalyzer/WhisperKit, TTS, openWakeWord | |
 | M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell/PTY, HUD, kill switch | |

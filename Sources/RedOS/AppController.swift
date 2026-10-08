@@ -21,7 +21,7 @@ final class AppController {
             systemOne = OllamaSystemOne(client: ollama)
             systemOneDescription = "Ollama · \(ollama.model)"
         }
-        let threshold = defaults.object(forKey: "systemOne.threshold") as? Double ?? 0.6
+        let threshold = defaults.object(forKey: "systemOne.threshold") as? Double ?? 0.5
         let router = SystemOneRouter(
             registry: registry,
             systemOne: systemOne,

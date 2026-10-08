@@ -13,14 +13,8 @@ public struct OllamaSystemOne: SystemOne {
     public func choose(_ question: JevChoiceQuestion, state: String) async throws -> JevChoiceAnswer {
         guard question.options.count <= Self.letters.count else { throw SystemOneError.tooManyOptions }
         let letters = Array(Self.letters.prefix(question.options.count))
-        let menu = zip(letters, question.options)
-            .map { "\($0)) \($1.label): \($1.description)" }
-            .joined(separator: "\n")
         let response = try await client.chat(
-            [
-                .system("\(question.instructions)\nOptions:\n\(menu)\nAnswer with the option letter only."),
-                .user(state),
-            ],
+            messages(for: question, state: state),
             format: nil,
             maxTokens: 1,
             topLogprobs: 20
@@ -33,5 +27,23 @@ public struct OllamaSystemOne: SystemOne {
             mass[question.options[index].label, default: 0] += exp(alternative.logprob)
         }
         return try JevChoiceAnswer(normalizing: mass, labels: question.options.map(\.label))
+    }
+
+    public func transcript(for question: JevChoiceQuestion, state: String, answer: JevChoiceAnswer) -> [ChatMessage] {
+        guard let index = question.options.firstIndex(where: { $0.label == answer.choice }),
+              index < Self.letters.count
+        else { return [] }
+        return messages(for: question, state: state) + [.assistant(Self.letters[index])]
+    }
+
+    /// The system prompt depends only on the catalog, so Ollama keeps it cached across commands.
+    private func messages(for question: JevChoiceQuestion, state: String) -> [ChatMessage] {
+        let menu = zip(Self.letters, question.options)
+            .map { "\($0)) \($1.label): \($1.description)" }
+            .joined(separator: "\n")
+        return [
+            .system("\(question.instructions)\nOptions:\n\(menu)\nAnswer with the option letter only."),
+            .user(state),
+        ]
     }
 }

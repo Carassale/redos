@@ -44,13 +44,14 @@ Commands that the fast path does not recognize are routed by a local model throu
 brew install ollama && brew services start ollama
 make models     # pulls gemma4:e4b-it-qat (~6 GB)
 make test-live  # routing check against the real model
+make eval       # accuracy, safety and latency on eval/commands.jsonl (SYSTEM_ONE_MODEL=..., EVAL_FLAGS=...)
 ```
 
 Settings (until the Settings window exists):
 
 ```sh
 defaults write dev.redos.RedOS systemOne.model gemma4:12b-it-qat     # another Ollama model
-defaults write dev.redos.RedOS systemOne.threshold -float 0.7         # minimum probability to act
+defaults write dev.redos.RedOS systemOne.threshold -float 0.7         # minimum probability to act (default 0.5)
 defaults write dev.redos.RedOS systemOne.jevURL http://127.0.0.1:8080  # use LocalJev (`make localjev-run`)
 ```
 

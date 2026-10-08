@@ -66,6 +66,19 @@ struct SystemOneTests {
         #expect(try ActionRegistry([action]).validate(ActionRequest("scroll", arguments)).id == "scroll")
     }
 
+    @Test func extractorDropsNumbersTheUserDidNotSay() async throws {
+        let action = FakeAction(
+            id: "mouse.move",
+            parameters: [ActionParameter("x", .integer), ActionParameter("y", .integer)],
+            recorder: await RunRecorder()
+        )
+        let invented = FakeChat(content: #"{"x": 960, "y": 540}"#)
+        let extractor = ArgumentExtractor(client: invented)
+
+        #expect(try await extractor.arguments(for: action, input: "move the mouse to the center").isEmpty)
+        #expect(try await extractor.arguments(for: action, input: "move to 960, 540") == ["x": "960", "y": "540"])
+    }
+
     @Test func jevResponseIsDecoded() throws {
         let data = Data(#"""
             {"model":"localjev-0.2","answers":{"action":{"type":"choice","choice":"scroll",
@@ -85,7 +98,8 @@ struct SystemOneTests {
                 registry: registry,
                 systemOne: OllamaSystemOne(client: chat),
                 extractor: ArgumentExtractor(client: chat),
-                warmUp: chat
+                warmUp: chat,
+                threshold: 0.6
             )
         }
 

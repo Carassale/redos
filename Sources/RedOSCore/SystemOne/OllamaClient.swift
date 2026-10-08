@@ -6,6 +6,7 @@ public struct ChatMessage: Codable, Sendable, Equatable {
 
     public static func system(_ content: String) -> Self { Self(role: "system", content: content) }
     public static func user(_ content: String) -> Self { Self(role: "user", content: content) }
+    public static func assistant(_ content: String) -> Self { Self(role: "assistant", content: content) }
 }
 
 public struct ChatResponse: Decodable, Sendable {

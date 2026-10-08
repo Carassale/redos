@@ -45,6 +45,15 @@ public struct JevChoiceAnswer: Decodable, Sendable, Equatable {
 
 public protocol SystemOne: Sendable {
     func choose(_ question: JevChoiceQuestion, state: String) async throws -> JevChoiceAnswer
+
+    /// Conversation that produced `answer`; a follow-up call to the same model can reuse it as a cached prefix.
+    func transcript(for question: JevChoiceQuestion, state: String, answer: JevChoiceAnswer) -> [ChatMessage]
+}
+
+extension SystemOne {
+    public func transcript(for question: JevChoiceQuestion, state: String, answer: JevChoiceAnswer) -> [ChatMessage] {
+        []
+    }
 }
 
 public enum SystemOneError: Error, Equatable, LocalizedError {

@@ -10,10 +10,15 @@ public struct FastPathParser: Sendable {
         public var directions: [String: String]
         public var click: [String]
         public var moveMouse: [String]
+        /// Words that chain steps ("and", "poi"): such commands go to the models instead.
+        public var connectors: [String]
+        /// Trailing courtesy ("please") dropped from app names.
+        public var courtesies: [String]
 
         public init(
             openApp: [String], quitApp: [String], typeText: [String], scroll: [String],
-            directions: [String: String], click: [String], moveMouse: [String]
+            directions: [String: String], click: [String], moveMouse: [String],
+            connectors: [String] = [], courtesies: [String] = []
         ) {
             self.openApp = openApp
             self.quitApp = quitApp
@@ -22,6 +27,8 @@ public struct FastPathParser: Sendable {
             self.directions = directions
             self.click = click
             self.moveMouse = moveMouse
+            self.connectors = connectors
+            self.courtesies = courtesies
         }
     }
 
@@ -43,10 +50,10 @@ public struct FastPathParser: Sendable {
             return ActionRequest("text.type", ["text": unquoted(rest)])
         }
         if let rest = remainder(of: text, after: vocabulary.openApp) {
-            return ActionRequest("app.open", ["name": unquoted(rest)])
+            return appName(rest, vocabulary).map { ActionRequest("app.open", ["name": $0]) }
         }
         if let rest = remainder(of: text, after: vocabulary.quitApp) {
-            return ActionRequest("app.quit", ["name": unquoted(rest)])
+            return appName(rest, vocabulary).map { ActionRequest("app.quit", ["name": $0]) }
         }
         if let rest = remainder(of: text, after: vocabulary.moveMouse) {
             guard let (x, y) = coordinates(in: rest) else { return nil }
@@ -100,6 +107,19 @@ public struct FastPathParser: Sendable {
         return nil
     }
 
+    private func appName(_ rest: String, _ vocabulary: Vocabulary) -> String? {
+        var name = rest
+        for courtesy in vocabulary.courtesies.sorted(by: { $0.count > $1.count }) {
+            if let range = name.range(of: courtesy, options: [.backwards, .anchored, .caseInsensitive]) {
+                name = name[..<range.lowerBound].trimmingCharacters(in: CharacterSet(charactersIn: " ,"))
+                break
+            }
+        }
+        let words = Set(name.lowercased().split(whereSeparator: \.isWhitespace).map(String.init))
+        guard !name.isEmpty, !name.contains(","), words.isDisjoint(with: vocabulary.connectors) else { return nil }
+        return unquoted(name)
+    }
+
     private func coordinates(in text: String) -> (Int, Int)? {
         let numbers = text.split { !$0.isNumber }.compactMap { Int($0) }
         guard numbers.count == 2 else { return nil }
@@ -123,7 +143,9 @@ extension FastPathParser.Vocabulary {
         scroll: ["scroll"],
         directions: ["up": "up", "down": "down", "left": "left", "right": "right"],
         click: ["click", "click at"],
-        moveMouse: ["move mouse to", "move the mouse to", "move mouse", "move the mouse"]
+        moveMouse: ["move mouse to", "move the mouse to", "move mouse", "move the mouse"],
+        connectors: ["and", "then"],
+        courtesies: ["please", "for me"]
     )
 
     public static let italian = Self(
@@ -136,6 +158,8 @@ extension FastPathParser.Vocabulary {
             "a sinistra": "left", "sinistra": "left", "a destra": "right", "destra": "right",
         ],
         click: ["clicca", "clic", "click", "clicca a", "clicca in"],
-        moveMouse: ["muovi il mouse a", "muovi il mouse su", "muovi il mouse", "sposta il mouse a", "sposta il mouse"]
+        moveMouse: ["muovi il mouse a", "muovi il mouse su", "muovi il mouse", "sposta il mouse a", "sposta il mouse"],
+        connectors: ["e", "poi", "quindi"],
+        courtesies: ["per favore", "per piacere", "grazie"]
     )
 }

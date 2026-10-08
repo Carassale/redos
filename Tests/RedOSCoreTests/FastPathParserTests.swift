@@ -8,6 +8,8 @@ struct FastPathParserTests {
         ("apri Safari", ActionRequest("app.open", ["name": "Safari"])),
         ("Open Visual Studio Code", ActionRequest("app.open", ["name": "Visual Studio Code"])),
         ("chiudi Slack", ActionRequest("app.quit", ["name": "Slack"])),
+        ("chiudi Spotify per favore", ActionRequest("app.quit", ["name": "Spotify"])),
+        ("open Xcode, please", ActionRequest("app.open", ["name": "Xcode"])),
         ("esci da Mail", ActionRequest("app.quit", ["name": "Mail"])),
         ("scrivi \"ciao mondo\"", ActionRequest("text.type", ["text": "ciao mondo"])),
         ("type open safari", ActionRequest("text.type", ["text": "open safari"])),
@@ -23,7 +25,10 @@ struct FastPathParserTests {
         #expect(parser.parse(input) == expected)
     }
 
-    @Test(arguments: ["", "   ", "apri", "apriti sesamo", "what's the weather?", "clicca su Salva", "scroll the page"])
+    @Test(arguments: [
+        "", "   ", "apri", "apriti sesamo", "what's the weather?", "clicca su Salva", "scroll the page",
+        "apri il progetto, fai pull e lancia i test", "open the repo and run the tests", "apri Mail poi scrivi",
+    ])
     func ignores(_ input: String) {
         #expect(parser.parse(input) == nil)
     }

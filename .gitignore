@@ -3,6 +3,7 @@
 .swiftpm/
 build/
 *.bun-build
+eval/runs/
 *.xcodeproj/
 *.p12
 *.pem

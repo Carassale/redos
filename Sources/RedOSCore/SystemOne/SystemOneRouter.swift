@@ -18,27 +18,31 @@ public struct SystemOneRouter: CommandRouting {
     private let extractor: ArgumentExtractor
     private let warmUp: any ChatCompleting
     private let threshold: Double
+    private let chainsExtraction: Bool
 
+    /// `chainsExtraction` reuses the decision conversation for the argument call (same model only).
     public init(
         registry: ActionRegistry,
         systemOne: any SystemOne,
         extractor: ArgumentExtractor,
         warmUp: any ChatCompleting,
-        threshold: Double = 0.6
+        threshold: Double = 0.5,
+        chainsExtraction: Bool = true
     ) {
         self.registry = registry
         self.systemOne = systemOne
         self.extractor = extractor
         self.warmUp = warmUp
         self.threshold = threshold
+        self.chainsExtraction = chainsExtraction
     }
 
-    var question: JevChoiceQuestion {
+    public var question: JevChoiceQuestion {
         let actions = registry.all.map { JevOption(label: $0.id, description: $0.summary) }
         let none = JevOption(
             label: Self.noneLabel,
-            description: "None of the above: a question, a conversation, or a task that needs several steps"
-                + " or an action that is not listed."
+            description: "None of the above: questions, conversation, tasks with several steps, or actions not listed"
+                + " (e.g. clicking a named button, media, volume, screenshots, shutting down)."
         )
         return JevChoiceQuestion(
             instructions: "Pick the single action that fulfils the user's command on their Mac.",
@@ -51,6 +55,7 @@ public struct SystemOneRouter: CommandRouting {
     }
 
     public func route(_ input: String) async throws -> RouteDecision {
+        let question = question
         let answer = try await systemOne.choose(question, state: input)
         if answer.choice == Self.noneLabel {
             return .noAction(confidence: answer.probability)
@@ -58,7 +63,8 @@ public struct SystemOneRouter: CommandRouting {
         guard answer.probability >= threshold, let action = registry.action(for: answer.choice) else {
             return .uncertain(actionID: answer.choice, confidence: answer.probability)
         }
-        let arguments = try await extractor.arguments(for: action, input: input)
+        let context = chainsExtraction ? systemOne.transcript(for: question, state: input, answer: answer) : []
+        let arguments = try await extractor.arguments(for: action, input: input, context: context)
         return .action(ActionRequest(action.id, arguments), confidence: answer.probability)
     }
 }

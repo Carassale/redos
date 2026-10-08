@@ -1,0 +1,70 @@
+{"lang": "en", "input": "bring up my terminal please", "action": "app.open", "arguments": {"name": "Terminal"}}
+{"lang": "en", "input": "I need Safari", "action": "app.open", "arguments": {"name": "Safari"}}
+{"lang": "en", "input": "can you get Visual Studio Code going", "action": "app.open", "arguments": {"name": "Visual Studio Code"}}
+{"lang": "en", "input": "show me my calendar app", "action": "app.open", "arguments": {"name": "Calendar|Calendario"}}
+{"lang": "en", "input": "fire up Slack", "action": "app.open", "arguments": {"name": "Slack"}}
+{"lang": "en", "input": "switch to Finder", "action": "app.open", "arguments": {"name": "Finder"}}
+{"lang": "it", "input": "fammi vedere il browser di Apple", "action": "app.open", "arguments": {"name": "Safari"}}
+{"lang": "it", "input": "mi serve il terminale", "action": "app.open", "arguments": {"name": "Terminal|Terminale"}}
+{"lang": "it", "input": "tirami su Spotify", "action": "app.open", "arguments": {"name": "Spotify"}}
+{"lang": "it", "input": "porta in primo piano Mail", "action": "app.open", "arguments": {"name": "Mail"}}
+{"lang": "it", "input": "vorrei usare la calcolatrice", "action": "app.open", "arguments": {"name": "Calculator|Calcolatrice"}}
+{"lang": "it", "input": "passa a Visual Studio Code", "action": "app.open", "arguments": {"name": "Visual Studio Code"}}
+{"lang": "en", "input": "get rid of Spotify", "action": "app.quit", "arguments": {"name": "Spotify"}}
+{"lang": "en", "input": "shut down Xcode for me", "action": "app.quit", "arguments": {"name": "Xcode"}}
+{"lang": "en", "input": "I'm done with Slack, kill it", "action": "app.quit", "arguments": {"name": "Slack"}}
+{"lang": "en", "input": "exit Preview", "action": "app.quit", "arguments": {"name": "Preview|Anteprima"}}
+{"lang": "it", "input": "chiudi Spotify per favore", "action": "app.quit", "arguments": {"name": "Spotify"}}
+{"lang": "it", "input": "basta con Teams, chiudilo", "action": "app.quit", "arguments": {"name": "Teams|Microsoft Teams"}}
+{"lang": "it", "input": "termina Anteprima", "action": "app.quit", "arguments": {"name": "Anteprima|Preview"}}
+{"lang": "it", "input": "spegni Xcode", "action": "app.quit", "arguments": {"name": "Xcode"}}
+{"lang": "en", "input": "put hello world in the text field", "action": "text.type", "arguments": {"text": "hello world"}}
+{"lang": "en", "input": "enter my username gcarassale", "action": "text.type", "arguments": {"text": "gcarassale"}}
+{"lang": "en", "input": "fill in: see you tomorrow", "action": "text.type", "arguments": {"text": "see you tomorrow"}}
+{"lang": "en", "input": "write thanks a lot", "action": "text.type", "arguments": {"text": "thanks a lot"}}
+{"lang": "it", "input": "scrivi buongiorno a tutti", "action": "text.type", "arguments": {"text": "buongiorno a tutti"}}
+{"lang": "it", "input": "inserisci nel campo ci vediamo domani", "action": "text.type", "arguments": {"text": "ci vediamo domani"}}
+{"lang": "it", "input": "batti il testo grazie mille", "action": "text.type", "arguments": {"text": "grazie mille"}}
+{"lang": "it", "input": "metti nel campo di testo ok per me", "action": "text.type", "arguments": {"text": "ok per me"}}
+{"lang": "en", "input": "go to the bottom of the page", "action": "scroll", "arguments": {"direction": "down"}}
+{"lang": "en", "input": "move the page up a bit", "action": "scroll", "arguments": {"direction": "up"}}
+{"lang": "en", "input": "page down 20 lines", "action": "scroll", "arguments": {"direction": "down", "amount": "20"}}
+{"lang": "en", "input": "scroll the list to the right", "action": "scroll", "arguments": {"direction": "right"}}
+{"lang": "it", "input": "vai in fondo alla pagina", "action": "scroll", "arguments": {"direction": "down"}}
+{"lang": "it", "input": "torna su", "action": "scroll", "arguments": {"direction": "up"}}
+{"lang": "it", "input": "fai scorrere la pagina verso il basso di 15 righe", "action": "scroll", "arguments": {"direction": "down", "amount": "15"}}
+{"lang": "it", "input": "spostati a sinistra nella tabella", "action": "scroll", "arguments": {"direction": "left"}}
+{"lang": "en", "input": "press the mouse button", "action": "mouse.click", "arguments": {}}
+{"lang": "en", "input": "right click here", "action": "mouse.click", "arguments": {"button": "right"}}
+{"lang": "it", "input": "fai clic qui", "action": "mouse.click", "arguments": {}}
+{"lang": "it", "input": "tasto destro del mouse", "action": "mouse.click", "arguments": {"button": "right"}}
+{"lang": "en", "input": "put the cursor at 640, 400", "action": "mouse.move", "arguments": {"x": "640", "y": "400"}}
+{"lang": "en", "input": "move the pointer to x 100 y 250", "action": "mouse.move", "arguments": {"x": "100", "y": "250"}}
+{"lang": "it", "input": "sposta il cursore alle coordinate 500, 300", "action": "mouse.move", "arguments": {"x": "500", "y": "300"}}
+{"lang": "it", "input": "porta il puntatore a 1200 800", "action": "mouse.move", "arguments": {"x": "1200", "y": "800"}}
+{"lang": "en", "input": "what's the weather tomorrow in Milan?", "action": "none"}
+{"lang": "en", "input": "how are you today?", "action": "none"}
+{"lang": "en", "input": "pause the music", "action": "none"}
+{"lang": "en", "input": "turn the volume down", "action": "none"}
+{"lang": "en", "input": "take a screenshot", "action": "none"}
+{"lang": "en", "input": "email Marco the latest report and then archive it", "action": "none"}
+{"lang": "en", "input": "open the repo, pull and run the tests", "action": "none"}
+{"lang": "en", "input": "what is 17 times 23?", "action": "none"}
+{"lang": "en", "input": "remind me to call mum at 6", "action": "none"}
+{"lang": "en", "input": "summarize this page", "action": "none"}
+{"lang": "en", "input": "move the mouse to the center of the screen", "action": "none"}
+{"lang": "en", "input": "click the Save button", "action": "none"}
+{"lang": "it", "input": "che tempo fa domani a Milano?", "action": "none"}
+{"lang": "it", "input": "ciao, come stai?", "action": "none"}
+{"lang": "it", "input": "metti in pausa la musica", "action": "none"}
+{"lang": "it", "input": "alza il volume", "action": "none"}
+{"lang": "it", "input": "fai uno screenshot", "action": "none"}
+{"lang": "it", "input": "manda una mail a Marco con il report e poi archiviala", "action": "none"}
+{"lang": "it", "input": "apri il progetto, fai pull e lancia i test", "action": "none"}
+{"lang": "it", "input": "quanto fa 17 per 23?", "action": "none"}
+{"lang": "it", "input": "ricordami di chiamare la mamma alle 18", "action": "none"}
+{"lang": "it", "input": "riassumi questa pagina", "action": "none"}
+{"lang": "it", "input": "porta il mouse al centro dello schermo", "action": "none"}
+{"lang": "it", "input": "clicca sul pulsante Salva", "action": "none"}
+{"lang": "it", "input": "spegni il computer", "action": "none"}
+{"lang": "it", "input": "che ore sono?", "action": "none"}
