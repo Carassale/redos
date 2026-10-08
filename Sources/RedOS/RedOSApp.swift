@@ -3,18 +3,20 @@ import SwiftUI
 
 @main
 struct RedOSApp: App {
-    @State private var permissions = PermissionCenter()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
+    private var controller: AppController { appDelegate.controller }
 
     var body: some Scene {
         MenuBarExtra("RedOS", systemImage: "circle.hexagongrid.fill") {
-            MenuContent(permissions: permissions)
+            MenuContent(controller: controller)
         }
 
         Window("Permissions", id: WindowID.permissions) {
-            PermissionsView(permissions: permissions)
+            PermissionsView(permissions: controller.permissions)
         }
         .windowResizability(.contentSize)
-        .defaultLaunchBehavior(permissions.allGranted ? .suppressed : .presented)
+        .defaultLaunchBehavior(controller.permissions.allGranted ? .suppressed : .presented)
     }
 }
 

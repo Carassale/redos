@@ -3,3 +3,7 @@ included:
   - Tests
 excluded:
   - .build
+disabled_rules:
+  - trailing_comma # conflicts with swift-format
+identifier_name:
+  excluded: [id, x, y]

@@ -80,8 +80,8 @@ RedOS da VS Code / altri agenti.
 | Fase | Contenuto | Stato |
 |---|---|---|
 | M0 | Repo, SwiftPM, menu bar, onboarding permessi, firma stabile, Makefile, localizzazione | ✅ |
-| M1 | Pannello testo stile Spotlight, hotkey globale, ActionRegistry, executor base, Policy, audit log | |
-| M2 | LocalJev sidecar + Ollama, client `/v1/systemone`, estrazione argomenti, fast path | |
+| M1 | Pannello testo stile Spotlight, hotkey globale, ActionRegistry, executor base, Policy, audit log, fast path it/en | ✅ |
+| M2 | LocalJev sidecar + Ollama, client `/v1/systemone`, estrazione argomenti | |
 | M2.5 | Eval su comandi reali it/en, scelta modello, soglie | |
 | M3 | System Two: provider cloud + locale, Portachiavi | |
 | M4 | Voce: push-to-talk, SpeechAnalyzer/WhisperKit, TTS, openWakeWord | |

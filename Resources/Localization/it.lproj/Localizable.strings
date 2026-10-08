@@ -12,3 +12,20 @@
 "Control mouse, keyboard and app interfaces." = "Controlla mouse, tastiera e interfacce delle app.";
 "Listen for the wake word and voice commands." = "Ascolta la wake word e i comandi vocali.";
 "Read the screen when an action needs visual context." = "Legge lo schermo quando un'azione richiede contesto visivo.";
+
+/* Command panel */
+"Command…" = "Comando…";
+"Show Audit Log" = "Mostra registro azioni";
+"Ask RedOS…" = "Chiedi a RedOS…";
+"Run %@? Press Return to confirm, Esc to cancel." = "Eseguire %@? Invio per confermare, Esc per annullare.";
+"I don't understand this command yet." = "Non capisco ancora questo comando.";
+"Action disabled: %@" = "Azione disattivata: %@";
+
+/* Action errors */
+"Unknown action: %@" = "Azione sconosciuta: %@";
+"Missing argument: %@" = "Parametro mancante: %@";
+"Invalid value for %@: %@" = "Valore non valido per %1$@: %2$@";
+"Missing permission: %@" = "Permesso mancante: %@ (apri Permessi dal menu RedOS)";
+"App not found: %@" = "App non trovata: %@";
+"App not running: %@" = "App non in esecuzione: %@";
+"Could not create input event." = "Impossibile creare l'evento di input.";

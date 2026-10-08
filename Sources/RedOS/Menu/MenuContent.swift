@@ -2,7 +2,7 @@ import RedOSCore
 import SwiftUI
 
 struct MenuContent: View {
-    let permissions: PermissionCenter
+    let controller: AppController
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -10,11 +10,22 @@ struct MenuContent: View {
 
         Divider()
 
+        Button("Command…") {
+            controller.commandPanel.show()
+        }
+        .keyboardShortcut(.space, modifiers: .option)
+
+        Button("Show Audit Log") {
+            controller.revealAuditLog()
+        }
+
+        Divider()
+
         Button {
             openWindow(id: WindowID.permissions)
             NSApp.activate()
         } label: {
-            if permissions.allGranted {
+            if controller.permissions.allGranted {
                 Label("Permissions…", systemImage: "checkmark.shield")
             } else {
                 Label("Permissions required…", systemImage: "exclamationmark.shield")

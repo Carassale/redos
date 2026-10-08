@@ -10,11 +10,11 @@ APP       := build/$(APP_NAME).app
 CONTENTS  := $(APP)/Contents
 PLIST     := $(CONTENTS)/Info.plist
 
-# Without Xcode, Swift Testing and SourceKit live in the Command Line Tools.
+# Without Xcode, Swift Testing and SourceKit live in the Command Line Tools (whose _Testing_Foundation overlay is empty).
 DEV_DIR       := $(shell xcode-select -p)
 TOOLCHAIN_DIR := $(if $(findstring CommandLineTools,$(DEV_DIR)),$(DEV_DIR),$(DEV_DIR)/Toolchains/XcodeDefault.xctoolchain)
 TESTING_FW    := $(DEV_DIR)/Library/Developer/Frameworks
-TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW))
+TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) -Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays)
 
 .PHONY: all build app sign run install test lint format clean cert
 
