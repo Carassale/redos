@@ -3,6 +3,9 @@ import SwiftUI
 
 /// Borderless, non-activating panel: typing goes here while the previous app stays frontmost.
 final class CommandPanel: NSPanel {
+    /// Returns true when the key was handled (e.g. history navigation) and must not reach the text field.
+    var onKeyDown: ((NSEvent) -> Bool)?
+
     init(rootView: some View) {
         super.init(
             contentRect: .zero,
@@ -25,6 +28,11 @@ final class CommandPanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, onKeyDown?(event) == true { return }
+        super.sendEvent(event)
+    }
 
     override func resignKey() {
         super.resignKey()
