@@ -7,6 +7,7 @@ struct MenuContent: View {
 
     var body: some View {
         Text(verbatim: "RedOS \(AppInfo.version)")
+        Text("System One: \(controller.systemOneDescription)")
 
         Divider()
 

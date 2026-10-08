@@ -2,6 +2,8 @@ APP_NAME  := RedOS
 BUNDLE_ID ?= dev.redos.RedOS
 SIGN_ID   ?= RedOS Development
 CONFIG    ?= release
+SYSTEM_ONE_MODEL ?= gemma4:e4b-it-qat
+LOCALJEV_PORT    ?= 8080
 VERSION   := $(shell cat VERSION)
 BUILD     := $(shell git rev-list --count HEAD 2>/dev/null || echo 0)
 
@@ -16,7 +18,7 @@ TOOLCHAIN_DIR := $(if $(findstring CommandLineTools,$(DEV_DIR)),$(DEV_DIR),$(DEV
 TESTING_FW    := $(DEV_DIR)/Library/Developer/Frameworks
 TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) -Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays)
 
-.PHONY: all build app sign run install test lint format clean cert
+.PHONY: all build app sign run install test test-live lint format clean cert models localjev localjev-run
 
 all: app
 
@@ -55,6 +57,25 @@ install: app
 
 test:
 	swift test $(TEST_FLAGS)
+
+# Needs a running Ollama with $(SYSTEM_ONE_MODEL).
+test-live:
+	REDOS_LIVE_MODEL=$(SYSTEM_ONE_MODEL) swift test $(TEST_FLAGS) --filter LiveSystemOneTests
+
+models:
+	ollama pull $(SYSTEM_ONE_MODEL)
+
+# Optional Jev-compatible backend; RedOS uses it when the `systemOne.jevURL` default is set.
+localjev:
+	rm -rf build/localjev-src && mkdir -p build
+	cp -R Vendor/localjev/src build/localjev-src
+	patch -s -p2 -d build/localjev-src < Vendor/patches/localjev-upstream-extra-body.patch
+	bun build build/localjev-src/index.ts --compile --minify \
+		--no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile build/localjev
+
+localjev-run: localjev
+	LOCALJEV_UPSTREAM=http://127.0.0.1:11434 LOCALJEV_UPSTREAM_MODEL=$(SYSTEM_ONE_MODEL) \
+	LOCALJEV_UPSTREAM_EXTRA_BODY='{"reasoning_effort":"none"}' LOCALJEV_PORT=$(LOCALJEV_PORT) build/localjev
 
 lint:
 	TOOLCHAIN_DIR=$(TOOLCHAIN_DIR) swiftlint --strict

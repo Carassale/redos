@@ -11,8 +11,15 @@ public struct AuditEntry: Codable, Sendable, Equatable {
         case failed
     }
 
+    public enum Route: String, Codable, Sendable {
+        case fastPath
+        case systemOne
+    }
+
     public var date: Date
     public var input: String
+    public var route: Route?
+    public var confidence: Double?
     public var actionID: String?
     public var arguments: [String: String]
     public var risk: RiskLevel?

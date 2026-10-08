@@ -6,7 +6,7 @@ struct TypeTextAction: Action {
     let id = "text.type"
     let summary = "Type text into the focused application as if from the keyboard."
     let risk = RiskLevel.moderate
-    let parameters = [ActionParameter("text", sensitive: true)]
+    let parameters = [ActionParameter("text", sensitive: true, description: "The exact text to type")]
     let requiredPermissions = [Permission.accessibility]
 
     @MainActor
@@ -33,8 +33,8 @@ struct ScrollAction: Action {
     let summary = "Scroll the content under the mouse pointer by a number of lines."
     let risk = RiskLevel.safe
     let parameters = [
-        ActionParameter("direction", .oneOf(["up", "down", "left", "right"])),
-        ActionParameter("amount", .integer, required: false),
+        ActionParameter("direction", .oneOf(["up", "down", "left", "right"]), description: "Scroll direction"),
+        ActionParameter("amount", .integer, required: false, description: "Number of lines, only if stated"),
     ]
     let requiredPermissions = [Permission.accessibility]
 
@@ -59,7 +59,10 @@ struct MoveMouseAction: Action {
     let id = "mouse.move"
     let summary = "Move the mouse pointer to absolute screen coordinates (points, origin top-left)."
     let risk = RiskLevel.safe
-    let parameters = [ActionParameter("x", .integer), ActionParameter("y", .integer)]
+    let parameters = [
+        ActionParameter("x", .integer, description: "Horizontal screen coordinate in points"),
+        ActionParameter("y", .integer, description: "Vertical screen coordinate in points"),
+    ]
     let requiredPermissions = [Permission.accessibility]
 
     @MainActor
@@ -74,9 +77,9 @@ struct ClickAction: Action {
     let summary = "Click at the given screen coordinates, or at the current pointer position if omitted."
     let risk = RiskLevel.moderate
     let parameters = [
-        ActionParameter("x", .integer, required: false),
-        ActionParameter("y", .integer, required: false),
-        ActionParameter("button", .oneOf(["left", "right"]), required: false),
+        ActionParameter("x", .integer, required: false, description: "Horizontal screen coordinate, only if stated"),
+        ActionParameter("y", .integer, required: false, description: "Vertical screen coordinate, only if stated"),
+        ActionParameter("button", .oneOf(["left", "right"]), required: false, description: "Mouse button"),
     ]
     let requiredPermissions = [Permission.accessibility]
 

@@ -7,3 +7,5 @@ disabled_rules:
   - trailing_comma # conflicts with swift-format
 identifier_name:
   excluded: [id, x, y]
+nesting:
+  type_level: 2 # Codable payloads with CodingKeys

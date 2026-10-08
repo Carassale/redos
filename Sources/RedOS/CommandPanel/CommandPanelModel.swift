@@ -7,7 +7,7 @@ final class CommandPanelModel {
     enum State: Equatable {
         case idle
         case working
-        case confirming(ActionRequest, input: String)
+        case confirming(ResolvedCommand)
         case message(String, isError: Bool)
     }
 

@@ -18,8 +18,17 @@
 "Show Audit Log" = "Mostra registro azioni";
 "Ask RedOS…" = "Chiedi a RedOS…";
 "Run %@? Press Return to confirm, Esc to cancel." = "Eseguire %@? Invio per confermare, Esc per annullare.";
-"I don't understand this command yet." = "Non capisco ancora questo comando.";
+"I'm not sure what to do. Complex requests will be handled by System Two." = "Non so bene cosa fare. Le richieste complesse le gestirà System Two.";
 "Action disabled: %@" = "Azione disattivata: %@";
+
+/* System One */
+"System One: %@" = "System One: %@";
+"System One unavailable: %@" = "System One non disponibile: %@";
+"System One returned HTTP %lld" = "System One ha risposto HTTP %lld";
+"System One gave no usable answer." = "System One non ha dato una risposta utilizzabile.";
+"Too many options for System One." = "Troppe opzioni per System One.";
+"Ollama is not reachable at %@" = "Ollama non raggiungibile su %@";
+"Jev is not reachable at %@" = "Jev non raggiungibile su %@";
 
 /* Action errors */
 "Unknown action: %@" = "Azione sconosciuta: %@";

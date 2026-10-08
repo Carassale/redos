@@ -19,12 +19,17 @@ public struct ActionParameter: Sendable, Equatable {
     public let kind: Kind
     public let isRequired: Bool
     public let isSensitive: Bool
+    public let description: String
 
-    public init(_ name: String, _ kind: Kind = .string, required: Bool = true, sensitive: Bool = false) {
+    public init(
+        _ name: String, _ kind: Kind = .string, required: Bool = true, sensitive: Bool = false,
+        description: String = ""
+    ) {
         self.name = name
         self.kind = kind
         self.isRequired = required
         self.isSensitive = sensitive
+        self.description = description
     }
 }
 

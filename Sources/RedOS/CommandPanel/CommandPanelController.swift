@@ -31,6 +31,8 @@ final class CommandPanelController {
         position()
         panel.makeKeyAndOrderFront(nil)
         model.focusRequest += 1
+        // Load the System One model while the user is still typing.
+        Task { [engine] in await engine.prepare() }
     }
 
     private func hide() {
@@ -48,8 +50,8 @@ final class CommandPanelController {
         switch model.state {
         case .working:
             return
-        case .confirming(let request, let input):
-            Task { await run(request, input: input) }
+        case .confirming(let command):
+            Task { await run(command) }
         case .idle, .message:
             let input = model.text
             model.state = .working
@@ -60,26 +62,31 @@ final class CommandPanelController {
     private func resolve(_ input: String) async {
         switch await engine.resolve(input) {
         case .unrecognized:
-            model.state = .message(String(localized: "I don't understand this command yet."), isError: true)
+            model.state = .message(
+                String(localized: "I'm not sure what to do. Complex requests will be handled by System Two."),
+                isError: true
+            )
+        case .unavailable(let reason):
+            model.state = .message(reason, isError: true)
         case .invalid(_, let error):
             model.state = .message(error.localizedDescription, isError: true)
         case .denied(let request):
             model.state = .message(String(localized: "Action disabled: \(request.actionID)"), isError: true)
-        case .ready(let request, let needsConfirmation):
+        case .ready(let command, let needsConfirmation):
             if needsConfirmation {
-                model.state = .confirming(request, input: input)
+                model.state = .confirming(command)
             } else {
-                await run(request, input: input)
+                await run(command)
             }
         }
     }
 
-    private func run(_ request: ActionRequest, input: String) async {
+    private func run(_ command: ResolvedCommand) async {
         model.state = .working
         hide()
         // Give focus back to the previous app before posting keyboard or mouse events.
         try? await Task.sleep(for: .milliseconds(150))
-        switch await engine.execute(request, input: input) {
+        switch await engine.execute(command) {
         case .success:
             model.text = ""
             model.state = .idle
@@ -91,8 +98,8 @@ final class CommandPanelController {
     }
 
     private func cancel() {
-        if case .confirming(let request, let input) = model.state {
-            Task { await engine.cancel(request, input: input) }
+        if case .confirming(let command) = model.state {
+            Task { [engine] in await engine.cancel(command) }
             model.state = .idle
         }
         hide()

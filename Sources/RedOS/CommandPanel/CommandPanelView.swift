@@ -39,9 +39,9 @@ struct CommandPanelView: View {
         switch model.state {
         case .idle, .working:
             EmptyView()
-        case .confirming(let request, _):
+        case .confirming(let command):
             Label(
-                "Run \(request.actionID)? Press Return to confirm, Esc to cancel.",
+                "Run \(command.request.actionID)? Press Return to confirm, Esc to cancel.",
                 systemImage: "exclamationmark.triangle"
             )
             .foregroundStyle(.orange)

@@ -13,7 +13,7 @@ modello "System One" locale (Jev via LocalJev) e controlla il Mac (mouse, tastie
 | Firma | Certificato self-signed stabile (`make cert`). Niente Developer ID / notarizzazione per ora |
 | Lingue | UI e comandi multilingua configurabili: `en` (base) + `it`, estendibili aggiungendo `*.lproj` e locale STT |
 | Wake word | openWakeWord (ONNX Runtime, on-device) |
-| System One | LocalJev (`githubnext/localjev`) → Ollama, tutto offline |
+| System One | Protocollo Jev (`choice`). Default: decisione nativa su Ollama dai logprob del modello; opzionale: LocalJev / Jev via HTTP |
 | System Two | Cloud opzionale (GitHub Models/Copilot, Claude, OpenAI, Gemini) o modello locale on-demand |
 | Repo | GitHub, pubblico |
 
@@ -31,6 +31,20 @@ non stanno comodi in 24 GB insieme a macOS e alle app. Strategia a livelli:
 
 Le probabilità di LocalJev sono auto-dichiarate dal modello (non logit): le soglie si tarano sul nostro eval.
 
+### Misure M2 (M3 24 GB, Ollama 0.40, `gemma4:e4b-it-qat`, modello caldo)
+
+| Backend | Latenza decisione | Note |
+|---|---|---|
+| LocalJev originale | 12-40 s | Ollama ignora `enable_thinking`: Gemma 4 ragiona prima di rispondere |
+| LocalJev + patch `reasoning_effort: none` | ~4.7 s | JSON di probabilità auto-dichiarate; "che tempo fa?" → `app.open` (errore) |
+| **Nativo logprob** (default) | **~0.8-1.7 s** | 1 token generato, probabilità lette dal modello; 6/6 corretti |
+| `gemma4:12b-it-qat` logprob | ~2.2 s | più lento e sovra-confidente (p=1.00 ovunque) |
+
+Estrazione argomenti: JSON mode (+~1.3 s). Lo schema JSON per richiesta costa ~1 s di compilazione
+grammatica in Ollama, quindi la validazione stretta resta in `ActionRegistry`.
+Totale tipico: 2-4 s. Ottimizzazioni per M2.5: riuso KV-cache (`OLLAMA_NUM_PARALLEL`), runner MLX,
+prompt più corti.
+
 ## Architettura
 
 ```mermaid
@@ -47,10 +61,11 @@ flowchart LR
   EX --> FB[HUD, TTS, notifiche, audit log]
 ```
 
-- Domande Jev: `action` (choice sul catalogo azioni), `risk` (score), `needs_clarification` (noul).
-- LocalJev gira come sidecar: submodule versionato, compilato con `bun build --compile`, incluso nel
-  bundle, avviato e monitorato dall'app (`/ready`), su `127.0.0.1` con `LOCALJEV_API_KEY` casuale nel
-  Portachiavi. Lo stesso client Swift può puntare a Jev cloud cambiando base URL.
+- Domanda Jev: `action` (choice sul catalogo azioni + `none`). Il rischio NON lo decide il modello: è
+  dichiarato da ogni azione; le azioni scelte dal modello sopra `safe` chiedono conferma se p < 0.85.
+- LocalJev (submodule + patch in `Vendor/patches/`) si compila con `make localjev` e si avvia con
+  `make localjev-run`; RedOS lo usa se `systemOne.jevURL` è impostato. Lo stesso client può puntare a
+  Jev cloud cambiando base URL.
 - Ordine degli executor: integrazioni dirette (CLI/AppleScript/Shortcuts) → Accessibility API → visione.
 
 ## Sicurezza
@@ -81,7 +96,7 @@ RedOS da VS Code / altri agenti.
 |---|---|---|
 | M0 | Repo, SwiftPM, menu bar, onboarding permessi, firma stabile, Makefile, localizzazione | ✅ |
 | M1 | Pannello testo stile Spotlight, hotkey globale, ActionRegistry, executor base, Policy, audit log, fast path it/en | ✅ |
-| M2 | LocalJev sidecar + Ollama, client `/v1/systemone`, estrazione argomenti | |
+| M2 | System One: protocollo Jev, decisione via logprob su Ollama, estrazione argomenti, LocalJev opzionale | ✅ |
 | M2.5 | Eval su comandi reali it/en, scelta modello, soglie | |
 | M3 | System Two: provider cloud + locale, Portachiavi | |
 | M4 | Voce: push-to-talk, SpeechAnalyzer/WhisperKit, TTS, openWakeWord | |

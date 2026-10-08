@@ -40,9 +40,14 @@ struct CommandEngineTests {
     let recorder = RunRecorder()
     let audit = MemoryAuditLog()
 
-    private func engine(_ actions: [any Action], granted: Set<Permission> = Set(Permission.allCases)) -> CommandEngine {
+    private func engine(
+        _ actions: [any Action],
+        router: (any CommandRouting)? = nil,
+        granted: Set<Permission> = Set(Permission.allCases)
+    ) -> CommandEngine {
         CommandEngine(
             registry: ActionRegistry(actions),
+            router: router,
             permissions: StaticPermissions(granted: granted),
             audit: audit
         )
@@ -59,7 +64,13 @@ struct CommandEngineTests {
             id: "app.quit", risk: .dangerous, parameters: [ActionParameter("name")], recorder: recorder
         )
         let result = await engine([action]).resolve("chiudi Slack")
-        #expect(result == .ready(ActionRequest("app.quit", ["name": "Slack"]), needsConfirmation: true))
+        let command = ResolvedCommand(
+            input: "chiudi Slack",
+            request: ActionRequest("app.quit", ["name": "Slack"]),
+            route: .fastPath,
+            confidence: nil
+        )
+        #expect(result == .ready(command, needsConfirmation: true))
         #expect(recorder.runs.isEmpty)
     }
 
@@ -68,23 +79,27 @@ struct CommandEngineTests {
             id: "text.type", parameters: [ActionParameter("text", sensitive: true)], recorder: recorder
         )
         let engine = engine([action])
-        guard case .ready(let request, false) = await engine.resolve("scrivi segreto") else {
-            Issue.record("Expected a ready request")
+        guard case .ready(let command, false) = await engine.resolve("scrivi segreto") else {
+            Issue.record("Expected a ready command")
             return
         }
-        let result = await engine.execute(request, input: "scrivi segreto")
+        let result = await engine.execute(command)
 
         #expect((try? result.get()) != nil)
         #expect(recorder.runs == [["text": "segreto"]])
         let entry = await audit.entries.last
         #expect(entry?.outcome == .completed)
+        #expect(entry?.route == .fastPath)
         #expect(entry?.input == CommandEngine.redacted)
         #expect(entry?.arguments == ["text": CommandEngine.redacted])
     }
 
     @Test func missingPermissionPreventsExecution() async {
         let action = FakeAction(id: "mouse.click", requiredPermissions: [.accessibility], recorder: recorder)
-        let result = await engine([action], granted: []).execute(ActionRequest("mouse.click"), input: "clicca")
+        let command = ResolvedCommand(
+            input: "clicca", request: ActionRequest("mouse.click"), route: .fastPath, confidence: nil
+        )
+        let result = await engine([action], granted: []).execute(command)
 
         #expect(throws: ActionError.permissionMissing(.accessibility)) { try result.get() }
         #expect(recorder.runs.isEmpty)
@@ -95,6 +110,58 @@ struct CommandEngineTests {
         var engine = engine([FakeAction(id: "mouse.click", recorder: recorder)])
         engine.policy.disabledActions = ["mouse.click"]
         #expect(await engine.resolve("clicca") == .denied(ActionRequest("mouse.click")))
+    }
+
+    @Test func unmatchedInputIsRoutedBySystemOne() async {
+        let action = FakeAction(id: "app.open", parameters: [ActionParameter("name")], recorder: recorder)
+        let router = StubRouter(decision: .action(ActionRequest("app.open", ["name": "Terminal"]), confidence: 0.97))
+        let result = await engine([action], router: router).resolve("bring up my terminal")
+
+        guard case .ready(let command, false) = result else {
+            Issue.record("Expected a ready command, got \(result)")
+            return
+        }
+        #expect(command.route == .systemOne)
+        #expect(command.confidence == 0.97)
+        #expect(command.request.arguments == ["name": "Terminal"])
+    }
+
+    @Test func lowConfidenceModerateActionNeedsConfirmation() async {
+        let action = FakeAction(
+            id: "app.quit", risk: .moderate, parameters: [ActionParameter("name")], recorder: recorder
+        )
+        let router = StubRouter(decision: .action(ActionRequest("app.quit", ["name": "Mail"]), confidence: 0.7))
+        let result = await engine([action], router: router).resolve("basta mail")
+        guard case .ready(_, let needsConfirmation) = result else {
+            Issue.record("Expected a ready command")
+            return
+        }
+        #expect(needsConfirmation)
+    }
+
+    @Test func noActionAndRouterFailuresAreAudited() async {
+        let noAction = StubRouter(decision: .noAction(confidence: 0.9))
+        #expect(await engine([], router: noAction).resolve("ciao") == .unrecognized)
+        let failing = StubRouter(decision: nil)
+        guard case .unavailable = await engine([], router: failing).resolve("ciao") else {
+            Issue.record("Expected unavailable")
+            return
+        }
+        let entries = await audit.entries
+        #expect(entries.map(\.outcome) == [.unrecognized, .failed])
+        #expect(entries.first?.confidence == 0.9)
+    }
+}
+
+private struct StubRouter: CommandRouting {
+    /// nil simulates an unreachable backend.
+    let decision: RouteDecision?
+
+    func prepare() async {}
+
+    func route(_ input: String) async throws -> RouteDecision {
+        guard let decision else { throw SystemOneError.unavailable("offline") }
+        return decision
     }
 }
 
@@ -144,6 +211,13 @@ struct PolicyTests {
         #expect(Policy(autoApproveUpTo: .dangerous).decide(for: action(.dangerous)) == .confirm)
         #expect(Policy(autoApproveUpTo: .safe).decide(for: action(.moderate)) == .confirm)
     }
+
+    @Test func modelRoutedActionsNeedConfidenceToAutoRun() {
+        let policy = Policy()
+        #expect(policy.decide(for: action(.safe), confidence: 0.5) == .allow)
+        #expect(policy.decide(for: action(.moderate), confidence: 0.5) == .confirm)
+        #expect(policy.decide(for: action(.moderate), confidence: 0.95) == .allow)
+    }
 }
 
 struct FileAuditLogTests {
@@ -154,8 +228,8 @@ struct FileAuditLogTests {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let log = FileAuditLog(url: url)
         let entry = AuditEntry(
-            date: .now, input: "apri Safari", actionID: "app.open", arguments: ["name": "Safari"],
-            risk: .safe, outcome: .completed, error: nil
+            date: .now, input: "apri Safari", route: .fastPath, confidence: nil, actionID: "app.open",
+            arguments: ["name": "Safari"], risk: .safe, outcome: .completed, error: nil
         )
 
         await log.record(entry)

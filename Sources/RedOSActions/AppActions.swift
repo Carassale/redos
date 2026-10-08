@@ -5,7 +5,9 @@ struct OpenAppAction: Action {
     let id = "app.open"
     let summary = "Open or bring to front an application by name."
     let risk = RiskLevel.safe
-    let parameters = [ActionParameter("name")]
+    let parameters = [
+        ActionParameter("name", description: "Real macOS application name (e.g. Safari for Apple's browser)")
+    ]
 
     private static let searchDirectories = [
         "/Applications", "/Applications/Utilities", "/System/Applications",
@@ -41,7 +43,7 @@ struct QuitAppAction: Action {
     let id = "app.quit"
     let summary = "Quit a running application by name."
     let risk = RiskLevel.moderate
-    let parameters = [ActionParameter("name")]
+    let parameters = [ActionParameter("name", description: "Application name, as written by the user")]
 
     @MainActor
     func run(_ arguments: ActionArguments) async throws {
