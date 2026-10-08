@@ -1,0 +1,14 @@
+"Permissions" = "Permessi";
+"Permissions…" = "Permessi…";
+"Permissions required…" = "Permessi richiesti…";
+"Quit RedOS" = "Esci da RedOS";
+"RedOS needs these permissions to control your Mac." = "RedOS ha bisogno di questi permessi per controllare il tuo Mac.";
+"Screen Recording changes take effect after restarting RedOS." = "Le modifiche a Registrazione schermo hanno effetto dopo il riavvio di RedOS.";
+"Grant" = "Consenti";
+"Open Settings" = "Apri Impostazioni";
+"Accessibility" = "Accessibilità";
+"Microphone" = "Microfono";
+"Screen Recording" = "Registrazione schermo";
+"Control mouse, keyboard and app interfaces." = "Controlla mouse, tastiera e interfacce delle app.";
+"Listen for the wake word and voice commands." = "Ascolta la wake word e i comandi vocali.";
+"Read the screen when an action needs visual context." = "Legge lo schermo quando un'azione richiede contesto visivo.";
