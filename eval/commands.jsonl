@@ -61,7 +61,7 @@
 {"lang": "en", "input": "remind me to call mum at 6", "action": "none"}
 {"lang": "en", "input": "summarize this page", "action": "none"}
 {"lang": "en", "input": "move the mouse to the center of the screen", "action": "none"}
-{"lang": "en", "input": "click the Save button", "action": "none"}
+{"lang": "en", "input": "click the Save button", "action": "ui.press", "arguments": {"target": "Save"}}
 {"lang": "it", "input": "che tempo fa domani a Milano?", "action": "none"}
 {"lang": "it", "input": "ciao, come stai?", "action": "none"}
 {"lang": "it", "input": "metti in pausa la musica", "action": "none"}
@@ -73,6 +73,17 @@
 {"lang": "it", "input": "ricordami di chiamare la mamma alle 18", "action": "none"}
 {"lang": "it", "input": "riassumi questa pagina", "action": "none"}
 {"lang": "it", "input": "porta il mouse al centro dello schermo", "action": "none"}
-{"lang": "it", "input": "clicca sul pulsante Salva", "action": "none"}
+{"lang": "it", "input": "clicca sul pulsante Salva", "action": "ui.press", "arguments": {"target": "Salva"}}
 {"lang": "it", "input": "spegni il computer", "action": "none"}
 {"lang": "it", "input": "che ore sono?", "action": "none"}
+{"lang": "it", "input": "premi il pulsante Accedi", "action": "ui.press", "arguments": {"target": "Accedi"}}
+{"lang": "en", "input": "hit the Continue button", "action": "ui.press", "arguments": {"target": "Continue"}}
+{"lang": "it", "input": "inserisci roma nella casella di ricerca", "action": "ui.fill", "arguments": {"text": "roma"}}
+{"lang": "en", "input": "put john@example.com in the email field", "action": "ui.fill", "arguments": {"text": "john@example.com"}}
+{"lang": "en", "input": "what does this window say?", "action": "ui.read", "arguments": {}}
+{"lang": "it", "input": "leggimi il contenuto della pagina", "action": "ui.read", "arguments": {}}
+{"lang": "en", "input": "run ls -la in the terminal", "action": "shell.run", "arguments": {"command": "ls -la"}}
+{"lang": "it", "input": "esegui brew update nel terminale", "action": "shell.run", "arguments": {"command": "brew update"}}
+{"lang": "it", "input": "clicca sul terzo link", "action": "multi_step", "agent": true}
+{"lang": "en", "input": "fill in the signup form with my name", "action": "multi_step", "agent": true}
+{"lang": "it", "input": "apri il secondo menu", "action": "multi_step", "agent": true}

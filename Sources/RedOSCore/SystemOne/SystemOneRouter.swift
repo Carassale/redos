@@ -47,12 +47,13 @@ public struct SystemOneRouter: CommandRouting {
         let actions = registry.all.map { JevOption(label: $0.id, description: $0.summary) }
         let multiStep = JevOption(
             label: Self.multiStepLabel,
-            description: "Several of the actions above in sequence (e.g. open an app and then go to a website in it)."
+            description: "Several of the actions above in sequence (e.g. open an app and then go to a website in it),"
+                + " or on-screen elements described by position or look (e.g. the first result)."
         )
         let none = JevOption(
             label: Self.noneLabel,
             description: "None of the above: questions, conversation, or actions not listed"
-                + " (e.g. clicking a named button, media, volume, screenshots, shutting down)."
+                + " (e.g. media, volume, screenshots, shutting down)."
         )
         let options = actions + [multiStep, none]
         let labels = Set(options.map(\.label))
@@ -73,12 +74,18 @@ public struct SystemOneRouter: CommandRouting {
         ("chiudi Telegram", "app.quit"), ("get out of Zoom", "app.quit"), ("spegni Music", "app.quit"),
         ("apri il sito ansa.it", "url.open"), ("load nytimes.com", "url.open"),
         ("digita ciao Marco", "text.type"), ("write: on my way", "text.type"),
+        ("type hello in this box", "text.type"), ("scrivi qui a domani", "text.type"),
         ("scendi di qualche riga", "scroll"), ("torna in cima", "scroll"), ("scroll a bit left", "scroll"),
         ("clicca col tasto destro", "mouse.click"), ("do a click", "mouse.click"),
         ("sposta il puntatore a 300, 200", "mouse.move"),
+        ("tocca il bottone Invia", "ui.press"), ("hit Cancel", "ui.press"), ("apri il menu Modifica", "ui.press"),
+        ("metti mario nel campo utente", "ui.fill"), ("enter my email in the Email box", "ui.fill"),
+        ("cosa dice questa finestra?", "ui.read"), ("read me this page", "ui.read"),
+        ("fai git status nel terminale", "shell.run"), ("list the files in Downloads", "shell.run"),
         ("apri Mail e scrivi ciao", "multi_step"), ("open Notes then type groceries", "multi_step"),
+        ("apri il primo risultato", "multi_step"), ("compila il modulo", "multi_step"),
         ("che giorno è oggi?", "none"), ("tell me a joke", "none"), ("metti un po' di musica", "none"),
-        ("clicca su Invia", "none"), ("abbassa la luminosità", "none"),
+        ("abbassa la luminosità", "none"),
     ]
 
     public func prepare() async {

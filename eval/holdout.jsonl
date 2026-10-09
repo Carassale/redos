@@ -25,6 +25,11 @@
 {"lang": "it", "input": "silenzia le notifiche", "action": "none"}
 {"lang": "en", "input": "turn on dark mode", "action": "none"}
 {"lang": "it", "input": "svuota il cestino", "action": "none"}
-{"lang": "en", "input": "press the Submit button", "action": "none"}
+{"lang": "en", "input": "press the Submit button", "action": "ui.press", "arguments": {"target": "Submit"}}
 {"lang": "it", "input": "grazie mille!", "action": "none"}
 {"lang": "en", "input": "what's the price of bitcoin now?", "action": "none"}
+{"lang": "en", "input": "press OK", "action": "ui.press", "arguments": {"target": "OK"}}
+{"lang": "it", "input": "seleziona la scheda Generale", "action": "ui.press", "arguments": {"target": "Generale|scheda Generale"}}
+{"lang": "it", "input": "dimmi cosa c'è scritto sullo schermo", "action": "ui.read", "arguments": {}}
+{"lang": "en", "input": "execute git pull in terminal", "action": "shell.run", "arguments": {"command": "git pull"}}
+{"lang": "it", "input": "apri l'ultimo risultato", "action": "multi_step", "agent": true}

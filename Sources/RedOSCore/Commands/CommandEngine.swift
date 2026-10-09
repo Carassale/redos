@@ -18,7 +18,12 @@ public enum Resolution: Sendable, Equatable {
     case plan(ResolvedPlan, needsConfirmation: Bool)
     /// System Two replied with text instead of actions (questions, things it cannot do).
     case answer(String)
+    /// The task needs to look at the screen between steps: run it with `runAgent`.
+    case agent(String)
 }
+
+/// Progress callback for the HUD: 1-based step number and the action about to run.
+public typealias StepHandler = @MainActor @Sendable (_ step: Int, _ request: ActionRequest) -> Void
 
 /// Turns user input into validated, policy-checked and audited action executions.
 public struct CommandEngine: Sendable {
@@ -30,11 +35,13 @@ public struct CommandEngine: Sendable {
     private let router: (any CommandRouting)?
     private let planner: (any Planning)?
     private let assistant: (any Planning)?
+    private let agent: (any Acting)?
+    private let observer: (any ScreenObserving)?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
     /// `planner` handles multi-step requests (fast, local); `assistant` questions and unclear commands
-    /// (any provider, defaults to `planner`).
+    /// (any provider, defaults to `planner`); `agent` and `observer` tasks that need to see the screen.
     public init(
         registry: ActionRegistry,
         parser: FastPathParser = FastPathParser(),
@@ -42,6 +49,8 @@ public struct CommandEngine: Sendable {
         router: (any CommandRouting)? = nil,
         planner: (any Planning)? = nil,
         assistant: (any Planning)? = nil,
+        agent: (any Acting)? = nil,
+        observer: (any ScreenObserving)? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -51,6 +60,8 @@ public struct CommandEngine: Sendable {
         self.router = router
         self.planner = planner
         self.assistant = assistant
+        self.agent = agent
+        self.observer = observer
         self.permissions = permissions
         self.audit = audit
     }
@@ -108,6 +119,9 @@ public struct CommandEngine: Sendable {
             return .unavailable(error.localizedDescription)
         }
         guard !result.steps.isEmpty else {
+            if result.needsScreen, agent != nil, observer != nil {
+                return .agent(input)
+            }
             await record(input, nil, result.answer == nil ? .unrecognized : .answered, route: .systemTwo)
             return result.answer.map(Resolution.answer) ?? .unrecognized
         }
@@ -158,36 +172,51 @@ public struct CommandEngine: Sendable {
         }
     }
 
-    /// Runs the steps in order and stops at the first failure.
-    public func execute(_ plan: ResolvedPlan) async -> Result<Void, ActionError> {
+    /// Runs the steps in order and stops at the first failure or when the task is cancelled.
+    /// Returns the outputs of reporting actions, if any.
+    public func execute(_ plan: ResolvedPlan, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
+        var outputs: [String] = []
         for (index, command) in commands(of: plan).enumerated() {
             if index > 0 {
                 // Let the previous step settle (window focus, page load) before the next one.
                 try? await Task.sleep(for: .milliseconds(400))
             }
-            if case .failure(let error) = await execute(command) {
+            await onStep?(index + 1, command.request)
+            switch await execute(command) {
+            case .success(let output):
+                if let output { outputs.append(output) }
+            case .failure(let error):
                 return .failure(error)
             }
         }
-        return .success(())
+        return .success(outputs.isEmpty ? nil : outputs.joined(separator: "\n\n"))
     }
 
     private func commands(of plan: ResolvedPlan) -> [ResolvedCommand] {
         plan.steps.map { ResolvedCommand(input: plan.input, request: $0, route: plan.route, confidence: nil) }
     }
 
-    public func execute(_ command: ResolvedCommand) async -> Result<Void, ActionError> {
+    public func execute(_ command: ResolvedCommand) async -> Result<String?, ActionError> {
         do {
+            try Task.checkCancellation()
             let action = try registry.validate(command.request)
             if let missing = action.requiredPermissions.first(where: { permissions.status(of: $0) != .granted }) {
                 throw ActionError.permissionMissing(missing)
             }
-            try await action.run(command.request.arguments)
+            var output: String?
+            if let reporting = action as? any ReportingAction {
+                output = try await reporting.report(command.request.arguments)
+            } else {
+                try await action.run(command.request.arguments)
+            }
             await record(command, .completed)
-            return .success(())
+            return .success(output)
+        } catch is CancellationError {
+            await record(command, .cancelled)
+            return .failure(.cancelled)
         } catch {
             let actionError = error as? ActionError ?? .failed(error.localizedDescription)
-            await record(command, .failed, error: actionError)
+            await record(command, actionError == .cancelled ? .cancelled : .failed, error: actionError)
             return .failure(actionError)
         }
     }
@@ -223,5 +252,83 @@ public struct CommandEngine: Sendable {
             outcome: outcome,
             error: error?.errorDescription
         ))
+    }
+}
+
+// MARK: - Screen agent
+
+extension CommandEngine {
+    /// Observe-act loop: every step is validated, policy-checked and audited; dangerous actions are refused.
+    /// Returns the agent's closing summary.
+    public func runAgent(_ task: String, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
+        guard let agent, let observer else { return .failure(.failed(String(localized: "No agent configured."))) }
+        var history: [String] = []
+        var repeats = 0
+        var previous: ActionRequest?
+        var succeeded: ActionRequest?
+        for number in 1...ModelAgent.maxSteps {
+            let request: ActionRequest
+            switch await nextStep(task, history: history, agent: agent, observer: observer) {
+            case .failure(let error): return .failure(error)
+            case .success(.done(let summary)): return .success(summary)
+            case .success(.act(let next)): request = next
+            }
+            // Small models tend to redo the last step instead of saying done (a second press would undo it).
+            if request == succeeded, request.actionID != "scroll" { return .success(nil) }
+            repeats = request == previous ? repeats + 1 : 0
+            previous = request
+            guard repeats < 3 else {
+                return .failure(.failed(String(localized: "Stopped: the same step kept repeating.")))
+            }
+            let line = Self.describe(request)
+            guard isAllowedForAgent(request) else {
+                history.append("\(line) -> refused: not allowed for the agent")
+                continue
+            }
+            await onStep?(number, request)
+            let result = await execute(ResolvedCommand(input: task, request: request, route: .agent, confidence: nil))
+            if case .failure(.cancelled) = result { return .failure(.cancelled) }
+            let entry = Self.historyEntry(line, result)
+            succeeded = entry.ok ? request : nil
+            history.append(entry.text)
+            // Let the app react (menus opening, pages loading) before looking again.
+            try? await Task.sleep(for: .milliseconds(600))
+        }
+        return .failure(.failed(String(localized: "Stopped: the task needs too many steps.")))
+    }
+
+    private static func historyEntry(
+        _ line: String, _ result: Result<String?, ActionError>
+    ) -> (text: String, ok: Bool) {
+        switch result {
+        case .success(let output): ("\(line) -> ok" + (output.map { ": \($0.prefix(300))" } ?? ""), true)
+        case .failure(let error): ("\(line) -> failed: \(error.localizedDescription)", false)
+        }
+    }
+
+    /// "ui.press target=#3" for the agent history and the HUD.
+    public static func describe(_ request: ActionRequest) -> String {
+        let arguments = request.arguments.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }
+        return ([request.actionID] + arguments).joined(separator: " ")
+    }
+
+    private func nextStep(
+        _ task: String, history: [String], agent: any Acting, observer: any ScreenObserving
+    ) async -> Result<AgentStep, ActionError> {
+        if Task.isCancelled { return .failure(.cancelled) }
+        do {
+            let screen = try await observer.observe()
+            return .success(try await agent.next(task: task, history: history, screen: screen, registry: registry))
+        } catch {
+            if Task.isCancelled { return .failure(.cancelled) }
+            let actionError = error as? ActionError ?? .failed(error.localizedDescription)
+            await record(task, nil, .failed, route: .agent, error: actionError)
+            return .failure(actionError)
+        }
+    }
+
+    private func isAllowedForAgent(_ request: ActionRequest) -> Bool {
+        guard let action = registry.action(for: request.actionID) else { return true }
+        return action.risk < .dangerous && policy.decide(for: action) != .deny
     }
 }

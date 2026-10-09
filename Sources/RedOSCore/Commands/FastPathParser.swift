@@ -15,11 +15,23 @@ public struct FastPathParser: Sendable {
         public var connectors: [String]
         /// Trailing courtesy ("please") dropped from app names.
         public var courtesies: [String]
+        /// "premi Salva", "click on Login": an on-screen element by name.
+        public var press: [String]
+        /// "scrivi Mario nel campo Nome": typing into a named field.
+        public var fillMarkers: [String]
+        /// When set, the field name must end with one of these ("in the Search field").
+        public var fillSuffixes: [String]
+        /// Whole commands that read the frontmost window.
+        public var read: [String]
+        /// "esegui il comando ls".
+        public var shell: [String]
 
         public init(
             openApp: [String], quitApp: [String], typeText: [String], scroll: [String],
             directions: [String: String], click: [String], moveMouse: [String],
-            openURL: [String] = [], connectors: [String] = [], courtesies: [String] = []
+            openURL: [String] = [], connectors: [String] = [], courtesies: [String] = [],
+            press: [String] = [], fillMarkers: [String] = [], fillSuffixes: [String] = [],
+            read: [String] = [], shell: [String] = []
         ) {
             self.openApp = openApp
             self.openURL = openURL
@@ -31,6 +43,11 @@ public struct FastPathParser: Sendable {
             self.moveMouse = moveMouse
             self.connectors = connectors
             self.courtesies = courtesies
+            self.press = press
+            self.fillMarkers = fillMarkers
+            self.fillSuffixes = fillSuffixes
+            self.read = read
+            self.shell = shell
         }
     }
 
@@ -73,9 +90,10 @@ public struct FastPathParser: Sendable {
     }
 
     private func parse(_ text: String, with vocabulary: Vocabulary) -> ActionRequest? {
+        if let request = screenRequest(text, vocabulary) { return request }
         // Typing first, so "type open safari" types the text instead of opening an app.
         if let rest = remainder(of: text, after: vocabulary.typeText) {
-            return ActionRequest("text.type", ["text": unquoted(rest)])
+            return fillRequest(rest, vocabulary) ?? ActionRequest("text.type", ["text": unquoted(rest)])
         }
         if let rest = remainder(of: text, after: vocabulary.openURL), WebAddress.url(from: rest) != nil {
             return ActionRequest("url.open", ["url": rest])
@@ -99,9 +117,42 @@ public struct FastPathParser: Sendable {
         return nil
     }
 
-    /// "apri Safari" opens the app, "apri google.com" the website.
+    /// Screen reading, named elements and shell commands.
+    private func screenRequest(_ text: String, _ vocabulary: Vocabulary) -> ActionRequest? {
+        let sentence = text.trimmingCharacters(in: CharacterSet(charactersIn: " ?!."))
+        if vocabulary.read.contains(where: { $0.compare(sentence, options: Self.matchOptions) == .orderedSame }) {
+            return ActionRequest("ui.read")
+        }
+        if let rest = remainder(of: text, after: vocabulary.shell) {
+            return ActionRequest("shell.run", ["command": unquoted(rest)])
+        }
+        if let rest = remainder(of: text, after: vocabulary.press), let target = UITarget.clean(rest) {
+            return ActionRequest("ui.press", ["target": target])
+        }
+        return nil
+    }
+
+    private func fillRequest(_ rest: String, _ vocabulary: Vocabulary) -> ActionRequest? {
+        for marker in vocabulary.fillMarkers {
+            guard let range = rest.range(of: " \(marker) ", options: [.caseInsensitive, .backwards]) else { continue }
+            let field = rest[range.upperBound...].lowercased()
+            guard vocabulary.fillSuffixes.isEmpty || vocabulary.fillSuffixes.contains(where: field.hasSuffix),
+                  let target = UITarget.clean(rest[range.upperBound...])
+            else { continue }
+            return ActionRequest("ui.fill", ["target": target, "text": unquoted(String(rest[..<range.lowerBound]))])
+        }
+        return nil
+    }
+
+    private static let menuWords: Set<String> = ["menu", "scheda", "voce", "tab"]
+
+    /// "apri Safari" opens the app, "apri google.com" the website, "apri il menu File" the menu.
     private func openRequest(_ rest: String, _ vocabulary: Vocabulary) -> ActionRequest? {
         guard let name = appName(rest, vocabulary) else { return nil }
+        let words = Set(name.lowercased().split(whereSeparator: \.isWhitespace).map(String.init))
+        if !words.isDisjoint(with: Self.menuWords) {
+            return UITarget.clean(name).map { ActionRequest("ui.press", ["target": $0]) }
+        }
         return WebAddress.url(from: name) == nil
             ? ActionRequest("app.open", ["name": name])
             : ActionRequest("url.open", ["url": name])
@@ -183,7 +234,15 @@ extension FastPathParser.Vocabulary {
         moveMouse: ["move mouse to", "move the mouse to", "move mouse", "move the mouse"],
         openURL: ["go to", "browse to", "navigate to", "open website", "open the website", "open the site"],
         connectors: ["and then", "and", "then"],
-        courtesies: ["please", "for me"]
+        courtesies: ["please", "for me"],
+        press: ["click on", "click the", "press the", "press", "tap on", "hit the"],
+        fillMarkers: ["into the", "in the"],
+        fillSuffixes: ["field", "box"],
+        read: [
+            "read the screen", "read the window", "read the page", "read this page", "read me the screen",
+            "what's on the screen", "what is on the screen", "what's on screen",
+        ],
+        shell: ["run the command", "run command", "run in the terminal", "run in terminal"]
     )
 
     public static let italian = Self(
@@ -202,6 +261,16 @@ extension FastPathParser.Vocabulary {
             "apri il sito",
         ],
         connectors: ["e poi", "e", "poi", "quindi"],
-        courtesies: ["per favore", "per piacere", "grazie"]
+        courtesies: ["per favore", "per piacere", "grazie"],
+        press: [
+            "premi", "premi su", "premi sul", "clicca", "clicca su", "clicca sul", "clicca sulla", "clicca sullo",
+            "fai clic su", "fai clic sul", "fai click su", "fai click sul", "pigia",
+        ],
+        fillMarkers: ["nel campo", "nella casella", "nel riquadro"],
+        read: [
+            "leggi lo schermo", "leggimi lo schermo", "leggi la finestra", "leggimi la finestra",
+            "leggi la pagina", "leggimi la pagina", "cosa c'è sullo schermo", "cosa c'è sulla pagina",
+        ],
+        shell: ["esegui il comando", "esegui nel terminale", "lancia il comando", "esegui comando"]
     )
 }

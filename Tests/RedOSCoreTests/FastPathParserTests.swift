@@ -23,6 +23,17 @@ struct FastPathParserTests {
         ("clicca", ActionRequest("mouse.click")),
         ("click at 100, 200", ActionRequest("mouse.click", ["x": "100", "y": "200"])),
         ("muovi il mouse a 300 400", ActionRequest("mouse.move", ["x": "300", "y": "400"])),
+        ("clicca su Salva", ActionRequest("ui.press", ["target": "Salva"])),
+        ("clicca sul pulsante Invia", ActionRequest("ui.press", ["target": "Invia"])),
+        ("press the Login button", ActionRequest("ui.press", ["target": "Login"])),
+        ("apri il menu File", ActionRequest("ui.press", ["target": "File"])),
+        ("clicca 300, 200", ActionRequest("mouse.click", ["x": "300", "y": "200"])),
+        ("scrivi mario nel campo Utente", ActionRequest("ui.fill", ["target": "Utente", "text": "mario"])),
+        ("type pizza in the Search field", ActionRequest("ui.fill", ["target": "Search", "text": "pizza"])),
+        ("type I live in the UK", ActionRequest("text.type", ["text": "I live in the UK"])),
+        ("leggimi lo schermo", ActionRequest("ui.read")),
+        ("what's on the screen?", ActionRequest("ui.read")),
+        ("esegui il comando git status", ActionRequest("shell.run", ["command": "git status"])),
     ])
     func recognizes(_ input: String, _ expected: ActionRequest?) {
         #expect(parser.parse(input) == expected)
@@ -43,9 +54,10 @@ struct FastPathParserTests {
     }
 
     @Test(arguments: [
-        "", "   ", "apri", "apriti sesamo", "what's the weather?", "clicca su Salva", "scroll the page",
+        "", "   ", "apri", "apriti sesamo", "what's the weather?", "clicca col tasto destro", "scroll the page",
         "apri il progetto, fai pull e lancia i test", "open the repo and run the tests", "apri Mail poi scrivi",
-        "apri chrom e naviga su google.com",
+        "apri chrom e naviga su google.com", "apri il primo menu", "premi invio", "press the mouse button",
+        "clicca qui",
     ])
     func ignores(_ input: String) {
         #expect(parser.parse(input) == nil)

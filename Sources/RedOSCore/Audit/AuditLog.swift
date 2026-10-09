@@ -16,6 +16,7 @@ public struct AuditEntry: Codable, Sendable, Equatable {
         case fastPath
         case systemOne
         case systemTwo
+        case agent
     }
 
     public var date: Date

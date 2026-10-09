@@ -54,7 +54,8 @@ final class AppController {
         )
         commandPanel.update(
             engine: CommandEngine(
-                registry: registry, router: router, planner: planner, assistant: assistant, audit: FileAuditLog()
+                registry: registry, router: router, planner: planner, assistant: assistant,
+                agent: ModelAgent(client: ollama), observer: AccessibilityObserver(), audit: FileAuditLog()
             ),
             voice: voice
         )
@@ -68,6 +69,10 @@ final class AppController {
             onPress: { [weak self] in self?.commandPanel.startListening() },
             onRelease: { [weak self] in self?.commandPanel.stopListening() }
         )
+        // Kill switch.
+        hotKeys.register(keyCode: kVK_Escape, modifiers: controlKey | optionKey) { [weak self] in
+            self?.commandPanel.stop()
+        }
     }
 
     func revealAuditLog() {

@@ -18,6 +18,9 @@ final class CommandPanelController {
     private let listener = SpeechListener()
     private let speaker = Speaker()
     private var listening: Task<Void, Never>?
+    /// The command being resolved or run: the kill switch cancels it.
+    private var work: Task<Void, Never>?
+    private lazy var hud = HUDController { [weak self] in self?.stop() }
     /// A confirmation that a spoken "sì" / "no" can answer.
     private var pendingConfirmation: CommandPanelModel.State?
     /// The current command came from the microphone: feedback is also spoken.
@@ -103,7 +106,7 @@ final class CommandPanelController {
     func stopListening() {
         guard let listening else { return }
         self.listening = nil
-        Task {
+        start { [self] in
             await listening.value
             guard model.state == .listening else { return }
             // Dictation ends sentences with a period: "apri Safari." must still match the app name.
@@ -131,6 +134,145 @@ final class CommandPanelController {
         }
     }
 
+    /// Kill switch: stops listening, speaking and whatever RedOS is doing.
+    func stop() {
+        speaker.stop()
+        hud.hide()
+        if listening != nil {
+            cancel()
+        }
+        work?.cancel()
+        work = nil
+    }
+
+    private func start(_ body: @escaping @MainActor () async -> Void) {
+        work?.cancel()
+        work = Task { await body() }
+    }
+
+    private func submit() {
+        switch model.state {
+        case .working, .listening:
+            return
+        case .confirming(let command):
+            start { [self, engine] in await run(command.input) { _ in await engine.execute(command) } }
+        case .confirmingPlan(let plan):
+            start { [self, engine] in await run(plan.input) { await engine.execute(plan, onStep: $0) } }
+        case .idle, .message, .answer:
+            let input = model.text
+            isVoiceCommand = false
+            model.state = .working
+            start { [self] in await resolve(input) }
+        }
+    }
+
+    private func resolve(_ input: String) async {
+        let resolution = await engine.resolve(input)
+        if Task.isCancelled {
+            model.state = .idle
+            return
+        }
+        remember(input, resolution)
+        switch resolution {
+        case .unrecognized:
+            fail(String(localized: "I don't know how to do that yet."), spoken: "I don't know how to do that yet.")
+        case .unavailable(let reason):
+            fail(reason)
+        case .invalid(_, let error):
+            fail(error.localizedDescription)
+        case .denied(let request):
+            fail(String(localized: "Action disabled: \(request.actionID)"))
+        case .ready(let command, let needsConfirmation):
+            await confirmOrRun(needsConfirmation ? .confirming(command) : nil, input) { [engine] _ in
+                await engine.execute(command)
+            }
+        case .plan(let plan, let needsConfirmation):
+            await confirmOrRun(needsConfirmation ? .confirmingPlan(plan) : nil, input) { [engine] in
+                await engine.execute(plan, onStep: $0)
+            }
+        case .agent(let task):
+            await run(task) { [engine] in await engine.runAgent(task, onStep: $0) }
+        case .answer(let text):
+            model.state = .answer(text)
+            say(text)
+        }
+    }
+
+    private func confirmOrRun(
+        _ confirmation: CommandPanelModel.State?, _ title: String,
+        _ work: (_ onStep: @escaping StepHandler) async -> Result<String?, ActionError>
+    ) async {
+        if let confirmation {
+            model.state = confirmation
+            sayPhrase("Say yes to confirm.")
+        } else {
+            await run(title, work)
+        }
+    }
+
+    /// Details stay on screen; the voice gets a short phrase in its own language.
+    private func fail(_ message: String, spoken: String = "Something went wrong, details are on screen.") {
+        model.state = .message(message, isError: true)
+        sayPhrase(spoken)
+    }
+
+    /// Hides the panel and shows the HUD while the work drives the Mac; outputs (screen text, command
+    /// results, the agent's summary) come back in the panel.
+    private func run(
+        _ title: String, _ work: (_ onStep: @escaping StepHandler) async -> Result<String?, ActionError>
+    ) async {
+        model.state = .working
+        hide()
+        hud.show(title)
+        // Give focus back to the previous app before posting keyboard or mouse events.
+        try? await Task.sleep(for: .milliseconds(150))
+        let result = await work { [hud] step, request in
+            hud.update("\(step) · \(CommandEngine.describe(request))")
+        }
+        hud.hide()
+        switch result {
+        case .success(let output?):
+            model.state = .idle
+            show()
+            model.state = .answer(output)
+            say(String(output.prefix(400)))
+        case .success(nil):
+            model.text = ""
+            model.state = .idle
+        case .failure(.cancelled):
+            model.state = .idle
+            show()
+            model.state = .message(ActionError.cancelled.localizedDescription, isError: false)
+            sayPhrase("Stopped.")
+        case .failure(let error):
+            model.state = .idle
+            show()
+            fail(error.localizedDescription)
+        }
+    }
+
+    private func cancel() {
+        speaker.stop()
+        switch model.state {
+        case .listening:
+            listening?.cancel()
+            listening = nil
+            Task { [listener] in await listener.cancel() }
+            model.state = .idle
+        case .confirming(let command):
+            Task { [engine] in await engine.cancel(command) }
+            model.state = .idle
+        case .confirmingPlan(let plan):
+            Task { [engine] in await engine.cancel(plan) }
+            model.state = .idle
+        default:
+            break
+        }
+        hide()
+    }
+}
+
+extension CommandPanelController {
     /// Model answers, spoken as they are.
     private func say(_ text: String) {
         guard isVoiceCommand, voice.speaksAnswers else { return }
@@ -168,7 +310,7 @@ final class CommandPanelController {
         case .ready(let command, _): [command.request]
         case .plan(let plan, _): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
-        case .unrecognized, .unavailable, .answer: []
+        case .unrecognized, .unavailable, .answer, .agent: []
         }
         let isSensitive = requests.contains { request in
             engine.registry.action(for: request.actionID)?.parameters
@@ -187,95 +329,5 @@ final class CommandPanelController {
         let size = panel.contentViewController?.preferredContentSize ?? NSSize(width: 640, height: 64)
         let frame = screen.visibleFrame
         panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.minY + frame.height * 0.7))
-    }
-
-    private func submit() {
-        switch model.state {
-        case .working, .listening:
-            return
-        case .confirming(let command):
-            Task { await run { [engine] in await engine.execute(command) } }
-        case .confirmingPlan(let plan):
-            Task { await run { [engine] in await engine.execute(plan) } }
-        case .idle, .message, .answer:
-            let input = model.text
-            isVoiceCommand = false
-            model.state = .working
-            Task { await resolve(input) }
-        }
-    }
-
-    private func resolve(_ input: String) async {
-        let resolution = await engine.resolve(input)
-        remember(input, resolution)
-        switch resolution {
-        case .unrecognized:
-            fail(String(localized: "I don't know how to do that yet."), spoken: "I don't know how to do that yet.")
-        case .unavailable(let reason):
-            fail(reason)
-        case .invalid(_, let error):
-            fail(error.localizedDescription)
-        case .denied(let request):
-            fail(String(localized: "Action disabled: \(request.actionID)"))
-        case .ready(let command, let needsConfirmation):
-            if needsConfirmation {
-                model.state = .confirming(command)
-                sayPhrase("Say yes to confirm.")
-            } else {
-                await run { [engine] in await engine.execute(command) }
-            }
-        case .plan(let plan, let needsConfirmation):
-            if needsConfirmation {
-                model.state = .confirmingPlan(plan)
-                sayPhrase("Say yes to confirm.")
-            } else {
-                await run { [engine] in await engine.execute(plan) }
-            }
-        case .answer(let text):
-            model.state = .answer(text)
-            say(text)
-        }
-    }
-
-    /// Details stay on screen; the voice gets a short phrase in its own language.
-    private func fail(_ message: String, spoken: String = "Something went wrong, details are on screen.") {
-        model.state = .message(message, isError: true)
-        sayPhrase(spoken)
-    }
-
-    private func run(_ work: () async -> Result<Void, ActionError>) async {
-        model.state = .working
-        hide()
-        // Give focus back to the previous app before posting keyboard or mouse events.
-        try? await Task.sleep(for: .milliseconds(150))
-        switch await work() {
-        case .success:
-            model.text = ""
-            model.state = .idle
-        case .failure(let error):
-            model.state = .idle
-            show()
-            fail(error.localizedDescription)
-        }
-    }
-
-    private func cancel() {
-        speaker.stop()
-        switch model.state {
-        case .listening:
-            listening?.cancel()
-            listening = nil
-            Task { [listener] in await listener.cancel() }
-            model.state = .idle
-        case .confirming(let command):
-            Task { [engine] in await engine.cancel(command) }
-            model.state = .idle
-        case .confirmingPlan(let plan):
-            Task { [engine] in await engine.cancel(plan) }
-            model.state = .idle
-        default:
-            break
-        }
-        hide()
     }
 }

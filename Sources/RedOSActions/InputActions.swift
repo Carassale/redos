@@ -4,27 +4,14 @@ import RedOSCore
 
 struct TypeTextAction: Action {
     let id = "text.type"
-    let summary = "Type text into the focused application as if from the keyboard."
+    let summary = "Type text where the cursor already is, as if from the keyboard."
     let risk = RiskLevel.moderate
     let parameters = [ActionParameter("text", sensitive: true, description: "The exact text to type")]
     let requiredPermissions = [Permission.accessibility]
 
     @MainActor
     func run(_ arguments: ActionArguments) async throws {
-        let characters = Array(try arguments.string("text"))
-        let source = CGEventSource(stateID: .combinedSessionState)
-        // Chunked on Character boundaries: some apps drop long unicode payloads.
-        for start in stride(from: 0, to: characters.count, by: 16) {
-            var units = Array(String(characters[start..<min(start + 16, characters.count)]).utf16)
-            for keyDown in [true, false] {
-                guard let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: keyDown) else {
-                    throw InputEvents.creationFailed
-                }
-                event.keyboardSetUnicodeString(stringLength: units.count, unicodeString: &units)
-                event.post(tap: .cghidEventTap)
-            }
-            try await Task.sleep(for: .milliseconds(8))
-        }
+        try await InputEvents.type(try arguments.string("text"))
     }
 }
 
@@ -75,7 +62,8 @@ struct MoveMouseAction: Action {
 
 struct ClickAction: Action {
     let id = "mouse.click"
-    let summary = "Click at the current pointer position or at explicit numeric coordinates. Cannot find named buttons."
+    let summary = "Click at the current pointer position or at explicit numeric coordinates."
+        + " Not for named buttons (use ui.press)."
     let risk = RiskLevel.moderate
     let parameters = [
         ActionParameter("x", .integer, required: false, description: "Horizontal screen coordinate, only if stated"),
@@ -108,5 +96,41 @@ enum InputEvents {
             mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: button
         ) else { throw creationFailed }
         event.post(tap: .cghidEventTap)
+    }
+
+    static func click(at point: CGPoint) throws(ActionError) {
+        try post(.mouseMoved, at: point, button: .left)
+        try post(.leftMouseDown, at: point, button: .left)
+        try post(.leftMouseUp, at: point, button: .left)
+    }
+
+    /// Cmd+A in the focused app.
+    static func selectAll() throws(ActionError) {
+        let keyA: CGKeyCode = 0
+        for keyDown in [true, false] {
+            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: keyA, keyDown: keyDown) else {
+                throw creationFailed
+            }
+            event.flags = .maskCommand
+            event.post(tap: .cghidEventTap)
+        }
+    }
+
+    @MainActor
+    static func type(_ text: String) async throws {
+        let characters = Array(text)
+        let source = CGEventSource(stateID: .combinedSessionState)
+        // Chunked on Character boundaries: some apps drop long unicode payloads.
+        for start in stride(from: 0, to: characters.count, by: 16) {
+            var units = Array(String(characters[start..<min(start + 16, characters.count)]).utf16)
+            for keyDown in [true, false] {
+                guard let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: keyDown) else {
+                    throw creationFailed
+                }
+                event.keyboardSetUnicodeString(stringLength: units.count, unicodeString: &units)
+                event.post(tap: .cghidEventTap)
+            }
+            try await Task.sleep(for: .milliseconds(8))
+        }
     }
 }

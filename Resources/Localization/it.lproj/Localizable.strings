@@ -88,3 +88,18 @@
 "App not found: %@" = "App non trovata: %@";
 "App not running: %@" = "App non in esecuzione: %@";
 "Could not create input event." = "Impossibile creare l'evento di input.";
+
+/* Screen, shell, agent */
+"Stop" = "Ferma";
+"Stopped." = "Interrotto.";
+"No agent configured." = "Nessun agente configurato.";
+"Stopped: the same step kept repeating." = "Interrotto: lo stesso passo si ripeteva.";
+"Stopped: the task needs too many steps." = "Interrotto: servono troppi passi.";
+"No app is in front." = "Nessuna app in primo piano.";
+"Element %@ is no longer on screen." = "L'elemento %@ non è più sullo schermo.";
+"Nothing named “%@” on screen." = "Sullo schermo non c'è niente chiamato “%@”.";
+"Could not press “%@”." = "Impossibile premere “%@”.";
+"Could not focus “%@”." = "Impossibile selezionare “%@”.";
+"Exit code %lld" = "Codice di uscita %lld";
+"Done, no output." = "Fatto, nessun output.";
+"The command timed out." = "Il comando ha superato il tempo massimo.";

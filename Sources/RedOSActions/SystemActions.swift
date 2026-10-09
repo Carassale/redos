@@ -4,7 +4,7 @@ public enum SystemActions {
     public static var all: [any Action] {
         [
             OpenAppAction(), QuitAppAction(), OpenURLAction(), TypeTextAction(), ScrollAction(), MoveMouseAction(),
-            ClickAction(),
+            ClickAction(), PressElementAction(), FillFieldAction(), ReadScreenAction(), RunShellAction(),
         ]
     }
 }

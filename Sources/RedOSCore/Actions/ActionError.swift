@@ -6,6 +6,7 @@ public enum ActionError: Error, Equatable, LocalizedError {
     case invalidArgument(String, String)
     case permissionMissing(Permission)
     case failed(String)
+    case cancelled
 
     public var errorDescription: String? {
         switch self {
@@ -14,6 +15,7 @@ public enum ActionError: Error, Equatable, LocalizedError {
         case .invalidArgument(let name, let value): String(localized: "Invalid value for \(name): \(value)")
         case .permissionMissing(let permission): String(localized: "Missing permission: \(permission.rawValue)")
         case .failed(let message): message
+        case .cancelled: String(localized: "Stopped.")
         }
     }
 }

@@ -123,6 +123,25 @@ Candidati provati con `make eval` (78 comandi) e `RedOSEval --system-two` (30 ri
 - Le frasi dette dall'app usano la lingua della voce (non quella dell'interfaccia).
 - Parametri URL validati prima dell'esecuzione (`.webAddress`).
 
+### M5: schermo, shell, agente
+
+- **Accessibility**: `ScreenReader` legge la finestra in primo piano e la barra dei menu (max 150 elementi,
+  testo visibile), con numeri `#n` per l'agente. Azioni: `ui.press` (pulsanti, link, schede, menu e voci di
+  menu anche chiusi, per nome), `ui.fill` (campo per nome, digitazione reale), `ui.read` (testo mostrato).
+- **Shell**: `shell.run` (zsh login, cartella home, timeout 60 s, output max 6000 caratteri), sempre
+  `dangerous` quindi confermato. Niente PTY: i programmi interattivi non sono supportati.
+- **Agente** osserva/agisci: il planner risponde `{"agent":true}` quando serve guardare lo schermo ("il primo
+  risultato", moduli); ogni passo è validato, controllato dalla policy e registrato (`route: agent`), max 12
+  passi, azioni `dangerous` rifiutate, si ferma se ripete il passo appena riuscito o un passo che fallisce.
+  gemma4:e4b locale: ~1.3 s per passo; 5/5 scelte corrette su schermate di prova (`make test-live`).
+- **HUD** non attivante in alto a destra durante l'esecuzione (passo corrente, pulsante Ferma) e **kill
+  switch** ⌃⌥⎋: annullano il task, i comandi shell vengono terminati.
+- Fast path: "clicca su X", "premi X", "apri il menu X", "scrivi X nel campo Y", "leggimi lo schermo",
+  "esegui il comando X"; i comandi composti valgono anche qui ("apri Safari e premi Accedi").
+- Eval (89 comandi): System One 88.8%, 0 azioni errate eseguite a soglia 0.5, p50 0.69 s. Holdout (35):
+  82.9%; errori nuovi su richieste ambigue ("key in my email" → `ui.fill`) e "svuota il cestino" →
+  `shell.run` (bloccato dalla conferma). "press OK" sbaglia col modello ma il fast path lo copre.
+
 ## Architettura
 
 ```mermaid
@@ -179,7 +198,7 @@ RedOS da VS Code / altri agenti.
 | M3 | System Two: provider cloud + locale, Portachiavi | ✅ |
 | M4 | Voce: push-to-talk (⌃⌥Spazio), SpeechAnalyzer on-device it/en, risposte vocali (TTS) | ✅ |
 | M4.1 | Wake word "Hey RedOS" (openWakeWord: addestramento modello dedicato) | |
-| M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell/PTY, HUD, kill switch | |
+| M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell, HUD, kill switch | ✅ |
 | M6 | MCP client e server | |
 | M7 | Sparkle, pacchetti release | |
 | M8 | Extra (routine, memoria, trigger, costi) | |

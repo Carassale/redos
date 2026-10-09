@@ -7,6 +7,13 @@ import RedOSCore
 //   [--jev-url URL --jev-model M]   decide through a Jev-compatible /v1/systemone endpoint
 //   [--extract-model M]             Ollama model for argument extraction (default: --model)
 //   [--system-two M]                evaluate the System Two planner with Ollama model M instead
+//   [--screen]                      print what the agent sees in the frontmost app (Accessibility needed)
+
+if CommandLine.arguments.contains("--screen") {
+    try await Task.sleep(for: .seconds(Double(CommandLine.arguments.last ?? "") ?? 0))
+    print(try await AccessibilityObserver().observe())
+    exit(0)
+}
 
 struct Sample: Decodable {
     let lang: String
@@ -16,6 +23,8 @@ struct Sample: Decodable {
     let arguments: [String: String]?
     /// Acceptable System Two action sequences; nil means no actions (an answer).
     let plan: [[String]]?
+    /// System Two should hand the request to the screen agent.
+    let agent: Bool?
 }
 
 struct Outcome: Encodable {
@@ -48,7 +57,9 @@ func option(_ name: String) -> String? {
 func matches(_ actual: [String: String], expected: [String: String]) -> Bool {
     let fold = { (text: String) in text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil) }
     return expected.allSatisfy { key, accepted in
-        guard let value = actual[key] else { return false }
+        guard var value = actual[key] else { return false }
+        // ui.press / ui.fill drop role words ("Save button" -> "Save") before matching.
+        if key == "target" { value = UITarget.clean(value) ?? value }
         return accepted.split(separator: "|").contains { fold(String($0)) == fold(value) }
     }
 }
@@ -104,10 +115,14 @@ if let plannerModel = option("--system-two") {
         latencies.append(elapsed)
         let actions = result?.steps.map(\.actionID)
         let valid = result?.steps.allSatisfy { (try? registry.validate($0)) != nil } ?? false
-        let isCorrect = valid && (sample.plan ?? [[]]).contains { $0 == actions }
-            && (actions?.isEmpty == false || result?.answer != nil)
+        let isCorrect = sample.agent == true
+            ? result?.needsScreen == true
+            : valid && (sample.plan ?? [[]]).contains { $0 == actions } && result?.needsScreen != true
+                && (actions?.isEmpty == false || result?.answer != nil)
         correct += isCorrect ? 1 : 0
-        let detail = actions.map { $0.isEmpty ? "answer: \(result?.answer ?? "-")" : $0.joined(separator: " → ") }
+        let detail = result?.needsScreen == true
+            ? "agent"
+            : actions.map { $0.isEmpty ? "answer: \(result?.answer ?? "-")" : $0.joined(separator: " → ") }
         print(String(format: "%@ %5.2fs  %-52@ → %@", isCorrect ? "✓" : "✗", elapsed,
                      sample.input as NSString, detail ?? "error"))
     }

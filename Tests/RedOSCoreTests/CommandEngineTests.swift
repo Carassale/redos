@@ -85,7 +85,7 @@ struct CommandEngineTests {
         }
         let result = await engine.execute(command)
 
-        #expect((try? result.get()) != nil)
+        #expect(throws: Never.self) { try result.get() }
         #expect(recorder.runs == [["text": "segreto"]])
         let entry = await audit.entries.last
         #expect(entry?.outcome == .completed)

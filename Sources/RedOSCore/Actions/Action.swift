@@ -63,6 +63,17 @@ extension Action {
     public var requiredPermissions: [Permission] { [] }
 }
 
+/// An action whose result is shown to the user (screen text, command output).
+public protocol ReportingAction: Action {
+    @MainActor func report(_ arguments: ActionArguments) async throws -> String
+}
+
+extension ReportingAction {
+    @MainActor public func run(_ arguments: ActionArguments) async throws {
+        _ = try await report(arguments)
+    }
+}
+
 extension Dictionary where Key == String, Value == String {
     public func string(_ name: String) throws(ActionError) -> String {
         guard let value = self[name], !value.isEmpty else { throw .missingArgument(name) }

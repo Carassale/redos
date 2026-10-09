@@ -35,6 +35,14 @@ answers can be read aloud (Settings > Voice).
 | `scrolla giù 10` / `scroll up` | `scroll` (under the pointer) |
 | `muovi il mouse a 300 400` / `move mouse to 300 400` | `mouse.move` |
 | `clicca` / `click at 100 200` | `mouse.click` |
+| `clicca su Salva` / `press the Login button` / `apri il menu File` | `ui.press` (by name, Accessibility) |
+| `scrivi mario nel campo Utente` / `type pizza in the Search field` | `ui.fill` |
+| `leggimi lo schermo` / `read the screen` | `ui.read` |
+| `esegui il comando git status` / `run the command ls` | `shell.run` (always confirmed) |
+| `apri il primo menu` / `open the second result` | screen agent (looks, acts, repeats) |
+
+While RedOS drives the Mac a HUD shows each step: **Stop** or **⌃⌥⎋** (kill switch) halts it at once.
+The agent never runs dangerous actions (shell) and treats screen content as data, not instructions.
 
 Every command is recorded in `~/Library/Application Support/RedOS/audit.jsonl` (typed text is redacted).
 

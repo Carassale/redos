@@ -10,10 +10,13 @@ public struct ResolvedPlan: Sendable, Equatable {
 public struct PlanResult: Sendable, Equatable {
     public let steps: [ActionRequest]
     public let answer: String?
+    /// The request needs to look at the screen between steps (handled by the agent).
+    public let needsScreen: Bool
 
-    public init(steps: [ActionRequest], answer: String? = nil) {
+    public init(steps: [ActionRequest], answer: String? = nil, needsScreen: Bool = false) {
         self.steps = steps
         self.answer = answer
+        self.needsScreen = needsScreen
     }
 }
 
@@ -51,6 +54,7 @@ public struct ModelPlanner: Planning {
 
         let steps: [Step]?
         let answer: String?
+        let agent: Bool?
     }
 
     /// Constant prompt over ~512 tokens: Gemma-style models then reuse the KV cache (~1 s saved).
@@ -66,7 +70,10 @@ public struct ModelPlanner: Planning {
                     \(catalog)
                     Use only these actions and parameters, and only the steps the user asked for.
                     A website for a named browser is one url.open step with the app argument.
+                    On-screen buttons, links, menus and fields named by the user are ui.press / ui.fill steps.
                     Reply with compact JSON only: {"steps":[{"action":"<id>","arguments":{"<parameter>":<value>}}]}
+                    If the request needs to look at the screen to decide what to press or fill (elements described
+                    by position, order or look, forms, several clicks inside an app), reply {"steps":[],"agent":true}.
                     If the user asks a question or chats, or any part of the request needs something these actions
                     cannot do, reply {"steps":[],"answer":"<one short sentence in the user's language>"}.
                     Answer general knowledge and arithmetic directly. Never invent real-time facts (weather, news,
@@ -82,10 +89,13 @@ public struct ModelPlanner: Planning {
                     {"action":"app.open","arguments":{"name":"Microsoft Teams"}}]}
                     "manda un messaggio a Luca su Slack" -> {"steps":[],"answer":"Non posso ancora inviare \
                     messaggi, ma posso aprire Slack."}
-                    "press the Login button" -> {"steps":[],"answer":"I can't find buttons on screen yet."}
+                    "press the Login button" -> {"steps":[{"action":"ui.press","arguments":{"target":"Login"}}]}
+                    "apri il primo menu" -> {"steps":[],"agent":true}
+                    "compila il modulo con nome Mario" -> {"steps":[],"agent":true}
                     "porta il puntatore in alto a destra" -> {"steps":[],"answer":"Dimmi le coordinate, ad \
                     esempio 1200, 50."}
-                    "commit and push my changes" -> {"steps":[],"answer":"I can't run terminal commands yet."}
+                    "quanto spazio libero ho sul disco?" -> {"steps":[{"action":"shell.run","arguments":\
+                    {"command":"df -h /"}}]}
                     "quanto fa 12 per 12?" -> {"steps":[],"answer":"144."}
                     "chi ha scritto i Promessi Sposi?" -> {"steps":[],"answer":"Alessandro Manzoni."}
                     "what's the weather in Rome?" -> {"steps":[],"answer":"I can't access live information \
@@ -112,6 +122,8 @@ public struct ModelPlanner: Planning {
             return ActionRequest(step.action, arguments ?? [:])
         }
         let answer = plan.answer?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return PlanResult(steps: requests, answer: answer?.isEmpty == false ? answer : nil)
+        return PlanResult(
+            steps: requests, answer: answer?.isEmpty == false ? answer : nil, needsScreen: plan.agent == true
+        )
     }
 }
