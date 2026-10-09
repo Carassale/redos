@@ -4,5 +4,15 @@
     <title>RedOS</title>
     <description>RedOS updates</description>
     <language>en</language>
+    <item>
+      <title>RedOS 0.5.0</title>
+      <pubDate>Fri, 09 Oct 2026 14:29:06 +0200</pubDate>
+      <sparkle:version>15</sparkle:version>
+      <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>chore: version 0.5.0</li><li>feat(M7): Sparkle updates (EdDSA, stable/beta channels), release packaging and publishing scripts</li><li>feat(M5): accessibility actions (ui.press/fill/read), shell.run, observe-act screen agent, HUD and kill switch</li><li>feat: instant fast-path plans, local multi-step planning, confirmation only when needed, spoken yes/no and voice-language phrases</li><li>feat: push-to-talk voice commands with on-device SpeechAnalyzer and spoken answers (M4)</li><li>perf: 2.7x faster System One/Two (few-shot cached prompts, e2b extraction, Ollama 2 slots), native Jev decision models support, holdout eval</li><li>feat: System Two with selectable providers (Ollama, Copilot CLI, OpenAI, Claude, Gemini), answers and Settings window (M3)</li><li>feat: multi-step requests via local System Two planner, url.open action</li><li>feat: command history with up/down arrows in the command panel</li><li>feat: System One eval set, chained argument extraction and safer defaults (M2.5)</li><li>chore: ignore bun build artifacts</li><li>feat: System One routing via Jev protocol, Ollama logprobs and optional LocalJev (M2)</li><li>feat: command panel, global hotkey and action engine (M1)</li><li>docs: add MIT license</li><li>chore: bootstrap RedOS menu bar app (M0)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.5.0/RedOS-0.5.0.zip" type="application/octet-stream" sparkle:edSignature="bXPejuC3QbDgHlPMkAE6V2HGoj0PCcpiN3Rjp1IPec3VPvaWSa60LloF7PaAVmE8CH6xjA3u5AjYJ4ieyuU4Ag==" length="1466756"/>
+    </item>
   </channel>
 </rss>
