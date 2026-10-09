@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.7.1</title>
+      <pubDate>Fri, 09 Oct 2026 16:36:20 +0000</pubDate>
+      <sparkle:version>31</sparkle:version>
+      <sparkle:shortVersionString>0.7.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>feat: settings with sidebar sections and easier model management (v0.7.1)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.7.1/RedOS-0.7.1.zip" type="application/octet-stream" sparkle:edSignature="Y9vNyahn5Tt+S/TGuTbWiVeMJqY/8nKdd37srUgTiEB06KQqnpB3REDFPp//05AkWpANt7Q0/PEwjZmMwAkXAg==" length="2230477"/>
+    </item>
+    <item>
       <title>RedOS 0.7.0</title>
       <pubDate>Fri, 09 Oct 2026 15:29:43 +0000</pubDate>
       <sparkle:version>29</sparkle:version>
