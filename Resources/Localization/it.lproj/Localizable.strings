@@ -111,3 +111,35 @@
 "Include beta versions" = "Includi versioni beta";
 "Version" = "Versione";
 "Check Now" = "Controlla ora";
+
+/* Routines, memory, costs */
+"No routine named “%@”." = "Nessuna routine chiamata “%@”.";
+"Deleted routine “%@”." = "Routine “%@” eliminata.";
+"Routine “%@” will run %@." = "La routine “%1$@” partirà %2$@.";
+"Routine “%@” will run when %@ opens." = "La routine “%1$@” partirà quando si apre %2$@.";
+"I couldn't turn “%@” into actions." = "Non sono riuscito a trasformare “%@” in azioni.";
+"Saved routine “%@”: %@. Say “run routine %@”." = "Routine “%1$@” salvata: %2$@. Di' “avvia la routine %3$@”.";
+"OK, I'll remember: %@" = "Ok, me lo ricordo: %@";
+"I don't remember anything about “%@”." = "Non ricordo niente su “%@”.";
+"Forgotten: %@" = "Dimenticato: %@";
+"I don't remember anything yet. Say “ricorda che…” or “remember that…”." = "Non ricordo ancora niente. Di' “ricorda che…”.";
+"at %@ on weekdays" = "alle %@ nei giorni feriali";
+"every day at %@" = "ogni giorno alle %@";
+"when %@ opens" = "quando si apre %@";
+"No routines yet. Example: “crea la routine buongiorno: apri Mail e Calendario”." = "Nessuna routine. Esempio: “crea la routine buongiorno: apri Mail e Calendario”.";
+"Offline · %@" = "Offline · %@";
+"Offline only (use the local model)" = "Solo offline (usa il modello locale)";
+"Daily cloud limit: none" = "Limite cloud giornaliero: nessuno";
+"Daily cloud limit: %lld requests" = "Limite cloud giornaliero: %lld richieste";
+"Cloud usage" = "Uso cloud";
+"Today %lld requests (~%lld tokens), month %lld" = "Oggi %1$lld richieste (~%2$lld token), mese %3$lld";
+"Routines" = "Routine";
+"Run" = "Avvia";
+"Delete" = "Elimina";
+"Remove Triggers" = "Togli attivazioni";
+"Say “crea la routine buongiorno: apri Mail e Calendario” to create one." = "Di' “crea la routine buongiorno: apri Mail e Calendario” per crearne una.";
+"“programma la routine X alle 9” or “avvia la routine X quando apro Xcode” add triggers." = "“programma la routine X alle 9” o “avvia la routine X quando apro Xcode” aggiungono un'attivazione automatica.";
+"Memory" = "Memoria";
+"Forget" = "Dimentica";
+"Say “ricorda che il mio editor è Visual Studio Code”." = "Di' “ricorda che il mio editor è Visual Studio Code”.";
+"Remembered facts are sent to System Two as context, including cloud providers." = "I fatti ricordati vengono inviati a System Two come contesto, anche ai provider cloud.";

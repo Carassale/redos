@@ -73,6 +73,13 @@ public struct AccessibilityObserver: ScreenObserving {
         guard AXIsProcessTrusted() else { throw ActionError.permissionMissing(.accessibility) }
         return try ScreenReader.snapshot().listing
     }
+
+    @MainActor
+    public func selectedText() -> String? {
+        guard AXIsProcessTrusted() else { return nil }
+        let focused = AXUIElementCreateSystemWide().element(kAXFocusedUIElementAttribute)
+        return focused?.string(kAXSelectedTextAttribute)
+    }
 }
 
 extension ActionArguments {

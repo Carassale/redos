@@ -17,6 +17,7 @@ public struct AuditEntry: Codable, Sendable, Equatable {
         case systemOne
         case systemTwo
         case agent
+        case routine
     }
 
     public var date: Date

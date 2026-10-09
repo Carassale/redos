@@ -10,6 +10,10 @@ struct AppSettings: Equatable {
     var systemTwoProvider: SystemTwoProvider
     var systemTwoModel: String
     var copilotPath: String
+    /// System Two stays on this Mac whatever the provider.
+    var offlineOnly: Bool
+    /// Cloud requests per day before switching to the local model; 0 = no limit.
+    var dailyCloudLimit: Int
     var voiceLocale: String
     var speaksAnswers: Bool
 
@@ -22,6 +26,8 @@ struct AppSettings: Equatable {
         systemTwoProvider = defaults.string(forKey: "systemTwo.provider").flatMap(SystemTwoProvider.init) ?? .ollama
         systemTwoModel = defaults.string(forKey: "systemTwo.model") ?? systemTwoProvider.defaultModel
         copilotPath = defaults.string(forKey: "systemTwo.copilotPath") ?? ""
+        offlineOnly = defaults.bool(forKey: "systemTwo.offlineOnly")
+        dailyCloudLimit = defaults.integer(forKey: "systemTwo.dailyLimit")
         voiceLocale = defaults.string(forKey: "voice.locale") ?? Self.defaultVoiceLocale
         speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
     }
@@ -39,6 +45,8 @@ struct AppSettings: Equatable {
         defaults.set(systemTwoProvider.rawValue, forKey: "systemTwo.provider")
         defaults.set(systemTwoModel, forKey: "systemTwo.model")
         defaults.set(copilotPath, forKey: "systemTwo.copilotPath")
+        defaults.set(offlineOnly, forKey: "systemTwo.offlineOnly")
+        defaults.set(dailyCloudLimit, forKey: "systemTwo.dailyLimit")
         defaults.set(voiceLocale, forKey: "voice.locale")
         defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
     }

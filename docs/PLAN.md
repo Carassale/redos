@@ -142,6 +142,21 @@ Candidati provati con `make eval` (78 comandi) e `RedOSEval --system-two` (30 ri
   82.9%; errori nuovi su richieste ambigue ("key in my email" → `ui.fill`) e "svuota il cestino" →
   `shell.run` (bloccato dalla conferma). "press OK" sbaglia col modello ma il fast path lo copre.
 
+### M8: routine, memoria, trigger, selezione, costi
+
+- **Routine**: "crea la routine X: …" trasforma il corpo in passi validati subito (fast path o planner),
+  salvati in `routines.json`; "avvia la routine X" li esegue senza modelli (policy del fast path).
+- **Trigger**: orario giornaliero (anche solo feriali) e apertura di un'app (`TriggerCenter`, controllo ogni
+  20 s / notifiche NSWorkspace). Senza richiesta esplicita, i passi sopra `safe` chiedono conferma.
+- **Memoria**: "ricorda che…", "dimentica…", "cosa ricordi?" (`memory.json`, max 50 fatti). I fatti vanno a
+  System Two e all'agente nel messaggio utente (il prompt di sistema resta in cache); le frasi con
+  "mio/my" saltano fast path e System One. Live: "apri il mio editor" → `app.open Visual Studio Code`.
+- **Testo selezionato**: richieste con "selezionato/selection" leggono la selezione via Accessibility e la
+  passano al provider come dati delimitati; live: un'istruzione iniettata nella selezione viene tradotta,
+  non eseguita.
+- **Costi**: `MeteredClient` conta richieste e token stimati (caratteri/4) per i provider cloud; oltre il
+  limite giornaliero usa il modello locale. Interruttore "Solo offline". Comandi meta: `MetaCommand`.
+
 ## Architettura
 
 ```mermaid
@@ -174,10 +189,8 @@ flowchart LR
 
 ## Funzioni aggiuntive (backlog)
 
-Routine/macro (anche "teach by demonstration"), memoria persistente, trigger (orari, rete, app),
-azioni sul testo selezionato, TTS, plugin via MCP, controllo costi cloud, modalità solo-offline,
-cronologia comandi, bridge terminale ("perché è fallito l'ultimo comando?"), server MCP per pilotare
-RedOS da VS Code / altri agenti.
+Teach by demonstration, trigger di rete, plugin via MCP, bridge terminale ("perché è fallito l'ultimo
+comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 
 ## Aggiornamenti
 
@@ -207,5 +220,5 @@ RedOS da VS Code / altri agenti.
 | M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell, HUD, kill switch | ✅ |
 | M6 | MCP client e server | |
 | M7 | Sparkle, pacchetti release | ✅ |
-| M8 | Extra (routine, memoria, trigger, costi) | |
+| M8 | Extra (routine, memoria, trigger, costi) | ✅ |
 | M9 | CI/CD GitHub Actions | |

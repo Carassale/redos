@@ -173,6 +173,22 @@ final class CommandPanelController {
             return
         }
         remember(input, resolution)
+        await handle(resolution, input: input)
+    }
+
+    /// A scheduled or app-launch routine: skipped while the user is busy with RedOS.
+    func runRoutine(named name: String) {
+        guard listening == nil, model.state != .working, model.state != .listening else { return }
+        start { [self] in
+            let resolution = await engine.resolveRoutine(named: name, triggered: true)
+            if case .plan(_, true) = resolution {
+                show()
+            }
+            await handle(resolution, input: name)
+        }
+    }
+
+    private func handle(_ resolution: Resolution, input: String) async {
         switch resolution {
         case .unrecognized:
             fail(String(localized: "I don't know how to do that yet."), spoken: "I don't know how to do that yet.")

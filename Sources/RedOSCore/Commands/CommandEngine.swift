@@ -33,15 +33,19 @@ public struct CommandEngine: Sendable {
     public var parser: FastPathParser
     public var policy: Policy
     private let router: (any CommandRouting)?
-    private let planner: (any Planning)?
-    private let assistant: (any Planning)?
+    let planner: (any Planning)?
+    let assistant: (any Planning)?
     private let agent: (any Acting)?
-    private let observer: (any ScreenObserving)?
+    let observer: (any ScreenObserving)?
+    let routines: RoutineStore?
+    let memory: MemoryStore?
+    let writer: (any ChatCompleting)?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
     /// `planner` handles multi-step requests (fast, local); `assistant` questions and unclear commands
-    /// (any provider, defaults to `planner`); `agent` and `observer` tasks that need to see the screen.
+    /// (any provider, defaults to `planner`); `agent` and `observer` tasks that need to see the screen;
+    /// `writer` requests about the selected text.
     public init(
         registry: ActionRegistry,
         parser: FastPathParser = FastPathParser(),
@@ -51,6 +55,9 @@ public struct CommandEngine: Sendable {
         assistant: (any Planning)? = nil,
         agent: (any Acting)? = nil,
         observer: (any ScreenObserving)? = nil,
+        routines: RoutineStore? = nil,
+        memory: MemoryStore? = nil,
+        writer: (any ChatCompleting)? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -62,6 +69,9 @@ public struct CommandEngine: Sendable {
         self.assistant = assistant
         self.agent = agent
         self.observer = observer
+        self.routines = routines
+        self.memory = memory
+        self.writer = writer
         self.permissions = permissions
         self.audit = audit
     }
@@ -71,6 +81,9 @@ public struct CommandEngine: Sendable {
     }
 
     public func resolve(_ input: String) async -> Resolution {
+        if let resolution = await resolveWithContext(input) {
+            return resolution
+        }
         if let request = parser.parse(input) {
             return await check(ResolvedCommand(input: input, request: request, route: .fastPath, confidence: nil))
         }
@@ -103,8 +116,8 @@ public struct CommandEngine: Sendable {
         }
     }
 
-    /// Hands the request to System Two; without one, System One's verdict is final.
-    private func escalate(
+    /// Hands the request to System Two (with the remembered facts); without one, System One's verdict is final.
+    func escalate(
         _ input: String, to planner: (any Planning)?, guess: ActionRequest?, confidence: Double
     ) async -> Resolution {
         guard let planner else {
@@ -113,7 +126,7 @@ public struct CommandEngine: Sendable {
         }
         let result: PlanResult
         do {
-            result = try await planner.plan(input, registry: registry)
+            result = try await planner.plan(await withFacts(input), registry: registry)
         } catch {
             await record(input, nil, .failed, route: .systemTwo, error: .failed(error.localizedDescription))
             return .unavailable(error.localizedDescription)
@@ -128,7 +141,7 @@ public struct CommandEngine: Sendable {
         return await check(ResolvedPlan(input: input, steps: PlanSimplifier.simplify(result.steps), route: .systemTwo))
     }
 
-    private func check(_ plan: ResolvedPlan) async -> Resolution {
+    func check(_ plan: ResolvedPlan) async -> Resolution {
         var needsConfirmation = false
         for step in plan.steps {
             let command = ResolvedCommand(input: plan.input, request: step, route: plan.route, confidence: nil)
@@ -227,7 +240,7 @@ public struct CommandEngine: Sendable {
         )
     }
 
-    private func record(
+    func record(
         _ input: String,
         _ request: ActionRequest?,
         _ outcome: AuditEntry.Outcome,
@@ -262,13 +275,14 @@ extension CommandEngine {
     /// Returns the agent's closing summary.
     public func runAgent(_ task: String, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
         guard let agent, let observer else { return .failure(.failed(String(localized: "No agent configured."))) }
+        let context = await withFacts(task)
         var history: [String] = []
         var repeats = 0
         var previous: ActionRequest?
         var succeeded: ActionRequest?
         for number in 1...ModelAgent.maxSteps {
             let request: ActionRequest
-            switch await nextStep(task, history: history, agent: agent, observer: observer) {
+            switch await nextStep(context, history: history, agent: agent, observer: observer) {
             case .failure(let error): return .failure(error)
             case .success(.done(let summary)): return .success(summary)
             case .success(.act(let next)): request = next

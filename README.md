@@ -44,6 +44,19 @@ answers can be read aloud (Settings > Voice).
 While RedOS drives the Mac a HUD shows each step: **Stop** or **⌃⌥⎋** (kill switch) halts it at once.
 The agent never runs dangerous actions (shell) and treats screen content as data, not instructions.
 
+| Routines, memory, selection | |
+|---|---|
+| `crea la routine buongiorno: apri Mail e Calendario` / `create routine focus: open Xcode` | saved as validated steps |
+| `avvia la routine buongiorno` / `run routine focus` | runs without any model |
+| `programma la routine buongiorno alle 9 nei giorni feriali` / `schedule routine focus at 2 pm` | daily trigger |
+| `avvia la routine focus quando apro Xcode` / `run routine focus when I open Xcode` | app-launch trigger |
+| `ricorda che il mio editor è Visual Studio Code` → `apri il mio editor` | memory, given to System Two |
+| `traduci in inglese il testo selezionato` / `summarize the selected text` | answer about the selection |
+
+Triggered routines ask for confirmation when a step is above `safe`. Routines, memory and cloud usage are
+in `~/Library/Application Support/RedOS/` and in **Settings**, which also has an offline-only switch and a
+daily cloud request limit (beyond it System Two uses the local model).
+
 Every command is recorded in `~/Library/Application Support/RedOS/audit.jsonl` (typed text is redacted).
 
 ## System One (local, offline)

@@ -9,6 +9,12 @@ import RedOSCore
 final class AppController {
     let permissions = PermissionCenter()
     let updater = Updater()
+    let routines = RoutineStore()
+    let memory = MemoryStore()
+    let usage = UsageStore()
+    @ObservationIgnored private lazy var triggers = TriggerCenter(routines: routines) { [weak self] routine in
+        self?.commandPanel.runRoutine(named: routine.name)
+    }
     let registry = ActionRegistry(SystemActions.all)
     private(set) var systemOneDescription = ""
     private(set) var systemTwoDescription = ""
@@ -42,12 +48,14 @@ final class AppController {
         // Multi-step plans stay on the local decision model (~1 s, cached prompt); the configured provider
         // answers questions and unclear commands.
         let planner = ModelPlanner(client: ollama)
-        let assistant: (any Planning)?
+        let writer: any ChatCompleting
         do {
-            assistant = ModelPlanner(client: try settings.systemTwo().client())
-            systemTwoDescription = settings.systemTwo().displayName
+            writer = try systemTwoClient(settings, local: ollama)
+            systemTwoDescription = settings.offlineOnly
+                ? String(localized: "Offline · \(ollama.model)")
+                : settings.systemTwo().displayName
         } catch {
-            assistant = nil
+            writer = ollama
             systemTwoDescription = error.localizedDescription
         }
         let voice = VoiceSettings(
@@ -55,11 +63,20 @@ final class AppController {
         )
         commandPanel.update(
             engine: CommandEngine(
-                registry: registry, router: router, planner: planner, assistant: assistant,
-                agent: ModelAgent(client: ollama), observer: AccessibilityObserver(), audit: FileAuditLog()
+                registry: registry, router: router, planner: planner, assistant: ModelPlanner(client: writer),
+                agent: ModelAgent(client: ollama), observer: AccessibilityObserver(),
+                routines: routines, memory: memory, writer: writer, audit: FileAuditLog()
             ),
             voice: voice
         )
+    }
+
+    /// Cloud providers are metered and fall back to the local model past the daily limit or when offline.
+    private func systemTwoClient(_ settings: AppSettings, local: OllamaClient) throws -> any ChatCompleting {
+        if settings.offlineOnly { return local }
+        let client = try settings.systemTwo().client()
+        guard settings.systemTwoProvider != .ollama else { return client }
+        return MeteredClient(inner: client, fallback: local, store: usage, dailyLimit: settings.dailyCloudLimit)
     }
 
     func start() {
@@ -74,6 +91,7 @@ final class AppController {
         hotKeys.register(keyCode: kVK_Escape, modifiers: controlKey | optionKey) { [weak self] in
             self?.commandPanel.stop()
         }
+        triggers.start()
     }
 
     func revealAuditLog() {

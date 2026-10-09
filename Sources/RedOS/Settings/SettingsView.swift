@@ -72,6 +72,15 @@ struct SettingsView: View {
                         Button("Detect") { Task { await detectCopilot() } }
                     }
                 }
+                Toggle("Offline only (use the local model)", isOn: $settings.offlineOnly)
+                if settings.systemTwoProvider != .ollama, !settings.offlineOnly {
+                    Stepper(value: $settings.dailyCloudLimit, in: 0...1000, step: 10) {
+                        Text(settings.dailyCloudLimit == 0
+                            ? "Daily cloud limit: none"
+                            : "Daily cloud limit: \(settings.dailyCloudLimit) requests")
+                    }
+                    UsageLabel(store: controller.usage)
+                }
             } header: {
                 Text("System Two")
             } footer: {
@@ -79,6 +88,10 @@ struct SettingsView: View {
             }
 
             updatesSection
+
+            RoutinesSection(store: controller.routines) { controller.commandPanel.runRoutine(named: $0) }
+
+            MemorySection(store: controller.memory)
 
             Section {
                 HStack {
@@ -96,7 +109,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 540)
+        .frame(width: 560, height: 720)
         .onAppear {
             NSApp.activate()
             apiKey = Keychain.secret(for: settings.systemTwoProvider.rawValue) ?? ""

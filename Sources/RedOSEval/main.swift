@@ -11,7 +11,7 @@ import RedOSCore
 
 if CommandLine.arguments.contains("--screen") {
     try await Task.sleep(for: .seconds(Double(CommandLine.arguments.last ?? "") ?? 0))
-    print(try await AccessibilityObserver().observe())
+    print(try AccessibilityObserver().observe())
     exit(0)
 }
 

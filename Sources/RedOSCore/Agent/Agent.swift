@@ -3,6 +3,12 @@ import Foundation
 /// Describes what is on screen for the agent (frontmost app, numbered elements, visible text).
 public protocol ScreenObserving: Sendable {
     @MainActor func observe() throws -> String
+    /// The text selected in the frontmost app, if any.
+    @MainActor func selectedText() -> String?
+}
+
+extension ScreenObserving {
+    @MainActor public func selectedText() -> String? { nil }
 }
 
 public enum AgentStep: Sendable, Equatable {

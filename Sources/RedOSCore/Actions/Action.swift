@@ -37,7 +37,7 @@ public struct ActionParameter: Sendable, Equatable {
 
 public typealias ActionArguments = [String: String]
 
-public struct ActionRequest: Sendable, Equatable {
+public struct ActionRequest: Sendable, Equatable, Codable {
     public let actionID: String
     public let arguments: ActionArguments
 
