@@ -2,34 +2,153 @@ import RedOSCore
 import RedOSVoice
 import SwiftUI
 
+/// Tabbed settings; changes are applied on their own shortly after the last edit.
 struct SettingsView: View {
     let controller: AppController
-    @State private var settings = AppSettings()
-    @State private var apiKey = ""
-    @State private var models: [String] = []
-    @State private var status: Status?
-    @State private var isBusy = false
+    @State private var settings: AppSettings
+    @State private var apiKey: String
+    @State private var applied: Draft
+
+    struct Draft: Equatable {
+        var settings: AppSettings
+        var apiKey: String
+    }
+
+    init(controller: AppController) {
+        self.controller = controller
+        let settings = AppSettings()
+        let apiKey = Keychain.secret(for: settings.systemTwoProvider.rawValue) ?? ""
+        _settings = State(initialValue: settings)
+        _apiKey = State(initialValue: apiKey)
+        _applied = State(initialValue: Draft(settings: settings, apiKey: apiKey))
+    }
+
+    private var draft: Draft { Draft(settings: settings, apiKey: apiKey) }
+
+    @State private var pane: SettingsPane? = .general
+
+    var body: some View {
+        NavigationSplitView {
+            List(SettingsPane.allCases, selection: $pane) { pane in
+                Label {
+                    Text(pane.title)
+                } icon: {
+                    Image(systemName: pane.symbol)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 22, height: 22)
+                        .background(pane.color.gradient, in: .rect(cornerRadius: 6))
+                }
+                .tag(pane)
+            }
+            .navigationSplitViewColumnWidth(200)
+            .toolbar(removing: .sidebarToggle)
+        } detail: {
+            detail(pane ?? .general)
+                .navigationTitle(Text((pane ?? .general).title))
+        }
+        .frame(width: 800, height: 580)
+        .onAppear { NSApp.activate() }
+        .onChange(of: settings.systemTwoProvider) { _, provider in
+            settings.systemTwoModel = provider.defaultModel
+            apiKey = Keychain.secret(for: provider.rawValue) ?? ""
+        }
+        .task(id: draft) {
+            guard draft != applied else { return }
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled else { return }
+            apply()
+        }
+        .onDisappear {
+            if draft != applied { apply() }
+        }
+    }
+
+    @ViewBuilder
+    private func detail(_ pane: SettingsPane) -> some View {
+        switch pane {
+        case .general:
+            GeneralSettingsView(controller: controller, settings: $settings)
+        case .models:
+            ModelsSettingsView(controller: controller, settings: $settings, apiKey: $apiKey)
+        case .privacy:
+            CloudSettingsView(controller: controller, settings: $settings)
+        case .routines:
+            Form {
+                RoutinesSection(store: controller.routines) { controller.commandPanel.runRoutine(named: $0) }
+            }
+            .formStyle(.grouped)
+        case .memory:
+            Form { MemorySection(store: controller.memory) }.formStyle(.grouped)
+        }
+    }
+
+    private func apply() {
+        settings.save()
+        let account = settings.systemTwoProvider.rawValue
+        if settings.systemTwoProvider.needsAPIKey, apiKey != (Keychain.secret(for: account) ?? "") {
+            try? Keychain.setSecret(apiKey.isEmpty ? nil : apiKey, for: account)
+        }
+        controller.reload(settings)
+        applied = draft
+    }
+}
+
+enum SettingsPane: String, CaseIterable, Identifiable {
+    case general, models, privacy, routines, memory
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .general: "General"
+        case .models: "Models"
+        case .privacy: "Privacy & Cloud"
+        case .routines: "Routines"
+        case .memory: "Memory"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .general: "gearshape.fill"
+        case .models: "cpu.fill"
+        case .privacy: "lock.shield.fill"
+        case .routines: "repeat"
+        case .memory: "brain.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .general: .gray
+        case .models: .purple
+        case .privacy: .blue
+        case .routines: .orange
+        case .memory: .pink
+        }
+    }
+}
+
+struct GeneralSettingsView: View {
+    let controller: AppController
+    @Binding var settings: AppSettings
     @State private var voiceLocales: [String] = []
     @State private var checksForUpdates = true
     @State private var receivesBetas = false
 
-    enum Status: Equatable {
-        case info(String)
-        case error(String)
-    }
-
     var body: some View {
         Form {
-            Section("System One (local, Ollama)") {
-                TextField("Decision model", text: $settings.systemOneModel)
-                TextField("Argument model", text: $settings.extractionModel)
-                LabeledContent("Minimum probability to act") {
-                    HStack {
-                        Slider(value: $settings.threshold, in: 0.3...0.95, step: 0.05)
-                        Text(settings.threshold, format: .number.precision(.fractionLength(2)))
-                            .monospacedDigit()
-                    }
+            Section {
+                Picker("Priority", selection: $settings.prefersAccuracy) {
+                    Text("Accuracy").tag(true)
+                    Text("Speed").tag(false)
                 }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Behavior")
+            } footer: {
+                Text(priorityFooter).font(.footnote).foregroundStyle(.secondary)
             }
 
             Section {
@@ -43,81 +162,26 @@ struct SettingsView: View {
                 Text("Voice")
             } footer: {
                 Text("Hold ⌃⌥Space and speak; release to send. Speech is recognized on this Mac.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(.footnote).foregroundStyle(.secondary)
             }
 
-            Section {
-                Picker("Provider", selection: $settings.systemTwoProvider) {
-                    ForEach(SystemTwoProvider.allCases) { Text($0.displayName).tag($0) }
-                }
-                HStack {
-                    TextField("Model", text: $settings.systemTwoModel)
-                    Menu("Models") {
-                        if models.isEmpty {
-                            Button("Load from provider") { Task { await loadModels() } }
-                        }
-                        ForEach(models, id: \.self) { model in
-                            Button(model) { settings.systemTwoModel = model }
-                        }
-                    }
-                    .fixedSize()
-                }
-                if settings.systemTwoProvider.needsAPIKey {
-                    SecureField("API key", text: $apiKey)
-                }
-                if settings.systemTwoProvider == .copilot {
+            // Applied immediately, like Sparkle's own preferences.
+            Section("Updates") {
+                Toggle("Check for updates automatically", isOn: $checksForUpdates)
+                    .onChange(of: checksForUpdates) { _, value in controller.updater.automaticallyChecks = value }
+                Toggle("Include beta versions", isOn: $receivesBetas)
+                    .onChange(of: receivesBetas) { _, value in controller.updater.receivesBetas = value }
+                LabeledContent("Version") {
                     HStack {
-                        TextField("Copilot CLI path", text: $settings.copilotPath)
-                        Button("Detect") { Task { await detectCopilot() } }
+                        Text(verbatim: AppInfo.version).foregroundStyle(.secondary)
+                        Button("Check Now") { controller.updater.checkForUpdates() }
+                            .disabled(!controller.updater.canCheckForUpdates)
                     }
-                }
-                Picker("Priority", selection: $settings.prefersAccuracy) {
-                    Text("Accuracy").tag(true)
-                    Text("Speed").tag(false)
-                }
-                .pickerStyle(.segmented)
-                Toggle("Offline only (use the local model)", isOn: $settings.offlineOnly)
-                if settings.systemTwoProvider != .ollama, !settings.offlineOnly {
-                    Stepper(value: $settings.dailyCloudLimit, in: 0...1000, step: 10) {
-                        Text(settings.dailyCloudLimit == 0
-                            ? "Daily cloud limit: none"
-                            : "Daily cloud limit: \(settings.dailyCloudLimit) requests")
-                    }
-                    UsageLabel(store: controller.usage)
-                }
-            } header: {
-                Text("System Two")
-            } footer: {
-                Text(footer).font(.footnote).foregroundStyle(.secondary)
-            }
-
-            updatesSection
-
-            RoutinesSection(store: controller.routines) { controller.commandPanel.runRoutine(named: $0) }
-
-            MemorySection(store: controller.memory)
-
-            Section {
-                HStack {
-                    Button("Test System Two") { Task { await test() } }
-                    if isBusy { ProgressView().controlSize(.small) }
-                    Spacer()
-                    Button("Save") { save() }
-                        .keyboardShortcut(.defaultAction)
-                }
-                switch status {
-                case .info(let text): Text(text).foregroundStyle(.secondary)
-                case .error(let text): Text(text).foregroundStyle(.red)
-                case nil: EmptyView()
                 }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 560, height: 720)
         .onAppear {
-            NSApp.activate()
-            apiKey = Keychain.secret(for: settings.systemTwoProvider.rawValue) ?? ""
             checksForUpdates = controller.updater.automaticallyChecks
             receivesBetas = controller.updater.receivesBetas
         }
@@ -125,88 +189,49 @@ struct SettingsView: View {
             let supported = await SpeechListener.supportedLocales.map(\.identifier)
             voiceLocales = Set(supported + [settings.voiceLocale]).sorted()
         }
-        .onChange(of: settings.systemTwoProvider) { _, provider in
-            settings.systemTwoModel = provider.defaultModel
-            apiKey = Keychain.secret(for: provider.rawValue) ?? ""
-            models = []
-            status = nil
-        }
     }
 
-    /// Applied immediately, like Sparkle's own preferences.
-    private var updatesSection: some View {
-        Section("Updates") {
-            Toggle("Check for updates automatically", isOn: $checksForUpdates)
-                .onChange(of: checksForUpdates) { _, value in controller.updater.automaticallyChecks = value }
-            Toggle("Include beta versions", isOn: $receivesBetas)
-                .onChange(of: receivesBetas) { _, value in controller.updater.receivesBetas = value }
-            LabeledContent("Version") {
-                HStack {
-                    Text(verbatim: AppInfo.version).foregroundStyle(.secondary)
-                    Button("Check Now") { controller.updater.checkForUpdates() }
-                        .disabled(!controller.updater.canCheckForUpdates)
-                }
-            }
-        }
-    }
-
-    private var footer: LocalizedStringKey {
+    private var priorityFooter: LocalizedStringKey {
         guard settings.systemTwoProvider != .ollama else { return "Everything stays on this Mac." }
         return settings.prefersAccuracy
             ? "Accuracy: questions, multi-step tasks and screen tasks go to this provider; simple commands stay local."
             : "Speed: questions go to this provider; multi-step and screen tasks are planned on this Mac."
     }
+}
 
-    private func save() {
-        settings.save()
-        do {
-            if settings.systemTwoProvider.needsAPIKey {
-                try Keychain.setSecret(apiKey, for: settings.systemTwoProvider.rawValue)
+struct CloudSettingsView: View {
+    let controller: AppController
+    @Binding var settings: AppSettings
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Offline only (use the local model)", isOn: $settings.offlineOnly)
+            } footer: {
+                Text(settings.systemTwoProvider == .ollama
+                    ? "The assistant runs on this Mac: nothing is sent to the cloud."
+                    : "Commands, questions, screen content and remembered facts go to the assistant's provider.")
+                    .font(.footnote).foregroundStyle(.secondary)
             }
-            controller.reload(settings)
-            status = .info(String(localized: "Saved."))
-        } catch {
-            status = .error(error.localizedDescription)
-        }
-    }
-
-    private func loadModels() async {
-        await run {
-            models = try await settings.systemTwo(apiKey: apiKey).client().listModels()
-            return String(localized: "\(models.count) models available.")
-        }
-    }
-
-    private func detectCopilot() async {
-        await run {
-            guard let url = await CopilotCLIClient.locate() else {
-                throw ProviderError.commandFailed(String(localized: "Copilot CLI not found. Set its path in Settings."))
+            if settings.systemTwoProvider != .ollama, !settings.offlineOnly {
+                Section {
+                    Stepper(value: $settings.dailyCloudLimit, in: 0...1000, step: 10) {
+                        Text(settings.dailyCloudLimit == 0
+                            ? "Daily cloud limit: none"
+                            : "Daily cloud limit: \(settings.dailyCloudLimit) requests")
+                    }
+                    UsageLabel(store: controller.usage)
+                } header: {
+                    Text("Usage")
+                } footer: {
+                    Text("Beyond the limit the assistant uses the local model.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             }
-            settings.copilotPath = url.path
-            return url.path
+            Section("Activity log") {
+                Button("Show Audit Log") { controller.revealAuditLog() }
+            }
         }
-    }
-
-    private func test() async {
-        await run {
-            let start = ContinuousClock.now
-            let planner = ModelPlanner(client: try settings.systemTwo(apiKey: apiKey).client())
-            let result = try await planner.plan("apri Safari e vai su apple.com", registry: controller.registry)
-            let elapsed = ContinuousClock.now - start
-            let seconds = elapsed.formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 1)))
-            let steps = result.steps.map(\.actionID).joined(separator: " → ")
-            let outcome = steps.isEmpty ? result.answer ?? "-" : steps
-            return String(localized: "OK in \(seconds): \(outcome)")
-        }
-    }
-
-    private func run(_ work: () async throws -> String) async {
-        isBusy = true
-        defer { isBusy = false }
-        do {
-            status = .info(try await work())
-        } catch {
-            status = .error(error.localizedDescription)
-        }
+        .formStyle(.grouped)
     }
 }

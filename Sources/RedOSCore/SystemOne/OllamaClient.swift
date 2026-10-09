@@ -106,6 +106,34 @@ public struct OllamaClient: ChatCompleting, ModelListing {
         return try JSONDecoder().decode(Tags.self, from: data).models.map(\.name).sorted()
     }
 
+    /// Downloads a model; `progress` receives the completed fraction while Ollama reports sizes.
+    public func pull(_ name: String, progress: @Sendable (Double) async -> Void) async throws {
+        struct Update: Decodable {
+            let total: Double?
+            let completed: Double?
+            let error: String?
+        }
+        var request = URLRequest(url: baseURL.appending(path: "api/pull"), timeoutInterval: 3600)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["model": name])
+        let (bytes, response): (URLSession.AsyncBytes, URLResponse)
+        do {
+            (bytes, response) = try await session.bytes(for: request)
+        } catch {
+            throw SystemOneError.unavailable(String(localized: "Ollama is not reachable at \(baseURL.absoluteString)"))
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else { throw SystemOneError.http(status) }
+        for try await line in bytes.lines {
+            guard let update = try? JSONDecoder().decode(Update.self, from: Data(line.utf8)) else { continue }
+            if let error = update.error { throw SystemOneError.unavailable(error) }
+            if let total = update.total, total > 0, let completed = update.completed {
+                await progress(completed / total)
+            }
+        }
+    }
+
     private func post(_ path: String, body: Data, timeout: TimeInterval = 120) async throws -> Data {
         var request = URLRequest(url: baseURL.appending(path: path), timeoutInterval: timeout)
         request.httpMethod = "POST"

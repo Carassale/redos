@@ -62,6 +62,31 @@
 "%lld models available." = "%lld modelli disponibili.";
 "OK in %@: %@" = "OK in %1$@: %2$@";
 "Everything stays on this Mac." = "Tutto resta su questo Mac.";
+"General" = "Generali";
+"Privacy & Cloud" = "Privacy e cloud";
+"Behavior" = "Comportamento";
+"Assistant (System Two)" = "Assistente (System Two)";
+"Answers questions, plans multi-step tasks, reads the screen and draws diagrams." = "Risponde alle domande, pianifica le attività in più passi, legge lo schermo e disegna i diagrammi.";
+"Test" = "Prova";
+"On this Mac (Ollama)" = "Su questo Mac (Ollama)";
+"Running · %lld models" = "Attivo · %lld modelli";
+"Not running" = "Non attivo";
+"Refresh" = "Aggiorna";
+"Commands" = "Comandi";
+"Parameters" = "Parametri";
+"%@ (recommended)" = "%@ (consigliato)";
+"%@" = "%@";
+"%@ is not installed" = "%@ non è installato";
+"Download" = "Scarica";
+"Start Ollama with: brew services start ollama" = "Avvia Ollama con: brew services start ollama";
+"Commands: understands simple commands in about a second. Parameters: a smaller model that extracts names, numbers and text." = "Comandi: capisce i comandi semplici in circa un secondo. Parametri: un modello più piccolo che estrae nomi, numeri e testo.";
+"Advanced" = "Avanzate";
+"Lower: acts on its own more often. Higher: asks the assistant more often. With Accuracy priority at least 0.85." = "Più bassa: agisce da solo più spesso. Più alta: chiede più spesso all'assistente. Con priorità Precisione almeno 0.85.";
+"The assistant runs on this Mac: nothing is sent to the cloud." = "L'assistente gira su questo Mac: niente viene inviato al cloud.";
+"Commands, questions, screen content and remembered facts go to the assistant's provider." = "Comandi, domande, contenuto dello schermo e fatti ricordati vanno al provider dell'assistente.";
+"Usage" = "Utilizzo";
+"Beyond the limit the assistant uses the local model." = "Oltre il limite l'assistente usa il modello locale.";
+"Activity log" = "Registro attività";
 
 /* Voice */
 "Voice" = "Voce";

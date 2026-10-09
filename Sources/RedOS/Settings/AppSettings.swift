@@ -19,10 +19,13 @@ struct AppSettings: Equatable {
     var voiceLocale: String
     var speaksAnswers: Bool
 
+    static let defaultSystemOneModel = "gemma4:e4b-it-qat"
+    // Smaller model: argument extraction is generation-bound (eval: 0.44 s vs 0.79 s, same accuracy).
+    static let defaultExtractionModel = "gemma4:e2b-it-qat"
+
     init(defaults: UserDefaults = .standard) {
-        systemOneModel = defaults.string(forKey: "systemOne.model") ?? "gemma4:e4b-it-qat"
-        // Smaller model: argument extraction is generation-bound (eval: 0.44 s vs 0.79 s, same accuracy).
-        extractionModel = defaults.string(forKey: "systemOne.extractionModel") ?? "gemma4:e2b-it-qat"
+        systemOneModel = defaults.string(forKey: "systemOne.model") ?? Self.defaultSystemOneModel
+        extractionModel = defaults.string(forKey: "systemOne.extractionModel") ?? Self.defaultExtractionModel
         threshold = defaults.object(forKey: "systemOne.threshold") as? Double ?? 0.5
         jevURL = defaults.string(forKey: "systemOne.jevURL") ?? ""
         systemTwoProvider = defaults.string(forKey: "systemTwo.provider").flatMap(SystemTwoProvider.init) ?? .ollama
