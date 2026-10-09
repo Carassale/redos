@@ -19,7 +19,7 @@ TOOLCHAIN_DIR := $(if $(findstring CommandLineTools,$(DEV_DIR)),$(DEV_DIR),$(DEV
 TESTING_FW    := $(DEV_DIR)/Library/Developer/Frameworks
 TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) -Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays)
 
-.PHONY: all build app sign run install test test-live test-live-copilot eval lint format clean cert models ollama-tune localjev localjev-run
+.PHONY: all build app sign run install release publish test test-live test-live-copilot eval lint format clean cert models ollama-tune localjev localjev-run
 
 all: app
 
@@ -28,8 +28,13 @@ build:
 
 app: build
 	rm -rf "$(APP)"
-	mkdir -p "$(CONTENTS)/MacOS" "$(CONTENTS)/Resources"
+	mkdir -p "$(CONTENTS)/MacOS" "$(CONTENTS)/Resources" "$(CONTENTS)/Frameworks"
 	cp "$(BIN_DIR)/$(APP_NAME)" "$(CONTENTS)/MacOS/"
+	install_name_tool -add_rpath @executable_path/../Frameworks "$(CONTENTS)/MacOS/$(APP_NAME)" 2>/dev/null
+	ditto "$(BIN_DIR)/Sparkle.framework" "$(CONTENTS)/Frameworks/Sparkle.framework"
+	# Not sandboxed: Sparkle's XPC services are unused.
+	rm -rf "$(CONTENTS)/Frameworks/Sparkle.framework/XPCServices" \
+		"$(CONTENTS)/Frameworks/Sparkle.framework/Versions/B/XPCServices"
 	cp Resources/Info.plist "$(PLIST)"
 	plutil -replace CFBundleIdentifier -string "$(BUNDLE_ID)" "$(PLIST)"
 	plutil -replace CFBundleShortVersionString -string "$(VERSION)" "$(PLIST)"
@@ -38,13 +43,18 @@ app: build
 	@$(MAKE) --no-print-directory sign
 
 # A stable identity keeps macOS privacy permissions across rebuilds; ad-hoc resets them.
+# Sparkle's helpers are signed inside out with the same identity (no hardened runtime: self-signed
+# certificates have no Team ID, so library validation would reject the framework).
 sign:
-	@if security find-identity -p codesigning | grep -q "$(SIGN_ID)"; then \
-		codesign --force --sign "$(SIGN_ID)" "$(APP)"; \
-	else \
-		echo "warning: identity '$(SIGN_ID)' not found, using ad-hoc signature (run 'make cert')"; \
-		codesign --force --sign - "$(APP)"; \
-	fi
+	@ID="$(SIGN_ID)"; \
+	if ! security find-identity -p codesigning | grep -q "$(SIGN_ID)"; then \
+		echo "warning: identity '$(SIGN_ID)' not found, using ad-hoc signature (run 'make cert')"; ID=-; \
+	fi; \
+	FW="$(CONTENTS)/Frameworks/Sparkle.framework"; \
+	codesign --force --sign "$$ID" "$$FW/Versions/B/Autoupdate" && \
+	codesign --force --sign "$$ID" "$$FW/Versions/B/Updater.app" && \
+	codesign --force --sign "$$ID" "$$FW" && \
+	codesign --force --sign "$$ID" "$(APP)"
 
 run: app
 	-pkill -x $(APP_NAME)
@@ -55,6 +65,19 @@ install: app
 	rm -rf "/Applications/$(APP_NAME).app"
 	cp -R "$(APP)" /Applications/
 	open "/Applications/$(APP_NAME).app"
+
+# Release: `make release` (zip + dmg, EdDSA signature, appcast item), then `make publish`
+# (GitHub release + appcast push). CHANNEL=beta for pre-releases.
+CHANNEL ?=
+release:
+	@git diff --quiet HEAD || { echo "error: commit your changes first"; exit 1; }
+	@security find-identity -p codesigning | grep -q "$(SIGN_ID)" || \
+		{ echo "error: '$(SIGN_ID)' is required: updates must keep the same signature"; exit 1; }
+	@$(MAKE) --no-print-directory app CONFIG=release
+	scripts/release.sh "$(VERSION)" "$(BUILD)" "$(CHANNEL)"
+
+publish:
+	scripts/publish.sh "$(VERSION)" "$(CHANNEL)"
 
 test:
 	swift test $(TEST_FLAGS)

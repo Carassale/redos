@@ -182,8 +182,14 @@ RedOS da VS Code / altri agenti.
 ## Aggiornamenti
 
 - **Locale**: `make install` (build, firma, copia in `/Applications`).
-- **Remoto**: Sparkle 2 con appcast firmato EdDSA su GitHub Releases/Pages, canali stable/beta.
-  Ogni release va firmata con la **stessa identità** (`RedOS Development`) per non perdere i permessi.
+- **Remoto**: Sparkle 2.10 con appcast firmato EdDSA (`appcast.xml` nel repo, archivi su GitHub Releases),
+  canali stable/beta (opzione nelle Impostazioni). `make release` crea zip + dmg, firma EdDSA (chiave nel
+  Portachiavi, account `redos`) e aggiunge l'item all'appcast; `make publish` crea la release GitHub e
+  pubblica l'appcast solo dopo che gli archivi sono scaricabili.
+  Ogni release va firmata con la **stessa identità** (`RedOS Development`) per non perdere i permessi:
+  Sparkle verifica anche che il nuovo bundle soddisfi il requisito di firma di quello installato.
+- Sparkle senza XPC services (app non sandboxed) e senza hardened runtime (certificato self-signed senza
+  Team ID: la library validation rifiuterebbe il framework).
 - Senza notarizzazione il primo download richiede "Apri comunque" in Impostazioni > Privacy e sicurezza.
 - In futuro: Developer ID + notarizzazione, Homebrew tap, GitHub Actions per build/test/release.
 
@@ -200,6 +206,6 @@ RedOS da VS Code / altri agenti.
 | M4.1 | Wake word "Hey RedOS" (openWakeWord: addestramento modello dedicato) | |
 | M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell, HUD, kill switch | ✅ |
 | M6 | MCP client e server | |
-| M7 | Sparkle, pacchetti release | |
+| M7 | Sparkle, pacchetti release | ✅ |
 | M8 | Extra (routine, memoria, trigger, costi) | |
 | M9 | CI/CD GitHub Actions | |

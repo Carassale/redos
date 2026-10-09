@@ -76,6 +76,22 @@ in the Keychain.
 make test-live-copilot COPILOT_MODEL=claude-haiku-5.5   # check Copilot CLI as System Two
 ```
 
+## Updates and releases
+
+RedOS updates itself with [Sparkle](https://sparkle-project.org) from `appcast.xml` in this repo
+(menu bar > Check for Updates…, Settings > Updates; beta channel is opt-in). Archives are signed with
+an EdDSA key kept in the maintainer's Keychain (account `redos`) and the app with the same
+certificate on every release, so macOS permissions survive updates.
+
+```sh
+# bump VERSION and commit, then:
+make release            # zip + dmg in build/release, EdDSA signature, appcast item (CHANNEL=beta for betas)
+make publish            # GitHub release with zip and dmg, then commit and push appcast.xml
+```
+
+The app is not notarized: on first install open it with right click > Open (or System Settings >
+Privacy & Security > Open Anyway). Updates through Sparkle do not ask again.
+
 ## License
 
 [MIT](LICENSE)

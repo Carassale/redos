@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var status: Status?
     @State private var isBusy = false
     @State private var voiceLocales: [String] = []
+    @State private var checksForUpdates = true
+    @State private var receivesBetas = false
 
     enum Status: Equatable {
         case info(String)
@@ -76,6 +78,8 @@ struct SettingsView: View {
                 Text(footer).font(.footnote).foregroundStyle(.secondary)
             }
 
+            updatesSection
+
             Section {
                 HStack {
                     Button("Test System Two") { Task { await test() } }
@@ -96,6 +100,8 @@ struct SettingsView: View {
         .onAppear {
             NSApp.activate()
             apiKey = Keychain.secret(for: settings.systemTwoProvider.rawValue) ?? ""
+            checksForUpdates = controller.updater.automaticallyChecks
+            receivesBetas = controller.updater.receivesBetas
         }
         .task {
             let supported = await SpeechListener.supportedLocales.map(\.identifier)
@@ -106,6 +112,23 @@ struct SettingsView: View {
             apiKey = Keychain.secret(for: provider.rawValue) ?? ""
             models = []
             status = nil
+        }
+    }
+
+    /// Applied immediately, like Sparkle's own preferences.
+    private var updatesSection: some View {
+        Section("Updates") {
+            Toggle("Check for updates automatically", isOn: $checksForUpdates)
+                .onChange(of: checksForUpdates) { _, value in controller.updater.automaticallyChecks = value }
+            Toggle("Include beta versions", isOn: $receivesBetas)
+                .onChange(of: receivesBetas) { _, value in controller.updater.receivesBetas = value }
+            LabeledContent("Version") {
+                HStack {
+                    Text(verbatim: AppInfo.version).foregroundStyle(.secondary)
+                    Button("Check Now") { controller.updater.checkForUpdates() }
+                        .disabled(!controller.updater.canCheckForUpdates)
+                }
+            }
         }
     }
 

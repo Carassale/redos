@@ -8,6 +8,7 @@ import RedOSCore
 @Observable
 final class AppController {
     let permissions = PermissionCenter()
+    let updater = Updater()
     let registry = ActionRegistry(SystemActions.all)
     private(set) var systemOneDescription = ""
     private(set) var systemTwoDescription = ""

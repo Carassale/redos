@@ -29,6 +29,11 @@ struct MenuContent: View {
         }
         .keyboardShortcut(",")
 
+        Button("Check for Updates…") {
+            controller.updater.checkForUpdates()
+        }
+        .disabled(!controller.updater.canCheckForUpdates)
+
         Divider()
 
         Button {

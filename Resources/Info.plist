@@ -35,5 +35,13 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>RedOS listens for the wake word and your voice commands.</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/Carassale/redos/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>CJryRg7GxheIYDUQNkKYQ44ucv9o47ZTOCOtO4+CdHM=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

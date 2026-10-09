@@ -103,3 +103,11 @@
 "Exit code %lld" = "Codice di uscita %lld";
 "Done, no output." = "Fatto, nessun output.";
 "The command timed out." = "Il comando ha superato il tempo massimo.";
+
+/* Updates */
+"Check for Updates…" = "Controlla aggiornamenti…";
+"Updates" = "Aggiornamenti";
+"Check for updates automatically" = "Controlla automaticamente gli aggiornamenti";
+"Include beta versions" = "Includi versioni beta";
+"Version" = "Versione";
+"Check Now" = "Controlla ora";
