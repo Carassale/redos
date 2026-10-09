@@ -26,6 +26,13 @@ final class CommandPanelController {
     private var pendingConfirmation: CommandPanelModel.State?
     /// The current command came from the microphone: feedback is also spoken.
     private var isVoiceCommand = false
+    /// The panel is hidden on purpose while actions drive the Mac (keystrokes must not land in it).
+    private var isDrivingMac = false
+    /// A result (answer, error, confirmation) arrived while the panel was closed.
+    private var hasUnseenResult = false {
+        didSet { if hasUnseenResult != oldValue { onUnseenResultChange?(hasUnseenResult) } }
+    }
+    var onUnseenResultChange: (@MainActor (Bool) -> Void)?
     private var history: CommandHistory
     private lazy var panel: CommandPanel = {
         let panel = CommandPanel(
@@ -59,15 +66,20 @@ final class CommandPanelController {
         }
     }
 
+    /// Reopening keeps a request in progress and shows a result that arrived while the panel was closed.
     func show() {
-        if model.state == .working { return }
-        model.state = .idle
-        history.resetNavigation()
+        guard !isDrivingMac else { return }
+        let keepsState = model.state == .working || model.state == .listening || hasUnseenResult
+        hasUnseenResult = false
+        if !keepsState {
+            model.state = .idle
+            history.resetNavigation()
+            // Load the System One model while the user is still typing.
+            Task { [engine] in await engine.prepare() }
+        }
         position()
         panel.makeKeyAndOrderFront(nil)
         model.focusRequest += 1
-        // Load the System One model while the user is still typing.
-        Task { [engine] in await engine.prepare() }
     }
 
     private func hide() {
@@ -149,12 +161,17 @@ final class CommandPanelController {
 
     private func start(_ body: @escaping @MainActor () async -> Void) {
         work?.cancel()
-        work = Task { [model] in
+        work = Task { [weak self, model] in
             model.activity = nil
             await ActivityReporter.$handler.withValue({ activity in model.activity = activity }, operation: {
                 await body()
             })
             model.activity = nil
+            guard let self, !Task.isCancelled, !panel.isVisible else { return }
+            switch model.state {
+            case .answer, .message, .confirming, .confirmingPlan: hasUnseenResult = true
+            case .idle, .listening, .working: break
+            }
         }
     }
 
@@ -276,11 +293,13 @@ extension CommandPanelController {
         model.state = .working
         hide()
         hud.show(title)
+        isDrivingMac = true
         // Give focus back to the previous app before posting keyboard or mouse events.
         try? await Task.sleep(for: .milliseconds(150))
         let result = await work { [hud] step, request in
             hud.update("\(step) · \(CommandEngine.describe(request))")
         }
+        isDrivingMac = false
         hud.hide()
         switch result {
         case .success(let output?):

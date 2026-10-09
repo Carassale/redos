@@ -18,10 +18,12 @@ final class AppController {
     let registry = ActionRegistry(SystemActions.all)
     private(set) var systemOneDescription = ""
     private(set) var systemTwoDescription = ""
+    private(set) var hasUnseenResult = false
     @ObservationIgnored let commandPanel: CommandPanelController
 
     init() {
         commandPanel = CommandPanelController(engine: CommandEngine(registry: registry, audit: FileAuditLog()))
+        commandPanel.onUnseenResultChange = { [weak self] in self?.hasUnseenResult = $0 }
         reload()
     }
 

@@ -9,3 +9,5 @@ identifier_name:
   excluded: [id, x, y, to, op]
 nesting:
   type_level: 2 # Codable payloads with CodingKeys
+file_length:
+  warning: 450 # CommandPanelController keeps its private state in one file

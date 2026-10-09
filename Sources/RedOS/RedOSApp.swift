@@ -8,8 +8,11 @@ struct RedOSApp: App {
     private var controller: AppController { appDelegate.controller }
 
     var body: some Scene {
-        MenuBarExtra("RedOS", systemImage: "circle.hexagongrid.fill") {
+        MenuBarExtra {
             MenuContent(controller: controller)
+        } label: {
+            // Filled circle: an answer arrived while the panel was closed.
+            Image(systemName: controller.hasUnseenResult ? "circle.hexagongrid.circle.fill" : "circle.hexagongrid.fill")
         }
 
         Window("Permissions", id: WindowID.permissions) {
