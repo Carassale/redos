@@ -22,6 +22,8 @@ public enum Resolution: Sendable, Equatable {
     case agent(String)
     /// The question needs the web: run it with `runResearch`.
     case research(String, query: String)
+    /// A diagram or chart to draw: run it with `runDiagram`.
+    case diagram(String, description: String)
 }
 
 /// Progress callback for the HUD: 1-based step number and the action about to run.
@@ -44,6 +46,7 @@ public struct CommandEngine: Sendable {
     let writer: (any ChatCompleting)?
     let web: (any WebResearching)?
     let researcher: ResearchAgent?
+    let designer: DiagramDesigner?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
@@ -65,6 +68,7 @@ public struct CommandEngine: Sendable {
         writer: (any ChatCompleting)? = nil,
         web: (any WebResearching)? = nil,
         researcher: ResearchAgent? = nil,
+        designer: DiagramDesigner? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -81,6 +85,7 @@ public struct CommandEngine: Sendable {
         self.writer = writer
         self.web = web
         self.researcher = researcher
+        self.designer = designer
         self.permissions = permissions
         self.audit = audit
     }
@@ -104,6 +109,7 @@ public struct CommandEngine: Sendable {
             return .unrecognized
         }
         do {
+            await ActivityReporter.report(.understanding)
             switch try await router.route(input) {
             case .action(let request, let confidence):
                 return await check(
@@ -135,6 +141,7 @@ public struct CommandEngine: Sendable {
         }
         let result: PlanResult
         do {
+            await ActivityReporter.report(.thinking)
             result = try await planner.plan(await withFacts(input), registry: registry)
         } catch {
             await record(input, nil, .failed, route: .systemTwo, error: .failed(error.localizedDescription))
@@ -146,6 +153,9 @@ public struct CommandEngine: Sendable {
             }
             if let query = result.research, researcher != nil {
                 return .research(input, query: query)
+            }
+            if let description = result.diagram, designer != nil {
+                return .diagram(input, description: description)
             }
             await record(input, nil, result.answer == nil ? .unrecognized : .answered, route: .systemTwo)
             return result.answer.map(Resolution.answer) ?? .unrecognized

@@ -65,18 +65,22 @@ public struct OllamaClient: ChatCompleting, ModelListing {
     public func chat(
         _ messages: [ChatMessage], format: JSONValue? = nil, maxTokens: Int? = nil, topLogprobs: Int? = nil
     ) async throws -> ChatResponse {
+        // Long prompts (diagrams) need a larger context than Ollama's default; short ones keep the cached slot.
+        let characters = messages.reduce(0) { $0 + $1.content.count }
+        let needed = characters / 3 + (maxTokens ?? 1024)
+        let numCtx = characters > 12_000 ? min(32_768, (needed / 4096 + 1) * 4096) : nil
         let body = OllamaChatRequest(
             model: model,
             messages: messages,
             keepAlive: keepAlive,
-            options: .init(temperature: 0, numPredict: maxTokens),
+            options: .init(temperature: 0, numPredict: maxTokens, numCtx: numCtx),
             format: format,
             logprobs: topLogprobs == nil ? nil : true,
             topLogprobs: topLogprobs
         )
         let data: Data
         do {
-            data = try await post("api/chat", body: JSONEncoder().encode(body))
+            data = try await post("api/chat", body: JSONEncoder().encode(body), timeout: numCtx == nil ? 120 : 900)
         } catch SystemOneError.http(501) where format != nil {
             // Some models (e.g. qwen3.5) reject structured output: callers parse JSON from plain text.
             return try await chat(messages, format: nil, maxTokens: maxTokens, topLogprobs: topLogprobs)
@@ -102,8 +106,8 @@ public struct OllamaClient: ChatCompleting, ModelListing {
         return try JSONDecoder().decode(Tags.self, from: data).models.map(\.name).sorted()
     }
 
-    private func post(_ path: String, body: Data) async throws -> Data {
-        var request = URLRequest(url: baseURL.appending(path: path), timeoutInterval: 120)
+    private func post(_ path: String, body: Data, timeout: TimeInterval = 120) async throws -> Data {
+        var request = URLRequest(url: baseURL.appending(path: path), timeoutInterval: timeout)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
@@ -123,10 +127,12 @@ private struct OllamaChatRequest: Encodable {
     struct Options: Encodable {
         let temperature: Double
         let numPredict: Int?
+        let numCtx: Int?
 
         enum CodingKeys: String, CodingKey {
             case temperature
             case numPredict = "num_predict"
+            case numCtx = "num_ctx"
         }
     }
 

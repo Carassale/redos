@@ -62,12 +62,16 @@ final class AppController {
             locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers
         )
         let web = WebTools(locale: settings.voiceLocale)
+        let designer = Bundle.main.resourceURL
+            .flatMap { DiagramLibrary(directory: $0.appending(path: "DiagramDesign")) }
+            .map { DiagramDesigner(client: writer, library: $0) }
         commandPanel.update(
             engine: CommandEngine(
                 registry: registry, router: router, planner: planner, assistant: ModelPlanner(client: writer),
                 agent: ModelAgent(client: ollama), observer: AccessibilityObserver(),
                 routines: routines, memory: memory, writer: writer,
-                web: web, researcher: ResearchAgent(client: writer, tools: web), audit: FileAuditLog()
+                web: web, researcher: ResearchAgent(client: writer, tools: web), designer: designer,
+                audit: FileAuditLog()
             ),
             voice: voice
         )

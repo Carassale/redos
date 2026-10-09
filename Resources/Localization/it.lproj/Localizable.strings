@@ -150,3 +150,20 @@
 "Blocked address: %@" = "Indirizzo bloccato: %@";
 "The website replied HTTP %lld." = "Il sito ha risposto HTTP %lld.";
 "Not found: %@" = "Non trovato: %@";
+
+/* Activities, rich answers, diagrams */
+"Understanding the request…" = "Capisco la richiesta…";
+"Thinking…" = "Ragiono…";
+"Searching the web: %@" = "Cerco nel web: %@";
+"Reading the news: %@" = "Leggo le notizie: %@";
+"Reading %@" = "Leggo %@";
+"Checking the weather: %@" = "Controllo il meteo: %@";
+"Checking exchange rates: %@" = "Controllo il cambio: %@";
+"Writing the answer…" = "Scrivo la risposta…";
+"Drawing the diagram (%@)…" = "Disegno il diagramma (%@)…";
+"Working…" = "Elaborazione…";
+"Open Diagram" = "Apri diagramma";
+"Show in Finder" = "Mostra nel Finder";
+"Open in Browser" = "Apri nel browser";
+"Diagrams are not available." = "I diagrammi non sono disponibili.";
+"The model did not produce a diagram. Try a cloud provider for diagrams." = "Il modello non ha prodotto un diagramma. Per i diagrammi prova un provider cloud.";

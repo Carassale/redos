@@ -8,6 +8,7 @@ struct CommandPanelView: View {
     @Bindable var model: CommandPanelModel
     let onSubmit: () -> Void
     let onCancel: () -> Void
+    let onOpenDiagram: (Diagram) -> Void
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -58,9 +59,17 @@ struct CommandPanelView: View {
     private var status: some View {
         switch model.state {
         case .working:
-            if let progress = model.progress {
-                Text(verbatim: progress).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+            let activity = model.activity
+            Label {
+                Text(verbatim: activity?.title ?? String(localized: "Working…")).lineLimit(1)
+            } icon: {
+                Image(systemName: activity?.symbol ?? "sparkles")
+                    .symbolEffect(.pulse, options: .repeating)
             }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .contentTransition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: activity)
         case .idle, .listening:
             EmptyView()
         case .confirming(let command):
@@ -82,22 +91,17 @@ struct CommandPanelView: View {
         case .message(let text, let isError):
             Label(text, systemImage: isError ? "xmark.octagon" : "checkmark.circle")
                 .foregroundStyle(isError ? .red : .secondary)
-        case .answer(let text):
+        case .answer(let answer):
             Label {
                 // Long answers scroll inside the fixed-size panel.
                 ViewThatFits(in: .vertical) {
-                    answer(text)
-                    ScrollView { answer(text) }.frame(height: 320)
+                    AnswerView(answer: answer, onOpenDiagram: onOpenDiagram)
+                    ScrollView { AnswerView(answer: answer, onOpenDiagram: onOpenDiagram) }.frame(height: 340)
                 }
             } icon: {
                 Image(systemName: "sparkles").foregroundStyle(.red)
             }
         }
-    }
-
-    private func answer(_ text: String) -> some View {
-        Text(verbatim: text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private static func describe(_ step: ActionRequest) -> String {

@@ -21,6 +21,7 @@ final class CommandPanelController {
     /// The command being resolved or run: the kill switch cancels it.
     private var work: Task<Void, Never>?
     private lazy var hud = HUDController { [weak self] in self?.stop() }
+    private let diagrams = DiagramWindowController()
     /// A confirmation that a spoken "sì" / "no" can answer.
     private var pendingConfirmation: CommandPanelModel.State?
     /// The current command came from the microphone: feedback is also spoken.
@@ -31,7 +32,8 @@ final class CommandPanelController {
             rootView: CommandPanelView(
                 model: model,
                 onSubmit: { [weak self] in self?.submit() },
-                onCancel: { [weak self] in self?.cancel() }
+                onCancel: { [weak self] in self?.cancel() },
+                onOpenDiagram: { [weak self] in self?.openDiagram($0) }
             )
         )
         panel.onKeyDown = { [weak self] event in self?.handleKey(event) ?? false }
@@ -147,7 +149,13 @@ final class CommandPanelController {
 
     private func start(_ body: @escaping @MainActor () async -> Void) {
         work?.cancel()
-        work = Task { await body() }
+        work = Task { [model] in
+            model.activity = nil
+            await ActivityReporter.$handler.withValue({ activity in model.activity = activity }, operation: {
+                await body()
+            })
+            model.activity = nil
+        }
     }
 
     private func submit() {
@@ -210,8 +218,10 @@ final class CommandPanelController {
             await run(task) { [engine] in await engine.runAgent(task, onStep: $0) }
         case .research(let question, let query):
             await research(question, query: query)
+        case .diagram(let request, let description):
+            await diagram(request, description: description)
         case .answer(let text):
-            model.state = .answer(text)
+            model.state = .answer(.init(text: text))
             say(text)
         }
     }
@@ -232,41 +242,6 @@ final class CommandPanelController {
     private func fail(_ message: String, spoken: String = "Something went wrong, details are on screen.") {
         model.state = .message(message, isError: true)
         sayPhrase(spoken)
-    }
-
-    /// Hides the panel and shows the HUD while the work drives the Mac; outputs (screen text, command
-    /// results, the agent's summary) come back in the panel.
-    private func run(
-        _ title: String, _ work: (_ onStep: @escaping StepHandler) async -> Result<String?, ActionError>
-    ) async {
-        model.state = .working
-        hide()
-        hud.show(title)
-        // Give focus back to the previous app before posting keyboard or mouse events.
-        try? await Task.sleep(for: .milliseconds(150))
-        let result = await work { [hud] step, request in
-            hud.update("\(step) · \(CommandEngine.describe(request))")
-        }
-        hud.hide()
-        switch result {
-        case .success(let output?):
-            model.state = .idle
-            show()
-            model.state = .answer(output)
-            say(String(output.prefix(400)))
-        case .success(nil):
-            model.text = ""
-            model.state = .idle
-        case .failure(.cancelled):
-            model.state = .idle
-            show()
-            model.state = .message(ActionError.cancelled.localizedDescription, isError: false)
-            sayPhrase("Stopped.")
-        case .failure(let error):
-            model.state = .idle
-            show()
-            fail(error.localizedDescription)
-        }
     }
 
     private func cancel() {
@@ -293,20 +268,73 @@ final class CommandPanelController {
 }
 
 extension CommandPanelController {
+    /// Hides the panel and shows the HUD while the work drives the Mac; outputs (screen text, command
+    /// results, the agent's summary) come back in the panel.
+    private func run(
+        _ title: String, _ work: (_ onStep: @escaping StepHandler) async -> Result<String?, ActionError>
+    ) async {
+        model.state = .working
+        hide()
+        hud.show(title)
+        // Give focus back to the previous app before posting keyboard or mouse events.
+        try? await Task.sleep(for: .milliseconds(150))
+        let result = await work { [hud] step, request in
+            hud.update("\(step) · \(CommandEngine.describe(request))")
+        }
+        hud.hide()
+        switch result {
+        case .success(let output?):
+            model.state = .idle
+            show()
+            model.state = .answer(.init(text: output))
+            say(String(output.prefix(400)))
+        case .success(nil):
+            model.text = ""
+            model.state = .idle
+        case .failure(.cancelled):
+            model.state = .idle
+            show()
+            model.state = .message(ActionError.cancelled.localizedDescription, isError: false)
+            sayPhrase("Stopped.")
+        case .failure(let error):
+            model.state = .idle
+            show()
+            fail(error.localizedDescription)
+        }
+    }
+
     /// Web research keeps the panel open with the current step; Esc or the kill switch stop it.
     private func research(_ question: String, query: String) async {
         model.state = .working
-        let result = await engine.runResearch(question, query: query) { [model] step in model.progress = step }
-        model.progress = nil
-        switch result {
+        switch await engine.runResearch(question, query: query) {
         case .success(let answer):
-            model.state = .answer(answer.display)
+            model.state = .answer(.init(
+                text: answer.text, sources: answer.sourceSites, image: answer.image, chart: answer.chart
+            ))
             say(answer.text)
         case .failure(.cancelled):
             model.state = .idle
         case .failure(let error):
             fail(error.localizedDescription)
         }
+    }
+
+    /// Diagrams open in their own window; the panel keeps a button to reopen them.
+    private func diagram(_ request: String, description: String) async {
+        model.state = .working
+        switch await engine.runDiagram(request, description: description) {
+        case .success(let diagram):
+            model.state = .answer(.init(text: diagram.title, diagram: diagram))
+            openDiagram(diagram)
+        case .failure(.cancelled):
+            model.state = .idle
+        case .failure(let error):
+            fail(error.localizedDescription)
+        }
+    }
+
+    func openDiagram(_ diagram: Diagram) {
+        diagrams.show(diagram)
     }
 
     /// Model answers, spoken as they are.
@@ -346,7 +374,7 @@ extension CommandPanelController {
         case .ready(let command, _): [command.request]
         case .plan(let plan, _): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
-        case .unrecognized, .unavailable, .answer, .agent, .research: []
+        case .unrecognized, .unavailable, .answer, .agent, .research, .diagram: []
         }
         let isSensitive = requests.contains { request in
             engine.registry.action(for: request.actionID)?.parameters

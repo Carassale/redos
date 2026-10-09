@@ -7,9 +7,20 @@ private struct FakeWeb: WebResearching {
         "1. Dune - Parte due — https://it.wikipedia.org/wiki/Dune\n   regia di Denis Villeneuve"
     }
     func news(_ query: String) async throws -> String { "- 2026-10-09: Notizia — https://example.com/n" }
-    func read(_ url: URL) async throws -> String { "Pagina \(url.absoluteString)" }
-    func weather(_ place: String) async throws -> String { "\(place): 18°C, overcast" }
+    func read(_ url: URL) async throws -> ToolOutput {
+        ToolOutput("Pagina \(url.absoluteString)\nImage: https://img.example.com/poster.jpg",
+                   image: URL(string: "https://img.example.com/poster.jpg"))
+    }
+    func weather(_ place: String) async throws -> ToolOutput {
+        ToolOutput("\(place): 18°C, overcast", chart: FakeWeb.chart)
+    }
     func exchangeRate(from: String, to: String) async throws -> (rate: Double, date: String) { (0.9, "2026-10-08") }
+    func rateHistory(from: String, to: String) async throws -> ChartSpec { FakeWeb.chart }
+
+    static let chart = ChartSpec(
+        title: "Milano · °C", kind: .line, unit: "°C",
+        series: [.init(name: "Max", points: [.init("ven 9", 20), .init("sab 10", 21)])]
+    )
 }
 
 /// Replies in order and records the user messages it receives.
@@ -116,6 +127,7 @@ struct ResearchTests {
         #expect(answer.text == "A Milano ci sono 18 gradi.")
         #expect(answer.sources == [URL(string: "https://open-meteo.com")!])
         #expect(answer.display.hasSuffix("open-meteo.com"))
+        #expect(answer.chart == FakeWeb.chart)
         let messages = await chat.messages
         // Weather questions start with the model, which picks the place.
         #expect(messages.first?.hasSuffix("Findings:\nnone") == true)
@@ -140,4 +152,64 @@ struct ResearchTests {
         #expect(await engine.resolve(question) == .research(question, query: "meteo Milano"))
         #expect(await engine.resolve("2+2") == .answer("2+2 = 4"))
     }
+
+    @Test func answersShowOnlyImagesFoundAndValidCharts() async throws {
+        let chat = ScriptedChat([
+            #"{"tool":"read","url":"https://it.wikipedia.org/wiki/Dune"}"#,
+            #"{"answer":"Villeneuve.","image":"https://evil.example.com/x.jpg","#
+                + #""chart":{"title":"t","kind":"bar","points":[{"label":"a","value":1}]}}"#,
+        ])
+        let answer = try await ResearchAgent(client: chat, tools: FakeWeb()).answer("chi ha diretto Dune?", query: nil)
+        // Not in the findings: the page's own image is used instead; a one-point chart is dropped.
+        #expect(answer.image == URL(string: "https://img.example.com/poster.jpg"))
+        #expect(answer.chart == nil)
+    }
+
+    @Test func activitiesReachTheReporter() async throws {
+        let seen = ActivityLog()
+        let chat = ScriptedChat([#"{"tool":"weather","place":"Roma"}"#, #"{"answer":"Sole."}"#])
+        _ = try await ActivityReporter.$handler.withValue({ seen.append($0) }, operation: {
+            try await ResearchAgent(client: chat, tools: FakeWeb()).answer("meteo Roma?", query: "meteo Roma")
+        })
+        #expect(await seen.items.contains(.checkingWeather("Roma")))
+        #expect(await seen.items.contains(.writing))
+    }
+
+    @Test func findsPreviewImages() throws {
+        let base = try #require(URL(string: "https://example.com/film"))
+        let html = #"<meta property="og:image" content="https://cdn.example.com/a.jpg"><meta name="x">"#
+        #expect(WebTools.previewImage(in: html, base: base) == URL(string: "https://cdn.example.com/a.jpg"))
+        let local = #"<meta content="http://192.168.1.2/a.jpg" property="og:image">"#
+        #expect(WebTools.previewImage(in: local, base: base) == nil)
+    }
+
+    @Test func plannerRoutesDiagrams() async throws {
+        let chat = ScriptedChat([#"{"steps":[],"diagram":"Flusso di login"}"#])
+        let result = try await ModelPlanner(client: chat).plan("disegna il login", registry: ActionRegistry([]))
+        #expect(result.diagram == "Flusso di login")
+    }
+
+    @Test func diagramLibraryReadsTheBundledSkill() throws {
+        let directory = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().appending(path: "Resources/DiagramDesign")
+        let library = try #require(DiagramLibrary(directory: directory))
+        #expect(library.types.count == 44)
+        #expect(library.types.contains { $0.id == "flowchart" && $0.name == "Flowchart" })
+        let prompt = DiagramDesigner(client: ScriptedChat([]), library: library)
+            .designPrompt(for: try #require(library.types.first { $0.id == "bar" }))
+        #expect(prompt.contains("# Visual type: Bar chart"))
+        #expect(prompt.contains("<svg"))
+    }
+
+    @Test func extractsDiagramHTML() {
+        let reply = "Ecco:\n```html\n<!DOCTYPE html><html><body><svg></svg><script>alert(1)</script></body></html>\n```"
+        #expect(DiagramDesigner.document(in: reply) == "<!DOCTYPE html><html><body><svg></svg></body></html>")
+        #expect(DiagramDesigner.document(in: "<svg viewBox='0 0 1 1'></svg>")?.hasPrefix("<!DOCTYPE html>") == true)
+        #expect(DiagramDesigner.document(in: "no diagram") == nil)
+    }
+}
+
+private final class ActivityLog: Sendable {
+    @MainActor private(set) var items: [Activity] = []
+    @MainActor func append(_ activity: Activity) { items.append(activity) }
 }

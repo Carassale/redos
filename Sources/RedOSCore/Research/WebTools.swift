@@ -1,12 +1,29 @@
 import Foundation
 
+/// A tool result: text for the model, plus what the answer can show.
+public struct ToolOutput: Sendable, Equatable {
+    public let text: String
+    public var chart: ChartSpec?
+    public var image: URL?
+
+    public init(_ text: String, chart: ChartSpec? = nil, image: URL? = nil) {
+        self.text = text
+        self.chart = chart
+        self.image = image
+    }
+}
+
 /// Web sources for the research agent; every result is compact plain text for a model.
 public protocol WebResearching: Sendable {
     func search(_ query: String) async throws -> String
     func news(_ query: String) async throws -> String
-    func read(_ url: URL) async throws -> String
-    func weather(_ place: String) async throws -> String
+    /// Page text, and its preview image (og:image) if any.
+    func read(_ url: URL) async throws -> ToolOutput
+    /// Forecast text and a temperature chart.
+    func weather(_ place: String) async throws -> ToolOutput
     func exchangeRate(from: String, to: String) async throws -> (rate: Double, date: String)
+    /// The last month of daily rates, as a chart.
+    func rateHistory(from: String, to: String) async throws -> ChartSpec
 }
 
 public enum WebError: Error, LocalizedError, Equatable {
@@ -65,12 +82,28 @@ public struct WebTools: WebResearching {
         return items.map { "- \($0.date): \($0.title)" }.joined(separator: "\n")
     }
 
-    public func read(_ url: URL) async throws -> String {
+    public func read(_ url: URL) async throws -> ToolOutput {
         guard Self.isPublicWebAddress(url) else { throw WebError.blockedAddress(url.absoluteString) }
-        return String(HTMLText.plain(from: try await text(at: url)).prefix(5000))
+        let html = try await text(at: url)
+        let image = Self.previewImage(in: html, base: url)
+        let text = String(HTMLText.plain(from: html).prefix(5000))
+        return ToolOutput(text + (image.map { "\nImage: \($0.absoluteString)" } ?? ""), image: image)
     }
 
-    public func weather(_ place: String) async throws -> String {
+    /// The page's og:image / twitter:image, if it is a public https address.
+    static func previewImage(in html: String, base: URL) -> URL? {
+        let meta = html.matches(of: /(?i)<meta\b[^>]*>/).map { String($0.output) }
+        for tag in meta where tag.range(of: #"(?:og|twitter):image(?::url)?["']"#, options: .regularExpression) != nil {
+            guard let content = tag.firstMatch(of: /(?i)content=["']([^"']+)["']/)?.1,
+                  let url = URL(string: HTMLText.decodeEntities(String(content)), relativeTo: base)?.absoluteURL,
+                  url.scheme == "https", isPublicWebAddress(url)
+            else { continue }
+            return url
+        }
+        return nil
+    }
+
+    public func weather(_ place: String) async throws -> ToolOutput {
         var geocode = URLComponents(string: "https://geocoding-api.open-meteo.com/v1/search")!
         geocode.queryItems = [
             .init(name: "name", value: place), .init(name: "count", value: "1"),
@@ -92,7 +125,24 @@ public struct WebTools: WebResearching {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         let response = try decoder.decode(ForecastResponse.self, from: try await data(at: forecast.url!))
-        return response.summary(for: [location.name, location.country].compactMap(\.self).joined(separator: ", "))
+        let name = [location.name, location.country].compactMap(\.self).joined(separator: ", ")
+        return ToolOutput(response.summary(for: name), chart: response.chart(for: location.name, language: language))
+    }
+
+    public func rateHistory(from: String, to: String) async throws -> ChartSpec {
+        let start = Date.now.addingTimeInterval(-30 * 86400).formatted(.iso8601.year().month().day())
+        var components = URLComponents(string: "https://api.frankfurter.dev/v1/\(start)..")!
+        components.queryItems = [
+            .init(name: "base", value: from.uppercased()), .init(name: "symbols", value: to.uppercased()),
+        ]
+        let response = try JSONDecoder().decode(HistoryResponse.self, from: try await data(at: components.url!))
+        let points = response.rates.sorted { $0.key < $1.key }.compactMap { day, rates in
+            rates[to.uppercased()].map { ChartSpec.Point(String(day.suffix(5)), $0) }
+        }
+        return ChartSpec(
+            title: "\(from.uppercased()) → \(to.uppercased())", kind: .line, unit: to.uppercased(),
+            series: [.init(name: to.uppercased(), points: points)]
+        )
     }
 
     public func exchangeRate(from: String, to: String) async throws -> (rate: Double, date: String) {
@@ -107,7 +157,17 @@ public struct WebTools: WebResearching {
 
     // MARK: - HTTP
 
+    /// One retry on temporary server errors (Open-Meteo answers 503 now and then).
     private func data(at url: URL) async throws -> Data {
+        do {
+            return try await fetch(url)
+        } catch WebError.httpStatus(let status) where (502...504).contains(status) {
+            try await Task.sleep(for: .seconds(1))
+            return try await fetch(url)
+        }
+    }
+
+    private func fetch(_ url: URL) async throws -> Data {
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("\(language)-\(region),\(language);q=0.9,en;q=0.5", forHTTPHeaderField: "Accept-Language")
@@ -301,6 +361,22 @@ private struct ForecastResponse: Decodable {
         return lines.joined(separator: "\n")
     }
 
+    /// Daily minimum and maximum temperatures, labelled with short weekdays.
+    func chart(for place: String, language: String) -> ChartSpec {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        let labels = daily.time.map { day in
+            parser.date(from: day).map {
+                $0.formatted(.dateTime.weekday(.abbreviated).day().locale(Locale(identifier: language)))
+            } ?? day
+        }
+        let series = [("Max", daily.temperature2mMax), ("Min", daily.temperature2mMin)].map { name, values in
+            ChartSpec.Series(name: name, points: zip(labels, values).map { ChartSpec.Point($0, $1) })
+        }
+        return ChartSpec(title: "\(place) · °C", kind: .line, unit: "°C", series: series)
+    }
+
     /// WMO weather interpretation codes.
     private static let descriptions: [(ClosedRange<Int>, String)] = [
         (0...0, "clear sky"), (1...2, "partly cloudy"), (3...3, "overcast"), (45...48, "fog"),
@@ -316,4 +392,8 @@ private struct ForecastResponse: Decodable {
 private struct RatesResponse: Decodable {
     let date: String
     let rates: [String: Double]
+}
+
+private struct HistoryResponse: Decodable {
+    let rates: [String: [String: Double]]
 }

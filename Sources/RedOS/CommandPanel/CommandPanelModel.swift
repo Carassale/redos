@@ -1,9 +1,19 @@
+import Foundation
 import Observation
 import RedOSCore
 
 @MainActor
 @Observable
 final class CommandPanelModel {
+    /// Text plus what can be shown with it.
+    struct Answer: Equatable {
+        var text: String
+        var sources: [String] = []
+        var image: URL?
+        var chart: ChartSpec?
+        var diagram: Diagram?
+    }
+
     enum State: Equatable {
         case idle
         case listening
@@ -11,12 +21,12 @@ final class CommandPanelModel {
         case confirming(ResolvedCommand)
         case confirmingPlan(ResolvedPlan)
         case message(String, isError: Bool)
-        case answer(String)
+        case answer(Answer)
     }
 
     var text = ""
     var state = State.idle
-    /// What a long-running request is doing, e.g. the web search in progress.
-    var progress: String?
+    /// What a running request is doing (understanding, searching the web…).
+    var activity: Activity?
     var focusRequest = 0
 }

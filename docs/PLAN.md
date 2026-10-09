@@ -184,7 +184,25 @@ flowchart LR
 - Live (gemma4:e4b locale): "chi ha diretto Dune parte due?" 10 s, "che tempo fa domani a Milano?" 7 s,
   "ultime notizie su Apple" 12 s; 4/4 domande attuali instradate alla ricerca. Eval System Two 83.9%.
 - Crash risolti: `.glassEffect` nel pannello borderless andava in ricorsione infinita in SwiftUI (sostituito da
-  `.regularMaterial`); callback Carbon degli hotkey ora passano dalla main queue.
+  `.regularMaterial`); callback Carbon degli hotkey ora passano dalla main queue. Pannello e HUD hanno ora
+  finestre di dimensione fissa: il ridimensionamento automatico (`sizingOptions`) innescava un ciclo di layout
+  riprodotto con una prova di stress (crash prima, 3/3 senza crash dopo).
+
+### Risposte ricche e diagrammi (09/10/2026)
+
+- **Attività** nel pannello: `ActivityReporter` (TaskLocal) riceve le fasi senza passare callback ovunque:
+  "Capisco la richiesta…" (System One), "Ragiono…" (System Two), "Cerco nel web: …", "Leggo …",
+  "Controllo il meteo / il cambio", "Scrivo la risposta…", "Disegno il diagramma (…)".
+- **Risposte ricche**: testo, grafico Swift Charts (`ChartSpec`: meteo min/max automatico, cambio ultimo mese,
+  serie numeriche proposte dal modello e validate), immagine (og:image delle pagine lette: solo URL presenti
+  nei risultati, https pubblici) e fonti.
+- **Diagrammi** con [diagram-design](https://github.com/cathrynlavery/diagram-design) (MIT, v2.6): guida di
+  stile, primitive, riferimenti e un esempio per ciascuno dei 44 tipi in `Resources/DiagramDesign` (1.2 MB).
+  Il planner risponde `{"diagram":"…"}`; `DiagramDesigner` sceglie il tipo (1 chiamata) e genera l'HTML/SVG con
+  guida + tipo + esempio come contesto (~20k token), salvato in `Application Support/RedOS/Diagrams` e mostrato
+  in una finestra WebKit senza JavaScript (link nel browser). Copilot `claude-haiku-5.5`: flowchart del login
+  con 2FA in ~90 s, fedele allo stile. Con Ollama il contesto si allarga da solo (`num_ctx` fino a 32k) ma
+  la qualità è inferiore: per i diagrammi conviene un provider cloud.
 
 ## Architettura
 

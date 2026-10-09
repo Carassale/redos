@@ -56,7 +56,8 @@ The agent never runs dangerous actions (shell) and treats screen content as data
 | `traduci in inglese il testo selezionato` / `summarize the selected text` | answer about the selection |
 | `2+2`, `quanto fa 3,5 per 4`, `20% di 150` | instant, exact (no model) |
 | `converti 10 miglia in km`, `100 °F in °C`, `100 dollari in euro` | instant (currencies: ECB rates) |
-| `che tempo fa domani a Milano?`, `ultime notizie su Apple`, `chi ha diretto Dune parte due?` | web research with sources |
+| `che tempo fa domani a Milano?`, `ultime notizie su Apple`, `chi ha diretto Dune parte due?` | web research with sources, charts and images |
+| `disegna il flusso di login con 2FA`, `grafico a barre: gennaio 10, febbraio 15` | diagram window (HTML/SVG) |
 
 Questions go through an orchestrator: arithmetic and conversions are computed locally; System Two answers
 stable knowledge directly and sends anything current to a research agent that searches the web (DuckDuckGo),
@@ -128,4 +129,5 @@ Privacy & Security > Open Anyway). Updates through Sparkle do not ask again.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Diagrams follow [diagram-design](https://github.com/cathrynlavery/diagram-design) by Cathryn
+Lavery (MIT), bundled in `Resources/DiagramDesign` with its [license](Resources/DiagramDesign/LICENSE).
