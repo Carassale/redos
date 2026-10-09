@@ -45,11 +45,9 @@ final class AppController {
             systemOne: systemOne,
             extractor: ArgumentExtractor(client: extraction),
             warmUp: [ollama, extraction],
-            threshold: settings.threshold
+            // Accuracy: unsure single actions go to System Two instead of running.
+            threshold: settings.prefersAccuracy ? max(settings.threshold, 0.85) : settings.threshold
         )
-        // Multi-step plans stay on the local decision model (~1 s, cached prompt); the configured provider
-        // answers questions and unclear commands.
-        let planner = ModelPlanner(client: ollama)
         let writer: any ChatCompleting
         do {
             writer = try systemTwoClient(settings, local: ollama)
@@ -60,17 +58,26 @@ final class AppController {
             writer = ollama
             systemTwoDescription = error.localizedDescription
         }
+        // Accuracy: multi-step plans and the screen agent use the provider too; speed keeps them on the
+        // local model (~1 s, cached prompt).
+        let thinker: any ChatCompleting = settings.prefersAccuracy ? writer : ollama
+        Task { await writer.preload() }
         let voice = VoiceSettings(
             locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers
         )
         let web = WebTools(locale: settings.voiceLocale)
+        // Speed: diagrams think less (about 15% faster with Copilot); accuracy keeps the default effort.
+        let drawer = settings.prefersAccuracy
+            ? writer
+            : (try? systemTwoClient(settings, local: ollama, reasoningEffort: "low")) ?? writer
         let designer = Bundle.main.resourceURL
             .flatMap { DiagramLibrary(directory: $0.appending(path: "DiagramDesign")) }
-            .map { DiagramDesigner(client: writer, library: $0) }
+            .map { DiagramDesigner(client: drawer, library: $0) }
         commandPanel.update(
             engine: CommandEngine(
-                registry: registry, router: router, planner: planner, assistant: ModelPlanner(client: writer),
-                agent: ModelAgent(client: ollama), observer: AccessibilityObserver(),
+                registry: registry, router: router, planner: ModelPlanner(client: thinker),
+                assistant: ModelPlanner(client: writer),
+                agent: ModelAgent(client: thinker), observer: AccessibilityObserver(),
                 routines: routines, memory: memory, writer: writer,
                 web: web, researcher: ResearchAgent(client: writer, tools: web), designer: designer,
                 audit: FileAuditLog()
@@ -80,9 +87,11 @@ final class AppController {
     }
 
     /// Cloud providers are metered and fall back to the local model past the daily limit or when offline.
-    private func systemTwoClient(_ settings: AppSettings, local: OllamaClient) throws -> any ChatCompleting {
+    private func systemTwoClient(
+        _ settings: AppSettings, local: OllamaClient, reasoningEffort: String? = nil
+    ) throws -> any ChatCompleting {
         if settings.offlineOnly { return local }
-        let client = try settings.systemTwo().client()
+        let client = try settings.systemTwo().client(reasoningEffort: reasoningEffort)
         guard settings.systemTwoProvider != .ollama else { return client }
         return MeteredClient(inner: client, fallback: local, store: usage, dailyLimit: settings.dailyCloudLimit)
     }

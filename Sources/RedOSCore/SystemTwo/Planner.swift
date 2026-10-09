@@ -16,16 +16,19 @@ public struct PlanResult: Sendable, Equatable {
     public let research: String?
     /// What to draw: the request asks for a diagram or a chart (handled by the diagram designer).
     public let diagram: String?
+    /// A question about what is on screen: answered by reading it.
+    public let look: Bool
 
     public init(
         steps: [ActionRequest], answer: String? = nil, needsScreen: Bool = false, research: String? = nil,
-        diagram: String? = nil
+        diagram: String? = nil, look: Bool = false
     ) {
         self.steps = steps
         self.answer = answer
         self.needsScreen = needsScreen
         self.research = research
         self.diagram = diagram
+        self.look = look
     }
 }
 
@@ -66,6 +69,7 @@ public struct ModelPlanner: Planning {
         let agent: Bool?
         let research: String?
         let diagram: String?
+        let look: Bool?
     }
 
     /// Constant prompt over ~512 tokens: Gemma-style models then reuse the KV cache (~1 s saved).
@@ -82,6 +86,9 @@ public struct ModelPlanner: Planning {
 
     private static let guidance = """
         Use only these actions and parameters, and only the steps the user asked for.
+        "On screen now" tells which app and window the user is looking at: "this", "questa", "qui" refer to it.
+        Questions about what is on screen (this page, this email, this merge request, what is written here)
+        reply {"steps":[],"look":true}: the screen will be read to answer. Never act to answer a question.
         A website for a named browser is one url.open step with the app argument.
         On-screen buttons, links, menus and fields named by the user are ui.press / ui.fill steps.
         Reply with compact JSON only: {"steps":[{"action":"<id>","arguments":{"<parameter>":<value>}}]}
@@ -93,6 +100,7 @@ public struct ModelPlanner: Planning {
         Questions about anything current or worth checking online (news, weather, prices, exchange rates,
         sports results, recent or upcoming releases, schedules, who holds a role now, facts you are unsure
         of) need the web: reply {"steps":[],"research":"<web search query in the user's language>"}.
+        Requests to see photos or pictures of someone or something also need the web (research).
         Requests to draw, diagram, chart or visualize something (flows, architectures, timelines, org
         charts, comparisons, data the user gives) reply {"steps":[],"diagram":"<what to draw, with all
         names, steps and numbers from the request>"}.
@@ -113,6 +121,9 @@ public struct ModelPlanner: Planning {
         messaggi, ma posso aprire Slack."}
         "press the Login button" -> {"steps":[{"action":"ui.press","arguments":{"target":"Login"}}]}
         "apri il primo menu" -> {"steps":[],"agent":true}
+        "a chi è assegnata questa issue?" -> {"steps":[],"look":true}
+        "what does this page say about pricing?" -> {"steps":[],"look":true}
+        "mostrami una foto della Mole Antonelliana" -> {"steps":[],"research":"Mole Antonelliana foto"}
         "apri il terzo link della pagina" -> {"steps":[],"agent":true}
         "compila il modulo con nome Mario" -> {"steps":[],"agent":true}
         "porta il puntatore in alto a destra" -> {"steps":[],"answer":"Dimmi le coordinate, ad \
@@ -156,7 +167,8 @@ public struct ModelPlanner: Planning {
         let diagram = plan.diagram?.trimmingCharacters(in: .whitespacesAndNewlines)
         return PlanResult(
             steps: requests, answer: answer?.isEmpty == false ? answer : nil, needsScreen: plan.agent == true,
-            research: research?.isEmpty == false ? research : nil, diagram: diagram?.isEmpty == false ? diagram : nil
+            research: research?.isEmpty == false ? research : nil, diagram: diagram?.isEmpty == false ? diagram : nil,
+            look: plan.look == true
         )
     }
 }

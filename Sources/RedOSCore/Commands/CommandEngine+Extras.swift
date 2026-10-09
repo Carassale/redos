@@ -39,6 +39,10 @@ extension CommandEngine {
         if let resolution = await resolveSelection(input) {
             return resolution
         }
+        // "a chi è assegnata questa MR?": read the screen and answer, never act.
+        if ScreenQuestion.matches(input), let resolution = await resolveLook(input) {
+            return resolution
+        }
         // "apri il mio editor": only System Two sees the remembered facts.
         if await refersToRememberedFacts(input) {
             return await escalate(input, to: planner ?? assistant, guess: nil, confidence: 1)
@@ -102,7 +106,7 @@ extension CommandEngine {
     private func createRoutine(_ name: String, body: String, store: RoutineStore) async -> Resolution {
         var steps = parser.parse(body).map { [$0] } ?? parser.parsePlan(body)
         if steps == nil, let planner = planner ?? assistant {
-            steps = try? await planner.plan(await withFacts(body), registry: registry).steps
+            steps = try? await planner.plan(await withContext(body), registry: registry).steps
         }
         guard let steps, !steps.isEmpty else {
             return .answer(String(localized: "I couldn't turn “\(body)” into actions."))
@@ -201,10 +205,18 @@ extension CommandEngine {
         return !(await memory.facts()).isEmpty
     }
 
-    func withFacts(_ input: String) async -> String {
-        guard let facts = await memory?.facts(), !facts.isEmpty else { return input }
-        let list = facts.map { "- \($0)" }.joined(separator: "\n")
-        return "Facts the user told you (use them only if relevant):\n\(list)\nRequest: \(input)"
+    /// Remembered facts and the frontmost window, so "il mio editor" or "questa MR" make sense to System Two.
+    func withContext(_ input: String) async -> String {
+        var lines: [String] = []
+        if let facts = await memory?.facts(), !facts.isEmpty {
+            lines.append("Facts the user told you (use them only if relevant):")
+            lines += facts.map { "- \($0)" }
+        }
+        if let front = await observer?.frontmost() {
+            lines.append("On screen now: \(front)")
+        }
+        guard !lines.isEmpty else { return input }
+        return lines.joined(separator: "\n") + "\nRequest: \(input)"
     }
 
     private static func missingRoutine(_ name: String) -> Resolution {

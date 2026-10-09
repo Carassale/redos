@@ -80,6 +80,17 @@ public struct AccessibilityObserver: ScreenObserving {
         let focused = AXUIElementCreateSystemWide().element(kAXFocusedUIElementAttribute)
         return focused?.string(kAXSelectedTextAttribute)
     }
+
+    @MainActor
+    public func screenContent() -> ScreenContent? {
+        guard AXIsProcessTrusted() else { return nil }
+        return try? ScreenReader.content()
+    }
+
+    @MainActor
+    public func frontmost() -> String? {
+        AXIsProcessTrusted() ? ScreenReader.frontmost() : nil
+    }
 }
 
 extension ActionArguments {

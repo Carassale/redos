@@ -55,7 +55,8 @@ public struct SystemTwoConfiguration: Sendable, Equatable {
         "\(provider.displayName) · \(model)"
     }
 
-    public func client() throws -> any ChatCompleting & ModelListing {
+    /// `reasoningEffort` applies to Copilot only (e.g. "low" for long, well-specified outputs like diagrams).
+    public func client(reasoningEffort: String? = nil) throws -> any ChatCompleting & ModelListing {
         if provider.needsAPIKey, apiKey?.isEmpty ?? true {
             throw ProviderError.missingAPIKey(provider.displayName)
         }
@@ -67,7 +68,9 @@ public struct SystemTwoConfiguration: Sendable, Equatable {
             guard let copilotPath, FileManager.default.isExecutableFile(atPath: copilotPath) else {
                 throw ProviderError.commandFailed(String(localized: "Copilot CLI not found. Set its path in Settings."))
             }
-            return CopilotCLIClient(executable: URL(filePath: copilotPath), model: model)
+            return CopilotACPClient(
+                executable: URL(filePath: copilotPath), model: model, reasoningEffort: reasoningEffort
+            )
         case .openAI:
             return OpenAICompatibleClient(
                 service: "OpenAI", baseURL: URL(string: "https://api.openai.com/v1")!, apiKey: key, model: model

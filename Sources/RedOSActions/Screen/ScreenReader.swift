@@ -117,6 +117,38 @@ enum ScreenReader {
         return snapshot
     }
 
+    /// Everything readable in the frontmost window (text, link and button labels, page address), for
+    /// answering questions about it.
+    static func content(maxCharacters: Int = 16000) throws(ActionError) -> ScreenContent {
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            throw .failed(String(localized: "No app is in front."))
+        }
+        let root = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(root, 2)
+        let window = root.element(kAXFocusedWindowAttribute) ?? root.element(kAXMainWindowAttribute)
+        var builder = Builder(bounds: nil, reading: true)
+        if let window { builder.visit(window, depth: 0) }
+        var text = ""
+        for line in builder.texts {
+            guard text.count + line.count < maxCharacters else { break }
+            text += line + "\n"
+        }
+        return ScreenContent(
+            app: app.localizedName ?? "", window: window?.string(kAXTitleAttribute),
+            address: builder.webAddress?.absoluteString, text: text
+        )
+    }
+
+    /// "Google Chrome — Merge request !12", for routing context.
+    static func frontmost() -> String? {
+        guard let app = NSWorkspace.shared.frontmostApplication, let name = app.localizedName else { return nil }
+        let root = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(root, 0.3)
+        let title = (root.element(kAXFocusedWindowAttribute) ?? root.element(kAXMainWindowAttribute))?
+            .string(kAXTitleAttribute)
+        return title.map { "\(name) — \($0)" } ?? name
+    }
+
     /// "#12" picks from the latest snapshot; a name is matched on screen, then in the app's menus.
     static func find(_ target: String) throws(ActionError) -> ScreenElement {
         if target.hasPrefix("#"), let id = Int(target.dropFirst()) {
@@ -159,27 +191,36 @@ enum ScreenReader {
 
     @MainActor
     private struct Builder {
-        static let maxElements = 150
-        static let maxTexts = 80
-        static let maxVisited = 5000
+        static let maxVisited = 8000
 
         let bounds: CGRect?
+        /// Reading mode keeps much more text, including link and button labels, for answering questions.
+        let reading: Bool
         var elements: [ScreenElement] = []
         var texts: [String] = []
+        var webAddress: URL?
         private var seenTexts: Set<String> = []
         private var visited = 0
+        private var maxElements: Int { reading ? 3000 : 150 }
+        private var maxTexts: Int { reading ? 1500 : 80 }
+        private var lineLimit: Int { reading ? 1000 : 160 }
 
-        init(bounds: CGRect?) {
+        init(bounds: CGRect?, reading: Bool = false) {
             self.bounds = bounds
+            self.reading = reading
         }
 
         mutating func visit(_ element: AXUIElement, depth: Int) {
-            guard depth < 40, visited < Self.maxVisited, elements.count < Self.maxElements else { return }
+            guard depth < 40, visited < Self.maxVisited, elements.count < maxElements else { return }
             visited += 1
             let role = element.role
+            if role == "AXWebArea", webAddress == nil, let url = element.value("AXURL") as? URL {
+                webAddress = url
+            }
             if let kind = ScreenReader.kinds[role] {
                 if element.bool(kAXEnabledAttribute) != false, isVisible(element) {
                     add(element, kind: kind, isField: kind == "field")
+                    if reading, let label = elements.last?.label, !label.isEmpty { addText(label) }
                 }
                 // Text inside buttons and links is their label; menus are listed separately.
                 if kind != "field" { return }
@@ -228,15 +269,15 @@ enum ScreenReader {
         }
 
         private mutating func append(_ element: AXUIElement, kind: String, label: String, value: String?) {
-            guard elements.count < Self.maxElements else { return }
+            guard elements.count < maxElements else { return }
             elements.append(
                 ScreenElement(id: elements.count + 1, kind: kind, label: label, value: value, element: element)
             )
         }
 
         private mutating func addText(_ text: String) {
-            let line = String(text.replacingOccurrences(of: "\n", with: " ").prefix(160))
-            guard texts.count < Self.maxTexts, seenTexts.insert(line).inserted else { return }
+            let line = String(text.replacingOccurrences(of: "\n", with: " ").prefix(lineLimit))
+            guard texts.count < maxTexts, seenTexts.insert(line).inserted else { return }
             texts.append(line)
         }
 

@@ -72,6 +72,11 @@ struct SettingsView: View {
                         Button("Detect") { Task { await detectCopilot() } }
                     }
                 }
+                Picker("Priority", selection: $settings.prefersAccuracy) {
+                    Text("Accuracy").tag(true)
+                    Text("Speed").tag(false)
+                }
+                .pickerStyle(.segmented)
                 Toggle("Offline only (use the local model)", isOn: $settings.offlineOnly)
                 if settings.systemTwoProvider != .ollama, !settings.offlineOnly {
                     Stepper(value: $settings.dailyCloudLimit, in: 0...1000, step: 10) {
@@ -146,9 +151,10 @@ struct SettingsView: View {
     }
 
     private var footer: LocalizedStringKey {
-        let cloud: LocalizedStringKey =
-            "Questions and unclear commands are sent to this provider. Multi-step tasks are always planned on this Mac."
-        return settings.systemTwoProvider == .ollama ? "Everything stays on this Mac." : cloud
+        guard settings.systemTwoProvider != .ollama else { return "Everything stays on this Mac." }
+        return settings.prefersAccuracy
+            ? "Accuracy: questions, multi-step tasks and screen tasks go to this provider; simple commands stay local."
+            : "Speed: questions go to this provider; multi-step and screen tasks are planned on this Mac."
     }
 
     private func save() {

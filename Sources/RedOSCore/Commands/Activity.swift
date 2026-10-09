@@ -11,6 +11,9 @@ public enum Activity: Sendable, Equatable {
     case checkingRates(String)
     case writing
     case drawing(String)
+    /// A long reply is streaming in.
+    case receiving(characters: Int)
+    case readingScreen(String)
 
     public var title: String {
         switch self {
@@ -23,6 +26,8 @@ public enum Activity: Sendable, Equatable {
         case .checkingRates(let pair): String(localized: "Checking exchange rates: \(pair)")
         case .writing: String(localized: "Writing the answer…")
         case .drawing(let type): String(localized: "Drawing the diagram (\(type))…")
+        case .receiving(let characters): String(localized: "Writing… \(characters) characters")
+        case .readingScreen(let app): String(localized: "Reading the screen: \(app)")
         }
     }
 
@@ -38,6 +43,8 @@ public enum Activity: Sendable, Equatable {
         case .checkingRates: "arrow.left.arrow.right.circle"
         case .writing: "text.cursor"
         case .drawing: "chart.xyaxis.line"
+        case .receiving: "text.append"
+        case .readingScreen: "macwindow"
         }
     }
 }

@@ -204,6 +204,24 @@ flowchart LR
   con 2FA in ~90 s, fedele allo stile. Con Ollama il contesto si allarga da solo (`num_ctx` fino a 32k) ma
   la qualità è inferiore: per i diagrammi conviene un provider cloud.
 
+### Comprensione e velocità (09/10/2026)
+
+- **Problema**: "a chi è assegnata questa MR" finiva all'agente schermo, che apriva il Terminale e scriveva;
+  ogni chiamata Copilot costava ~5 s (avvio della CLI) e i diagrammi oltre 1 minuto senza segnali.
+- **Domande sullo schermo**: `ScreenQuestion` (deterministico: verbo interrogativo + riferimento deittico
+  "questa pagina/MR", "sullo schermo") e l'opzione `look` del planner leggono il contenuto della finestra
+  (Accessibility, fino a 16k caratteri, URL della pagina) e rispondono senza agire.
+- **Contesto**: System Two riceve "On screen now: app — titolo finestra" per risolvere "questa/this".
+- **Agente limitato**: solo `ui.press`, `ui.fill`, `ui.read`, `scroll`, `url.open`, `app.open`.
+- **Priorità** (Impostazioni): Precisione (predefinita: soglia System One almeno 0.85, piani e agente al
+  provider) o Velocità (piani e agente sul modello locale; diagrammi con ragionamento ridotto).
+- **Copilot via ACP**: un processo `copilot --acp` persistente invece di `copilot -p` per ogni chiamata.
+  `--available-tools=none` toglie davvero i tool (con la lista vuota il modello provava a creare il file
+  del diagramma, negato: risposta vuota nel ~50% dei casi) e riduce l'input da ~19k a ~3.5k token.
+  `claude-haiku-5.5`: risposte e piani 1–2.5 s (prima 4–6 s), domanda sullo schermo 2.4 s.
+- **Diagrammi**: restano 60–90 s (~5k token di HTML + ragionamento; `--reasoning-effort low` ~15% più
+  veloce, `none` non risponde), ma il pannello mostra "Scrivo… N caratteri" mentre arrivano.
+
 ## Architettura
 
 ```mermaid

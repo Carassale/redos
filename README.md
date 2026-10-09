@@ -42,9 +42,13 @@ answers can be read aloud (Settings > Voice).
 | `leggimi lo schermo` / `read the screen` | `ui.read` |
 | `esegui il comando git status` / `run the command ls` | `shell.run` (always confirmed) |
 | `apri il primo menu` / `open the second result` | screen agent (looks, acts, repeats) |
+| `a chi è assegnata questa MR?` / `what does this page say about pricing?` | answer from the screen (never acts) |
 
 While RedOS drives the Mac a HUD shows each step: **Stop** or **⌃⌥⎋** (kill switch) halts it at once.
-The agent never runs dangerous actions (shell) and treats screen content as data, not instructions.
+The agent only presses, fills, reads, scrolls and opens apps or links: it never types into the focused
+app, runs dangerous actions (shell) or follows instructions found on screen. Questions about what is on
+screen ("questa pagina", "this MR") are answered by reading it, without acting; System Two also knows
+the frontmost app and window title.
 
 | Routines, memory, selection | |
 |---|---|
@@ -92,12 +96,13 @@ defaults write dev.redos.RedOS systemOne.jevURL http://127.0.0.1:8080  # then re
 ## System Two (multi-step tasks, questions)
 
 What System One does not run goes to System Two, which returns a plan (always confirmed) or a short
-answer. Choose the provider in **Settings…**: Ollama (local, default), GitHub Copilot (via the
-official `copilot` CLI, tools disabled), OpenAI, Anthropic Claude, Google Gemini. API keys are stored
-in the Keychain.
+answer. Choose the provider in **Settings…**: Ollama (local, default), GitHub Copilot (a persistent
+`copilot --acp` process, no tools: ~1–2 s per call), OpenAI, Anthropic Claude, Google Gemini. API keys
+are stored in the Keychain. **Priority: Accuracy** (default) sends unsure commands, plans and the screen
+agent to this provider; **Speed** keeps plans and the agent on the local model.
 
 ```sh
-make test-live-copilot COPILOT_MODEL=claude-haiku-5.5   # check Copilot CLI as System Two
+make test-live-copilot COPILOT_MODEL=claude-haiku-5.5   # check Copilot as System Two
 ```
 
 ## Updates and releases

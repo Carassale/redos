@@ -161,6 +161,13 @@
 "Checking exchange rates: %@" = "Controllo il cambio: %@";
 "Writing the answer…" = "Scrivo la risposta…";
 "Drawing the diagram (%@)…" = "Disegno il diagramma (%@)…";
+"Writing… %lld characters" = "Scrivo… %lld caratteri";
+"Reading the screen: %@" = "Leggo lo schermo: %@";
+"Priority" = "Priorità";
+"Accuracy" = "Precisione";
+"Speed" = "Velocità";
+"Accuracy: questions, multi-step tasks and screen tasks go to this provider; simple commands stay local." = "Precisione: domande, attività in più passi e sullo schermo vanno a questo provider; i comandi semplici restano locali.";
+"Speed: questions go to this provider; multi-step and screen tasks are planned on this Mac." = "Velocità: le domande vanno a questo provider; le attività in più passi e sullo schermo sono pianificate su questo Mac.";
 "Working…" = "Elaborazione…";
 "Open Diagram" = "Apri diagramma";
 "Show in Finder" = "Mostra nel Finder";

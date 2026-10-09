@@ -142,12 +142,15 @@ public struct CommandEngine: Sendable {
         let result: PlanResult
         do {
             await ActivityReporter.report(.thinking)
-            result = try await planner.plan(await withFacts(input), registry: registry)
+            result = try await planner.plan(await withContext(input), registry: registry)
         } catch {
             await record(input, nil, .failed, route: .systemTwo, error: .failed(error.localizedDescription))
             return .unavailable(error.localizedDescription)
         }
         guard !result.steps.isEmpty else {
+            if result.look, let resolution = await resolveLook(input) {
+                return resolution
+            }
             if result.needsScreen, agent != nil, observer != nil {
                 return .agent(input)
             }
@@ -297,7 +300,7 @@ extension CommandEngine {
     /// Returns the agent's closing summary.
     public func runAgent(_ task: String, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
         guard let agent, let observer else { return .failure(.failed(String(localized: "No agent configured."))) }
-        let context = await withFacts(task)
+        let context = await withContext(task)
         var history: [String] = []
         var repeats = 0
         var previous: ActionRequest?
@@ -364,6 +367,7 @@ extension CommandEngine {
     }
 
     private func isAllowedForAgent(_ request: ActionRequest) -> Bool {
+        guard ModelAgent.allowedActions.contains(request.actionID) else { return false }
         guard let action = registry.action(for: request.actionID) else { return true }
         return action.risk < .dangerous && policy.decide(for: action) != .deny
     }

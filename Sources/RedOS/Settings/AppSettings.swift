@@ -14,6 +14,8 @@ struct AppSettings: Equatable {
     var offlineOnly: Bool
     /// Cloud requests per day before switching to the local model; 0 = no limit.
     var dailyCloudLimit: Int
+    /// Plans and the screen agent use System Two, and System One acts only when very sure.
+    var prefersAccuracy: Bool
     var voiceLocale: String
     var speaksAnswers: Bool
 
@@ -28,6 +30,7 @@ struct AppSettings: Equatable {
         copilotPath = defaults.string(forKey: "systemTwo.copilotPath") ?? ""
         offlineOnly = defaults.bool(forKey: "systemTwo.offlineOnly")
         dailyCloudLimit = defaults.integer(forKey: "systemTwo.dailyLimit")
+        prefersAccuracy = defaults.object(forKey: "routing.prefersAccuracy") as? Bool ?? true
         voiceLocale = defaults.string(forKey: "voice.locale") ?? Self.defaultVoiceLocale
         speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
     }
@@ -47,6 +50,7 @@ struct AppSettings: Equatable {
         defaults.set(copilotPath, forKey: "systemTwo.copilotPath")
         defaults.set(offlineOnly, forKey: "systemTwo.offlineOnly")
         defaults.set(dailyCloudLimit, forKey: "systemTwo.dailyLimit")
+        defaults.set(prefersAccuracy, forKey: "routing.prefersAccuracy")
         defaults.set(voiceLocale, forKey: "voice.locale")
         defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
     }
