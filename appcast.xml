@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.5.1</title>
+      <pubDate>Fri, 09 Oct 2026 13:10:50 +0000</pubDate>
+      <sparkle:version>20</sparkle:version>
+      <sparkle:shortVersionString>0.5.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>chore: version 0.5.1</li><li>ci: bump actions/checkout to v7 and actions/cache to v6</li><li>ci(M9): GitHub Actions CI and release workflows, release secrets setup, Dependabot</li><li>feat(M8): routines with schedule and app triggers, persistent memory, selected-text requests, cloud usage limit and offline mode</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.5.1/RedOS-0.5.1.zip" type="application/octet-stream" sparkle:edSignature="kugBt02cszrTC9J+ohwNo0iqvGdhUGyj9TFXMJv9eaBOUhk9SE1yZ/CXhJi4OJ7e+t63SC7EZXwYGyMTWNi3DQ==" length="1571595"/>
+    </item>
+    <item>
       <title>RedOS 0.5.0</title>
       <pubDate>Fri, 09 Oct 2026 14:29:06 +0200</pubDate>
       <sparkle:version>15</sparkle:version>
