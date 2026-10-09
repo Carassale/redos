@@ -73,6 +73,9 @@
 "Downloading the speech model…" = "Scarico il modello vocale…";
 "I didn't hear anything." = "Non ho sentito nulla.";
 "Press Return to confirm." = "Premi Invio per confermare.";
+"Say yes to confirm." = "Dimmi sì per confermare.";
+"Something went wrong, details are on screen." = "Qualcosa non ha funzionato, trovi i dettagli sullo schermo.";
+"Questions and unclear commands are sent to this provider. Multi-step tasks are always planned on this Mac." = "Domande e comandi poco chiari vengono inviati a questo provider. Le richieste in più passi sono sempre pianificate su questo Mac.";
 "Speech recognition is not available for %@." = "Il riconoscimento vocale non è disponibile per %@.";
 "The microphone is not available." = "Il microfono non è disponibile.";
 "Commands that System One cannot handle, with the list of available actions, are sent to this provider." = "I comandi che System One non gestisce, con l'elenco delle azioni disponibili, vengono inviati a questo provider.";

@@ -38,19 +38,24 @@ final class AppController {
             warmUp: [ollama, extraction],
             threshold: settings.threshold
         )
-        let planner: (any Planning)?
+        // Multi-step plans stay on the local decision model (~1 s, cached prompt); the configured provider
+        // answers questions and unclear commands.
+        let planner = ModelPlanner(client: ollama)
+        let assistant: (any Planning)?
         do {
-            planner = ModelPlanner(client: try settings.systemTwo().client())
+            assistant = ModelPlanner(client: try settings.systemTwo().client())
             systemTwoDescription = settings.systemTwo().displayName
         } catch {
-            planner = nil
+            assistant = nil
             systemTwoDescription = error.localizedDescription
         }
         let voice = VoiceSettings(
             locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers
         )
         commandPanel.update(
-            engine: CommandEngine(registry: registry, router: router, planner: planner, audit: FileAuditLog()),
+            engine: CommandEngine(
+                registry: registry, router: router, planner: planner, assistant: assistant, audit: FileAuditLog()
+            ),
             voice: voice
         )
     }

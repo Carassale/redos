@@ -45,33 +45,59 @@ struct PlannerTests {
                 parameters: [ActionParameter("x", .integer), ActionParameter("y", .integer)],
                 recorder: recorder
             ),
+            FakeAction(id: "text.type", risk: .moderate, parameters: [ActionParameter("text")], recorder: recorder),
         ]
     }
 
     private func engine(
-        _ steps: [ActionRequest], answer: String? = nil, decision: RouteDecision = .multiStep(confidence: 0.9)
+        _ steps: [ActionRequest], answer: String? = nil, decision: RouteDecision = .multiStep(confidence: 0.9),
+        assistant: PlanResult? = nil
     ) -> CommandEngine {
         CommandEngine(
             registry: ActionRegistry(actions),
             router: FixedRouter(decision: decision),
             planner: StaticPlanner(result: PlanResult(steps: steps, answer: answer)),
+            assistant: assistant.map(StaticPlanner.init),
             audit: audit
         )
     }
 
-    @Test func multiStepRequestBecomesAPlanThatRunsInOrder() async throws {
-        let steps = [
-            ActionRequest("app.open", ["name": "Google Chrome"]),
-            ActionRequest("url.open", ["url": "google.com", "app": "Google Chrome"]),
-        ]
+    @Test func safeModelPlanRunsWithoutConfirmationAndInOrder() async throws {
+        let steps = [ActionRequest("app.open", ["name": "Safari"]), ActionRequest("mouse.move", ["x": "1", "y": "2"])]
         let engine = engine(steps)
-        let resolution = await engine.resolve("apri chrome e naviga su google.com")
-        #expect(resolution == .plan(ResolvedPlan(input: "apri chrome e naviga su google.com", steps: steps)))
+        let resolution = await engine.resolve("fammi vedere Safari col mouse in alto")
+        let expected = ResolvedPlan(input: "fammi vedere Safari col mouse in alto", steps: steps)
+        #expect(resolution == .plan(expected, needsConfirmation: false))
 
-        guard case .plan(let plan) = resolution else { return }
-        _ = try await engine.execute(plan).get()
+        _ = try await engine.execute(expected).get()
         #expect(recorder.runs == steps.map(\.arguments))
         #expect(await audit.entries.map(\.route) == [.systemTwo, .systemTwo])
+    }
+
+    @Test func modelPlanWithNonSafeStepNeedsConfirmation() async {
+        let steps = [ActionRequest("app.open", ["name": "Notes"]), ActionRequest("text.type", ["text": "ciao"])]
+        guard case .plan(_, let needsConfirmation) = await engine(steps).resolve("prendi nota: ciao") else {
+            Issue.record("Expected a plan")
+            return
+        }
+        #expect(needsConfirmation)
+    }
+
+    @Test func compositeFastPathCommandIsAnInstantPlan() async {
+        let resolution = await engine([]).resolve("apri Note e scrivi ciao")
+        let steps = [ActionRequest("app.open", ["name": "Note"]), ActionRequest("text.type", ["text": "ciao"])]
+        #expect(resolution == .plan(
+            ResolvedPlan(input: "apri Note e scrivi ciao", steps: steps, route: .fastPath), needsConfirmation: false
+        ))
+    }
+
+    @Test func multiStepGoesToPlannerAndQuestionsToAssistant() async {
+        let assistant = PlanResult(steps: [], answer: "391")
+        let step = ActionRequest("app.open", ["name": "Safari"])
+        let planned = await engine([step], decision: .multiStep(confidence: 0.9), assistant: assistant).resolve("x")
+        #expect(planned == .plan(ResolvedPlan(input: "x", steps: [step]), needsConfirmation: false))
+        let asked = await engine([step], decision: .noAction(confidence: 0.9), assistant: assistant).resolve("y")
+        #expect(asked == .answer("391"))
     }
 
     @Test func emptyOrInvalidPlansAreNotRun() async {

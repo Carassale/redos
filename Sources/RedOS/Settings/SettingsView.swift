@@ -110,9 +110,9 @@ struct SettingsView: View {
     }
 
     private var footer: LocalizedStringKey {
-        settings.systemTwoProvider == .ollama
-            ? "Everything stays on this Mac."
-            : "Commands that System One cannot handle, with the list of available actions, are sent to this provider."
+        let cloud: LocalizedStringKey =
+            "Questions and unclear commands are sent to this provider. Multi-step tasks are always planned on this Mac."
+        return settings.systemTwoProvider == .ollama ? "Everything stays on this Mac." : cloud
     }
 
     private func save() {

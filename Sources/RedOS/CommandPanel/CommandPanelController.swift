@@ -18,6 +18,8 @@ final class CommandPanelController {
     private let listener = SpeechListener()
     private let speaker = Speaker()
     private var listening: Task<Void, Never>?
+    /// A confirmation that a spoken "sì" / "no" can answer.
+    private var pendingConfirmation: CommandPanelModel.State?
     /// The current command came from the microphone: feedback is also spoken.
     private var isVoiceCommand = false
     private var history: CommandHistory
@@ -76,6 +78,10 @@ final class CommandPanelController {
             return
         }
         speaker.stop()
+        pendingConfirmation = switch model.state {
+        case .confirming, .confirmingPlan: model.state
+        default: nil
+        }
         show()
         model.text = ""
         model.state = .listening
@@ -109,14 +115,33 @@ final class CommandPanelController {
                 return
             }
             isVoiceCommand = true
+            if let pending = pendingConfirmation, let confirmed = ConfirmationReply.parse(text) {
+                pendingConfirmation = nil
+                model.state = pending
+                if confirmed {
+                    submit()
+                } else {
+                    cancel()
+                }
+                return
+            }
+            pendingConfirmation = nil
             model.state = .working
             await resolve(text)
         }
     }
 
+    /// Model answers, spoken as they are.
     private func say(_ text: String) {
         guard isVoiceCommand, voice.speaksAnswers else { return }
         speaker.speak(text, locale: voice.locale)
+    }
+
+    /// App phrases, spoken in the voice language even when the interface uses another one.
+    private func sayPhrase(_ key: String) {
+        let language = voice.locale.language.languageCode?.identifier ?? "en"
+        let bundle = Bundle.main.path(forResource: language, ofType: "lproj").flatMap(Bundle.init(path:))
+        say(bundle?.localizedString(forKey: key, value: key, table: nil) ?? key)
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
@@ -141,7 +166,7 @@ final class CommandPanelController {
     private func remember(_ input: String, _ resolution: Resolution) {
         let requests: [ActionRequest] = switch resolution {
         case .ready(let command, _): [command.request]
-        case .plan(let plan): plan.steps
+        case .plan(let plan, _): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
         case .unrecognized, .unavailable, .answer: []
         }
@@ -185,7 +210,7 @@ final class CommandPanelController {
         remember(input, resolution)
         switch resolution {
         case .unrecognized:
-            fail(String(localized: "I don't know how to do that yet."))
+            fail(String(localized: "I don't know how to do that yet."), spoken: "I don't know how to do that yet.")
         case .unavailable(let reason):
             fail(reason)
         case .invalid(_, let error):
@@ -195,22 +220,27 @@ final class CommandPanelController {
         case .ready(let command, let needsConfirmation):
             if needsConfirmation {
                 model.state = .confirming(command)
-                say(String(localized: "Press Return to confirm."))
+                sayPhrase("Say yes to confirm.")
             } else {
                 await run { [engine] in await engine.execute(command) }
             }
-        case .plan(let plan):
-            model.state = .confirmingPlan(plan)
-            say(String(localized: "Press Return to confirm."))
+        case .plan(let plan, let needsConfirmation):
+            if needsConfirmation {
+                model.state = .confirmingPlan(plan)
+                sayPhrase("Say yes to confirm.")
+            } else {
+                await run { [engine] in await engine.execute(plan) }
+            }
         case .answer(let text):
             model.state = .answer(text)
             say(text)
         }
     }
 
-    private func fail(_ message: String) {
+    /// Details stay on screen; the voice gets a short phrase in its own language.
+    private func fail(_ message: String, spoken: String = "Something went wrong, details are on screen.") {
         model.state = .message(message, isError: true)
-        say(message)
+        sayPhrase(spoken)
     }
 
     private func run(_ work: () async -> Result<Void, ActionError>) async {

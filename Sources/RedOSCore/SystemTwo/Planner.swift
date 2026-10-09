@@ -3,6 +3,7 @@ import Foundation
 public struct ResolvedPlan: Sendable, Equatable {
     public let input: String
     public let steps: [ActionRequest]
+    public var route: AuditEntry.Route = .systemTwo
 }
 
 /// System Two output: actions to run, or a short reply when nothing should be run.

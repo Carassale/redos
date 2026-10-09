@@ -14,8 +14,8 @@ public enum Resolution: Sendable, Equatable {
     case invalid(ActionRequest, ActionError)
     case denied(ActionRequest)
     case ready(ResolvedCommand, needsConfirmation: Bool)
-    /// Plans are always shown to the user and confirmed before running.
-    case plan(ResolvedPlan)
+    /// Fast-path plans follow the policy; model-written plans run unattended only if every step is `safe`.
+    case plan(ResolvedPlan, needsConfirmation: Bool)
     /// System Two replied with text instead of actions (questions, things it cannot do).
     case answer(String)
 }
@@ -29,15 +29,19 @@ public struct CommandEngine: Sendable {
     public var policy: Policy
     private let router: (any CommandRouting)?
     private let planner: (any Planning)?
+    private let assistant: (any Planning)?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
+    /// `planner` handles multi-step requests (fast, local); `assistant` questions and unclear commands
+    /// (any provider, defaults to `planner`).
     public init(
         registry: ActionRegistry,
         parser: FastPathParser = FastPathParser(),
         policy: Policy = Policy(),
         router: (any CommandRouting)? = nil,
         planner: (any Planning)? = nil,
+        assistant: (any Planning)? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -46,6 +50,7 @@ public struct CommandEngine: Sendable {
         self.policy = policy
         self.router = router
         self.planner = planner
+        self.assistant = assistant
         self.permissions = permissions
         self.audit = audit
     }
@@ -58,6 +63,9 @@ public struct CommandEngine: Sendable {
         if let request = parser.parse(input) {
             return await check(ResolvedCommand(input: input, request: request, route: .fastPath, confidence: nil))
         }
+        if let steps = parser.parsePlan(input) {
+            return await check(ResolvedPlan(input: input, steps: steps, route: .fastPath))
+        }
         guard let router else {
             await record(input, nil, .unrecognized)
             return .unrecognized
@@ -68,10 +76,14 @@ public struct CommandEngine: Sendable {
                 return await check(
                     ResolvedCommand(input: input, request: request, route: .systemOne, confidence: confidence)
                 )
-            case .noAction(let confidence), .multiStep(let confidence):
-                return await escalate(input, guess: nil, confidence: confidence)
+            case .noAction(let confidence):
+                return await escalate(input, to: assistant ?? planner, guess: nil, confidence: confidence)
+            case .multiStep(let confidence):
+                return await escalate(input, to: planner, guess: nil, confidence: confidence)
             case .uncertain(let actionID, let confidence):
-                return await escalate(input, guess: ActionRequest(actionID), confidence: confidence)
+                return await escalate(
+                    input, to: assistant ?? planner, guess: ActionRequest(actionID), confidence: confidence
+                )
             }
         } catch {
             let actionError = ActionError.failed(error.localizedDescription)
@@ -81,7 +93,9 @@ public struct CommandEngine: Sendable {
     }
 
     /// Hands the request to System Two; without one, System One's verdict is final.
-    private func escalate(_ input: String, guess: ActionRequest?, confidence: Double) async -> Resolution {
+    private func escalate(
+        _ input: String, to planner: (any Planning)?, guess: ActionRequest?, confidence: Double
+    ) async -> Resolution {
         guard let planner else {
             await record(input, guess, .unrecognized, route: .systemOne, confidence: confidence)
             return .unrecognized
@@ -97,14 +111,22 @@ public struct CommandEngine: Sendable {
             await record(input, nil, result.answer == nil ? .unrecognized : .answered, route: .systemTwo)
             return result.answer.map(Resolution.answer) ?? .unrecognized
         }
-        for step in result.steps {
-            let command = ResolvedCommand(input: input, request: step, route: .systemTwo, confidence: nil)
+        return await check(ResolvedPlan(input: input, steps: PlanSimplifier.simplify(result.steps), route: .systemTwo))
+    }
+
+    private func check(_ plan: ResolvedPlan) async -> Resolution {
+        var needsConfirmation = false
+        for step in plan.steps {
+            let command = ResolvedCommand(input: plan.input, request: step, route: plan.route, confidence: nil)
             switch await check(command) {
-            case .ready: continue
-            case let other: return other
+            case .ready(_, let confirm):
+                let risk = registry.action(for: step.actionID)?.risk ?? .dangerous
+                needsConfirmation = needsConfirmation || confirm || (plan.route == .systemTwo && risk > .safe)
+            case let other:
+                return other
             }
         }
-        return .plan(ResolvedPlan(input: input, steps: result.steps))
+        return .plan(plan, needsConfirmation: needsConfirmation)
     }
 
     private func check(_ command: ResolvedCommand) async -> Resolution {
@@ -151,7 +173,7 @@ public struct CommandEngine: Sendable {
     }
 
     private func commands(of plan: ResolvedPlan) -> [ResolvedCommand] {
-        plan.steps.map { ResolvedCommand(input: plan.input, request: $0, route: .systemTwo, confidence: nil) }
+        plan.steps.map { ResolvedCommand(input: plan.input, request: $0, route: plan.route, confidence: nil) }
     }
 
     public func execute(_ command: ResolvedCommand) async -> Result<Void, ActionError> {

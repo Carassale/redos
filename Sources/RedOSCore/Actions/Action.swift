@@ -13,6 +13,8 @@ public struct ActionParameter: Sendable, Equatable {
         case string
         case integer
         case oneOf([String])
+        /// An http(s) address, see `WebAddress`.
+        case webAddress
     }
 
     public let name: String

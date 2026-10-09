@@ -46,6 +46,32 @@ public struct FastPathParser: Sendable {
         return vocabularies.lazy.compactMap { parse(text, with: $0) }.first
     }
 
+    /// A composite command whose every part is a fast-path command, e.g. "apri Chrome e vai su google.com".
+    public func parsePlan(_ input: String) -> [ActionRequest]? {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        for vocabulary in vocabularies {
+            let parts = split(text, on: vocabulary.connectors)
+            guard parts.count > 1, parts.count <= 6 else { continue }
+            let requests = parts.compactMap(parse)
+            if requests.count == parts.count {
+                return PlanSimplifier.simplify(requests)
+            }
+        }
+        return nil
+    }
+
+    /// Splits on commas and whole-word connectors ("e", "poi", "and then").
+    private func split(_ text: String, on connectors: [String]) -> [String] {
+        let words = connectors.sorted { $0.count > $1.count }
+            .map { NSRegularExpression.escapedPattern(for: $0) }
+            .joined(separator: "|")
+        let pattern = "\\s*,\\s*(?:(?:\(words))\\s+)?|\\s+(?:\(words))\\s+"
+        guard !words.isEmpty, let separator = try? Regex(pattern) else { return [text] }
+        return text.split(separator: separator.ignoresCase())
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
     private func parse(_ text: String, with vocabulary: Vocabulary) -> ActionRequest? {
         // Typing first, so "type open safari" types the text instead of opening an app.
         if let rest = remainder(of: text, after: vocabulary.typeText) {
@@ -156,7 +182,7 @@ extension FastPathParser.Vocabulary {
         click: ["click", "click at"],
         moveMouse: ["move mouse to", "move the mouse to", "move mouse", "move the mouse"],
         openURL: ["go to", "browse to", "navigate to", "open website", "open the website", "open the site"],
-        connectors: ["and", "then"],
+        connectors: ["and then", "and", "then"],
         courtesies: ["please", "for me"]
     )
 
@@ -171,8 +197,11 @@ extension FastPathParser.Vocabulary {
         ],
         click: ["clicca", "clic", "click", "clicca a", "clicca in"],
         moveMouse: ["muovi il mouse a", "muovi il mouse su", "muovi il mouse", "sposta il mouse a", "sposta il mouse"],
-        openURL: ["vai su", "vai a", "naviga su", "naviga a", "apri il sito"],
-        connectors: ["e", "poi", "quindi"],
+        openURL: [
+            "vai su", "vai a", "vai sul sito", "vai al sito", "naviga su", "naviga a", "naviga sul sito",
+            "apri il sito",
+        ],
+        connectors: ["e poi", "e", "poi", "quindi"],
         courtesies: ["per favore", "per piacere", "grazie"]
     )
 }

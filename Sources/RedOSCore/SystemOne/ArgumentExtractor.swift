@@ -57,6 +57,7 @@ public struct ArgumentExtractor: Sendable {
         case .string: " (string)"
         case .integer: " (integer)"
         case .oneOf(let options): " (one of: \(options.joined(separator: ", ")))"
+        case .webAddress: " (web address)"
         }
     }
 }

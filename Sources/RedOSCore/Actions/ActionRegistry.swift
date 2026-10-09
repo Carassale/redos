@@ -27,15 +27,17 @@ public struct ActionRegistry: Sendable {
                 if parameter.isRequired { throw .missingArgument(parameter.name) }
                 continue
             }
-            switch parameter.kind {
-            case .string:
-                break
-            case .integer:
-                guard Int(value) != nil else { throw .invalidArgument(parameter.name, value) }
-            case .oneOf(let options):
-                guard options.contains(value) else { throw .invalidArgument(parameter.name, value) }
-            }
+            guard Self.accepts(value, for: parameter.kind) else { throw .invalidArgument(parameter.name, value) }
         }
         return action
+    }
+
+    private static func accepts(_ value: String, for kind: ActionParameter.Kind) -> Bool {
+        switch kind {
+        case .string: true
+        case .integer: Int(value) != nil
+        case .oneOf(let options): options.contains(value)
+        case .webAddress: WebAddress.url(from: value) != nil
+        }
     }
 }

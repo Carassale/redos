@@ -111,6 +111,18 @@ Candidati provati con `make eval` (78 comandi) e `RedOSEval --system-two` (30 ri
 | Azione singola (System One + argomenti) | 1.74 s | **0.64 s** |
 | Domanda / più passi (System One + System Two locale) | ~4.8 s | **~1.3 s** |
 
+### Flusso multi-step rivisto
+
+- Comandi composti da parti semplici ("apri Chrome e vai su bip.red", "apri Note e poi scrivi...")
+  diventano un piano **istantaneo** dal fast path (divisione su virgole/congiunzioni, 0 ms).
+- Gli altri multi-step vanno sempre al **planner locale** (gemma4:e4b, ~1 s); il provider configurato
+  (es. Copilot) riceve solo domande e comandi poco chiari.
+- `PlanSimplifier`: niente avvii ripetuti; "apri browser + apri URL" diventa un solo `url.open`.
+- Conferma solo se serve: piani dal fast path seguono la policy; piani dal modello partono da soli se
+  tutti i passi sono `safe`. Le conferme si danno anche a voce ("sì", "conferma", "no", "annulla").
+- Le frasi dette dall'app usano la lingua della voce (non quella dell'interfaccia).
+- Parametri URL validati prima dell'esecuzione (`.webAddress`).
+
 ## Architettura
 
 ```mermaid

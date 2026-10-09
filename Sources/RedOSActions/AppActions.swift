@@ -23,7 +23,7 @@ struct OpenURLAction: Action {
     let summary = "Open a website or web address (e.g. google.com) in the browser, optionally in a given browser app."
     let risk = RiskLevel.safe
     let parameters = [
-        ActionParameter("url", description: "Web address, e.g. google.com or https://github.com"),
+        ActionParameter("url", .webAddress, description: "Web address, e.g. google.com or https://github.com"),
         ActionParameter("app", required: false, description: "Browser application name, only if stated"),
     ]
 
