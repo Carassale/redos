@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # build number = commit count
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Toolchain
+        run: |
+          swift --version
+          command -v swiftlint || brew install swiftlint
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+
+      # Ad-hoc signed here: only releases use the RedOS Development identity.
+      - name: App bundle
+        run: |
+          make app CONFIG=release
+          codesign --verify --deep --strict build/RedOS.app
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" build/RedOS.app/Contents/Info.plist

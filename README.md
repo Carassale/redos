@@ -1,5 +1,7 @@
 # RedOS
 
+[![CI](https://github.com/Carassale/redos/actions/workflows/ci.yml/badge.svg)](https://github.com/Carassale/redos/actions/workflows/ci.yml)
+
 AI assistant for macOS that lives in the menu bar: voice or text commands, local decision model
 (Jev via LocalJev + Ollama), full control of your Mac. See [docs/PLAN.md](docs/PLAN.md).
 
@@ -100,6 +102,17 @@ certificate on every release, so macOS permissions survive updates.
 # bump VERSION and commit, then:
 make release            # zip + dmg in build/release, EdDSA signature, appcast item (CHANNEL=beta for betas)
 make publish            # GitHub release with zip and dmg, then commit and push appcast.xml
+```
+
+Or from GitHub Actions: CI (lint, tests, app bundle) runs on every push and pull request; the **Release**
+workflow does `make release` + `make publish` on a macOS runner with the same signing identity and
+Sparkle key, stored once as secrets:
+
+```sh
+# Keychain Access > My Certificates > "RedOS Development" > Export… > RedOS.p12 (only this identity)
+scripts/setup-release-secrets.sh ~/Desktop/RedOS.p12
+# bump VERSION, commit, push, then:
+gh workflow run release.yml -f channel=beta     # or channel=stable
 ```
 
 The app is not notarized: on first install open it with right click > Open (or System Settings >

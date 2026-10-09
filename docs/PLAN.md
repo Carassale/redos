@@ -204,7 +204,11 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 - Sparkle senza XPC services (app non sandboxed) e senza hardened runtime (certificato self-signed senza
   Team ID: la library validation rifiuterebbe il framework).
 - Senza notarizzazione il primo download richiede "Apri comunque" in Impostazioni > Privacy e sicurezza.
-- In futuro: Developer ID + notarizzazione, Homebrew tap, GitHub Actions per build/test/release.
+- In futuro: Developer ID + notarizzazione, Homebrew tap.
+- **CI/CD** (M9): `ci.yml` su `macos-26` a ogni push/PR (SwiftLint, test, bundle firmato ad-hoc);
+  `release.yml` manuale (canale stable/beta) importa l'identità self-signed e la chiave Sparkle dai
+  secret (`scripts/setup-release-secrets.sh`) in un portachiavi temporaneo, poi `make release` +
+  `make publish`. Dependabot per Sparkle e per le action.
 
 ## Roadmap
 
@@ -221,4 +225,4 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M6 | MCP client e server | |
 | M7 | Sparkle, pacchetti release | ✅ |
 | M8 | Extra (routine, memoria, trigger, costi) | ✅ |
-| M9 | CI/CD GitHub Actions | |
+| M9 | CI/CD GitHub Actions | ✅ |

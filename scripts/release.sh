@@ -23,8 +23,12 @@ ln -s /Applications "$out/dmg/Applications"
 hdiutil create -quiet -volname "RedOS $version" -srcfolder "$out/dmg" -ov -format UDZO "$out/$dmg"
 rm -rf "$out/dmg"
 
-# Prints: sparkle:edSignature="..." length="..."
-signature=$("$sparkle_bin/sign_update" --account redos "$out/$zip")
+# Prints: sparkle:edSignature="..." length="..."; CI passes the key as a file, locally it is in the Keychain.
+if [[ -n "${SPARKLE_KEY_FILE:-}" ]]; then
+    signature=$("$sparkle_bin/sign_update" --ed-key-file "$SPARKLE_KEY_FILE" "$out/$zip")
+else
+    signature=$("$sparkle_bin/sign_update" --account redos "$out/$zip")
+fi
 
 last_tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
 git log --no-merges --pretty='%s' ${last_tag:+"$last_tag"..}HEAD | grep -v '^release: ' > "$out/notes.md" || true
