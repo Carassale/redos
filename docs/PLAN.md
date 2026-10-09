@@ -165,7 +165,8 @@ RedOS da VS Code / altri agenti.
 | M2 | System One: protocollo Jev, decisione via logprob su Ollama, estrazione argomenti, LocalJev opzionale | ✅ |
 | M2.5 | Eval su comandi reali it/en, scelta modello, soglie | ✅ |
 | M3 | System Two: provider cloud + locale, Portachiavi | ✅ |
-| M4 | Voce: push-to-talk, SpeechAnalyzer/WhisperKit, TTS, openWakeWord | |
+| M4 | Voce: push-to-talk (⌃⌥Spazio), SpeechAnalyzer on-device it/en, risposte vocali (TTS) | ✅ |
+| M4.1 | Wake word "Hey RedOS" (openWakeWord: addestramento modello dedicato) | |
 | M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell/PTY, HUD, kill switch | |
 | M6 | MCP client e server | |
 | M7 | Sparkle, pacchetti release | |

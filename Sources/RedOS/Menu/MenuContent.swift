@@ -17,6 +17,8 @@ struct MenuContent: View {
         }
         .keyboardShortcut(.space, modifiers: .option)
 
+        Text("Hold ⌃⌥Space to talk")
+
         Button("Show Audit Log") {
             controller.revealAuditLog()
         }

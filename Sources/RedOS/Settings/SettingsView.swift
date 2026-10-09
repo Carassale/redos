@@ -1,4 +1,5 @@
 import RedOSCore
+import RedOSVoice
 import SwiftUI
 
 struct SettingsView: View {
@@ -8,6 +9,7 @@ struct SettingsView: View {
     @State private var models: [String] = []
     @State private var status: Status?
     @State private var isBusy = false
+    @State private var voiceLocales: [String] = []
 
     enum Status: Equatable {
         case info(String)
@@ -26,6 +28,21 @@ struct SettingsView: View {
                             .monospacedDigit()
                     }
                 }
+            }
+
+            Section {
+                Picker("Language", selection: $settings.voiceLocale) {
+                    ForEach(voiceLocales, id: \.self) { identifier in
+                        Text(Locale.current.localizedString(forIdentifier: identifier) ?? identifier).tag(identifier)
+                    }
+                }
+                Toggle("Speak answers", isOn: $settings.speaksAnswers)
+            } header: {
+                Text("Voice")
+            } footer: {
+                Text("Hold ⌃⌥Space and speak; release to send. Speech is recognized on this Mac.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -79,6 +96,10 @@ struct SettingsView: View {
         .onAppear {
             NSApp.activate()
             apiKey = Keychain.secret(for: settings.systemTwoProvider.rawValue) ?? ""
+        }
+        .task {
+            let supported = await SpeechListener.supportedLocales.map(\.identifier)
+            voiceLocales = Set(supported + [settings.voiceLocale]).sorted()
         }
         .onChange(of: settings.systemTwoProvider) { _, provider in
             settings.systemTwoModel = provider.defaultModel

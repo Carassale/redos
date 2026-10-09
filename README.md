@@ -23,7 +23,9 @@ Version is read from `VERSION`; build number is the git commit count.
 
 ## Usage
 
-Press **⌥ Space** (or menu bar > Command…) and type a command, in English or Italian:
+Press **⌥ Space** (or menu bar > Command…) and type a command, in English or Italian.
+Or **hold ⌃⌥ Space and speak**: release to send. Speech is recognized on this Mac (SpeechAnalyzer) and
+answers can be read aloud (Settings > Voice).
 
 | Example | Action |
 |---|---|

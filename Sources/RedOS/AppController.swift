@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import Observation
 import RedOSActions
 import RedOSCore
@@ -11,7 +12,6 @@ final class AppController {
     private(set) var systemOneDescription = ""
     private(set) var systemTwoDescription = ""
     @ObservationIgnored let commandPanel: CommandPanelController
-    @ObservationIgnored private var hotKey: GlobalHotKey?
 
     init() {
         commandPanel = CommandPanelController(engine: CommandEngine(registry: registry, audit: FileAuditLog()))
@@ -46,13 +46,23 @@ final class AppController {
             planner = nil
             systemTwoDescription = error.localizedDescription
         }
+        let voice = VoiceSettings(
+            locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers
+        )
         commandPanel.update(
-            engine: CommandEngine(registry: registry, router: router, planner: planner, audit: FileAuditLog())
+            engine: CommandEngine(registry: registry, router: router, planner: planner, audit: FileAuditLog()),
+            voice: voice
         )
     }
 
     func start() {
-        hotKey = GlobalHotKey { [weak self] in self?.commandPanel.toggle() }
+        let hotKeys = HotKeyCenter.shared
+        hotKeys.register(keyCode: kVK_Space, modifiers: optionKey) { [weak self] in self?.commandPanel.toggle() }
+        hotKeys.register(
+            keyCode: kVK_Space, modifiers: controlKey | optionKey,
+            onPress: { [weak self] in self?.commandPanel.startListening() },
+            onRelease: { [weak self] in self?.commandPanel.stopListening() }
+        )
     }
 
     func revealAuditLog() {

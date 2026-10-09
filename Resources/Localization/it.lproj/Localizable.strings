@@ -62,6 +62,19 @@
 "%lld models available." = "%lld modelli disponibili.";
 "OK in %@: %@" = "OK in %1$@: %2$@";
 "Everything stays on this Mac." = "Tutto resta su questo Mac.";
+
+/* Voice */
+"Voice" = "Voce";
+"Language" = "Lingua";
+"Speak answers" = "Leggi le risposte ad alta voce";
+"Hold ⌃⌥Space and speak; release to send. Speech is recognized on this Mac." = "Tieni premuto ⌃⌥Spazio e parla; rilascia per inviare. Il parlato viene riconosciuto su questo Mac.";
+"Hold ⌃⌥Space to talk" = "Tieni premuto ⌃⌥Spazio per parlare";
+"Listening…" = "Ti ascolto…";
+"Downloading the speech model…" = "Scarico il modello vocale…";
+"I didn't hear anything." = "Non ho sentito nulla.";
+"Press Return to confirm." = "Premi Invio per confermare.";
+"Speech recognition is not available for %@." = "Il riconoscimento vocale non è disponibile per %@.";
+"The microphone is not available." = "Il microfono non è disponibile.";
 "Commands that System One cannot handle, with the list of available actions, are sent to this provider." = "I comandi che System One non gestisce, con l'elenco delle azioni disponibili, vengono inviati a questo provider.";
 
 /* Action errors */

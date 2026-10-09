@@ -10,7 +10,8 @@ let package = Package(
     targets: [
         .target(name: "RedOSCore"),
         .target(name: "RedOSActions", dependencies: ["RedOSCore"]),
-        .executableTarget(name: "RedOS", dependencies: ["RedOSCore", "RedOSActions"]),
+        .target(name: "RedOSVoice"),
+        .executableTarget(name: "RedOS", dependencies: ["RedOSCore", "RedOSActions", "RedOSVoice"]),
         .executableTarget(name: "RedOSEval", dependencies: ["RedOSCore", "RedOSActions"]),
         .testTarget(name: "RedOSCoreTests", dependencies: ["RedOSCore", "RedOSActions"]),
     ]

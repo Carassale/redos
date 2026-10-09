@@ -10,6 +10,8 @@ struct AppSettings: Equatable {
     var systemTwoProvider: SystemTwoProvider
     var systemTwoModel: String
     var copilotPath: String
+    var voiceLocale: String
+    var speaksAnswers: Bool
 
     init(defaults: UserDefaults = .standard) {
         systemOneModel = defaults.string(forKey: "systemOne.model") ?? "gemma4:e4b-it-qat"
@@ -20,6 +22,13 @@ struct AppSettings: Equatable {
         systemTwoProvider = defaults.string(forKey: "systemTwo.provider").flatMap(SystemTwoProvider.init) ?? .ollama
         systemTwoModel = defaults.string(forKey: "systemTwo.model") ?? systemTwoProvider.defaultModel
         copilotPath = defaults.string(forKey: "systemTwo.copilotPath") ?? ""
+        voiceLocale = defaults.string(forKey: "voice.locale") ?? Self.defaultVoiceLocale
+        speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
+    }
+
+    /// The Mac's language when it is Italian or English, otherwise US English.
+    private static var defaultVoiceLocale: String {
+        Locale.current.language.languageCode?.identifier == "it" ? "it_IT" : "en_US"
     }
 
     func save(to defaults: UserDefaults = .standard) {
@@ -30,6 +39,8 @@ struct AppSettings: Equatable {
         defaults.set(systemTwoProvider.rawValue, forKey: "systemTwo.provider")
         defaults.set(systemTwoModel, forKey: "systemTwo.model")
         defaults.set(copilotPath, forKey: "systemTwo.copilotPath")
+        defaults.set(voiceLocale, forKey: "voice.locale")
+        defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
     }
 
     func systemTwo(apiKey: String? = nil) -> SystemTwoConfiguration {

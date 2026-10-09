@@ -6,6 +6,7 @@ import RedOSCore
 final class CommandPanelModel {
     enum State: Equatable {
         case idle
+        case listening
         case working
         case confirming(ResolvedCommand)
         case confirmingPlan(ResolvedPlan)

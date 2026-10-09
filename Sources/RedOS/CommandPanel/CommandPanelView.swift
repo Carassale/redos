@@ -10,10 +10,17 @@ struct CommandPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Image(systemName: "circle.hexagongrid.fill")
-                    .font(.title2)
-                    .foregroundStyle(.red)
-                TextField("Ask RedOS…", text: $model.text)
+                if model.state == .listening {
+                    Image(systemName: "waveform.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.red)
+                        .symbolEffect(.variableColor.iterative, options: .repeating)
+                } else {
+                    Image(systemName: "circle.hexagongrid.fill")
+                        .font(.title2)
+                        .foregroundStyle(.red)
+                }
+                TextField(model.state == .listening ? "Listening…" : "Ask RedOS…", text: $model.text)
                     .textFieldStyle(.plain)
                     .font(.system(size: 22))
                     .focused($isFocused)
@@ -41,7 +48,7 @@ struct CommandPanelView: View {
     @ViewBuilder
     private var status: some View {
         switch model.state {
-        case .idle, .working:
+        case .idle, .working, .listening:
             EmptyView()
         case .confirming(let command):
             Label(

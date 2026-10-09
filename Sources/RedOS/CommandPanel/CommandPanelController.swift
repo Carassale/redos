@@ -1,13 +1,25 @@
 import AppKit
 import RedOSCore
+import RedOSVoice
+
+struct VoiceSettings: Equatable {
+    var locale: Locale
+    var speaksAnswers: Bool
+}
 
 @MainActor
 final class CommandPanelController {
     private static let historyKey = "commandHistory"
 
     private var engine: CommandEngine
+    private var voice = VoiceSettings(locale: Locale(identifier: "en_US"), speaksAnswers: true)
     private let defaults: UserDefaults
     private let model = CommandPanelModel()
+    private let listener = SpeechListener()
+    private let speaker = Speaker()
+    private var listening: Task<Void, Never>?
+    /// The current command came from the microphone: feedback is also spoken.
+    private var isVoiceCommand = false
     private var history: CommandHistory
     private lazy var panel: CommandPanel = {
         let panel = CommandPanel(
@@ -27,8 +39,9 @@ final class CommandPanelController {
         self.history = CommandHistory(entries: defaults.stringArray(forKey: Self.historyKey) ?? [])
     }
 
-    func update(engine: CommandEngine) {
+    func update(engine: CommandEngine, voice: VoiceSettings) {
         self.engine = engine
+        self.voice = voice
     }
 
     func toggle() {
@@ -52,6 +65,58 @@ final class CommandPanelController {
 
     private func hide() {
         panel.orderOut(nil)
+    }
+
+    /// Push-to-talk pressed: listen and show the live transcript.
+    func startListening() {
+        guard listening == nil, model.state != .working else { return }
+        guard SystemPermissionChecker().status(of: .microphone) == .granted else {
+            show()
+            model.state = .message(ActionError.permissionMissing(.microphone).localizedDescription, isError: true)
+            return
+        }
+        speaker.stop()
+        show()
+        model.text = ""
+        model.state = .listening
+        listener.onTranscript = { [weak self] text in self?.model.text = text }
+        listener.onDownload = { [weak self] in
+            self?.model.state = .message(String(localized: "Downloading the speech model…"), isError: false)
+        }
+        listening = Task { [listener, voice] in
+            do {
+                try await listener.start(locale: voice.locale)
+                if case .message = model.state { model.state = .listening }
+            } catch {
+                model.state = .message(error.localizedDescription, isError: true)
+            }
+        }
+    }
+
+    /// Push-to-talk released: the transcript is submitted like a typed command.
+    func stopListening() {
+        guard let listening else { return }
+        self.listening = nil
+        Task {
+            await listening.value
+            guard model.state == .listening else { return }
+            // Dictation ends sentences with a period: "apri Safari." must still match the app name.
+            var text = await listener.stop()
+            if text.hasSuffix(".") { text.removeLast() }
+            model.text = text
+            guard !text.isEmpty else {
+                model.state = .message(String(localized: "I didn't hear anything."), isError: true)
+                return
+            }
+            isVoiceCommand = true
+            model.state = .working
+            await resolve(text)
+        }
+    }
+
+    private func say(_ text: String) {
+        guard isVoiceCommand, voice.speaksAnswers else { return }
+        speaker.speak(text, locale: voice.locale)
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
@@ -101,7 +166,7 @@ final class CommandPanelController {
 
     private func submit() {
         switch model.state {
-        case .working:
+        case .working, .listening:
             return
         case .confirming(let command):
             Task { await run { [engine] in await engine.execute(command) } }
@@ -109,6 +174,7 @@ final class CommandPanelController {
             Task { await run { [engine] in await engine.execute(plan) } }
         case .idle, .message, .answer:
             let input = model.text
+            isVoiceCommand = false
             model.state = .working
             Task { await resolve(input) }
         }
@@ -119,24 +185,32 @@ final class CommandPanelController {
         remember(input, resolution)
         switch resolution {
         case .unrecognized:
-            model.state = .message(String(localized: "I don't know how to do that yet."), isError: true)
+            fail(String(localized: "I don't know how to do that yet."))
         case .unavailable(let reason):
-            model.state = .message(reason, isError: true)
+            fail(reason)
         case .invalid(_, let error):
-            model.state = .message(error.localizedDescription, isError: true)
+            fail(error.localizedDescription)
         case .denied(let request):
-            model.state = .message(String(localized: "Action disabled: \(request.actionID)"), isError: true)
+            fail(String(localized: "Action disabled: \(request.actionID)"))
         case .ready(let command, let needsConfirmation):
             if needsConfirmation {
                 model.state = .confirming(command)
+                say(String(localized: "Press Return to confirm."))
             } else {
                 await run { [engine] in await engine.execute(command) }
             }
         case .plan(let plan):
             model.state = .confirmingPlan(plan)
+            say(String(localized: "Press Return to confirm."))
         case .answer(let text):
             model.state = .answer(text)
+            say(text)
         }
+    }
+
+    private func fail(_ message: String) {
+        model.state = .message(message, isError: true)
+        say(message)
     }
 
     private func run(_ work: () async -> Result<Void, ActionError>) async {
@@ -151,12 +225,18 @@ final class CommandPanelController {
         case .failure(let error):
             model.state = .idle
             show()
-            model.state = .message(error.localizedDescription, isError: true)
+            fail(error.localizedDescription)
         }
     }
 
     private func cancel() {
+        speaker.stop()
         switch model.state {
+        case .listening:
+            listening?.cancel()
+            listening = nil
+            Task { [listener] in await listener.cancel() }
+            model.state = .idle
         case .confirming(let command):
             Task { [engine] in await engine.cancel(command) }
             model.state = .idle
