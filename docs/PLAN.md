@@ -80,6 +80,37 @@ grammatica in Ollama, quindi la validazione stretta resta in `ActionRegistry`.
 - GitHub Models è stato dismesso il 30/07/2026: per Copilot si usa la CLI ufficiale.
 - Misure: Ollama piano ~3.8 s / risposta ~2.7 s; Copilot `claude-haiku-5.5` piano ~7.3 s / risposta ~4.4 s.
 
+### Ottimizzazione velocità (09/10/2026)
+
+Candidati provati con `make eval` (78 comandi) e `RedOSEval --system-two` (30 richieste):
+
+| System One | Accuratezza | Azioni errate auto | Decisione p50 |
+|---|---|---|---|
+| gemma4:e4b logprob (prima) | 89.7% | 1 | 0.82 s |
+| **gemma4:e4b logprob + esempi** | **92.3%** | **0** | **0.25 s** |
+| gemma4:e2b logprob + esempi | 89.7% | 4 | 0.14 s |
+| qwen3.5:4b logprob + esempi | 84.6% | 4 | 0.46 s |
+| tev1:4b (modello decisionale, `/v1/systemone` nativo di Ollama) | 82.1% | 3 | 1.24 s |
+| tev1:0.8b / laya 322M-421M | 61.5% / 38.5% | 5-9 | 0.23 / 0.8 s |
+
+- Ollama 0.40 espone **nativamente l'API Jev** (`/v1/systemone`) per modelli decisionali (tev1, nimble,
+  clef, laya): provati, ma su comandi it/en per il Mac sono più lenti o meno accurati della nostra
+  decisione via logprob. Il client `JevHTTPSystemOne` li supporta comunque (modello configurabile).
+- **Cache KV**: Gemma 4 (sliding window) riusa la cache solo con prompt costanti oltre ~512 token; sotto
+  rielabora tutto a ogni richiesta (~0.75-1.5 s). Gli esempi few-shot allungano il prompt: più accurato
+  *e* più veloce. Con `OLLAMA_NUM_PARALLEL=2` (`make ollama-tune`) decisione e piani non si rubano la
+  cache: prompt 1.85 s → 0.15 s.
+- **Estrazione argomenti** con `gemma4:e2b-it-qat`: 0.44 s invece di 0.79 s, argomenti 97.9%.
+- **System Two** gemma4:e4b con prompt lungo + esempi: 86.7% (prima 80%), p50 1.0 s (prima ~2.8-3.8 s).
+  Altri modelli (e2b, qwen3.5:4b, lfm2.5) 10-60%.
+- **Holdout** (30 comandi nuovi mai usati per tarare): System One 90.0%, 1 azione `safe` errata
+  ("butta giù Safari" → apre Safari), totale p50 0.64 s; System Two 100% (12/12), p50 1.1 s.
+
+| Percorso | Prima | Dopo |
+|---|---|---|
+| Azione singola (System One + argomenti) | 1.74 s | **0.64 s** |
+| Domanda / più passi (System One + System Two locale) | ~4.8 s | **~1.3 s** |
+
 ## Architettura
 
 ```mermaid

@@ -47,6 +47,8 @@
 "Settings…" = "Impostazioni…";
 "System One (local, Ollama)" = "System One (locale, Ollama)";
 "Model" = "Modello";
+"Decision model" = "Modello per le decisioni";
+"Argument model" = "Modello per i parametri";
 "Minimum probability to act" = "Probabilità minima per agire";
 "Provider" = "Provider";
 "Models" = "Modelli";

@@ -1,0 +1,30 @@
+{"lang": "it", "input": "fammi partire Pages", "action": "app.open", "arguments": {"name": "Pages"}}
+{"lang": "en", "input": "bring Messages to the front", "action": "app.open", "arguments": {"name": "Messages|Messaggi"}}
+{"lang": "it", "input": "ho bisogno delle impostazioni di sistema", "action": "app.open", "arguments": {"name": "System Settings|Impostazioni di Sistema"}}
+{"lang": "en", "input": "can I get the App Store", "action": "app.open", "arguments": {"name": "App Store"}}
+{"lang": "it", "input": "butta giù Safari", "action": "app.quit", "arguments": {"name": "Safari"}}
+{"lang": "en", "input": "terminate Keynote please", "action": "app.quit", "arguments": {"name": "Keynote"}}
+{"lang": "it", "input": "non mi serve più Word, chiudilo", "action": "app.quit", "arguments": {"name": "Word|Microsoft Word"}}
+{"lang": "en", "input": "pull up wikipedia.org", "action": "url.open", "arguments": {"url": "wikipedia.org|https://wikipedia.org|https://www.wikipedia.org"}}
+{"lang": "it", "input": "portami su corriere.it", "action": "url.open", "arguments": {"url": "corriere.it|https://corriere.it|https://www.corriere.it"}}
+{"lang": "it", "input": "scrivimi arrivo tra cinque minuti", "action": "text.type", "arguments": {"text": "arrivo tra cinque minuti"}}
+{"lang": "en", "input": "key in my email address mario@example.com", "action": "text.type", "arguments": {"text": "mario@example.com"}}
+{"lang": "en", "input": "input the code 4821", "action": "text.type", "arguments": {"text": "4821"}}
+{"lang": "it", "input": "sali un po' nella pagina", "action": "scroll", "arguments": {"direction": "up"}}
+{"lang": "en", "input": "go down a few lines", "action": "scroll", "arguments": {"direction": "down"}}
+{"lang": "it", "input": "vai a destra di 10 righe", "action": "scroll", "arguments": {"direction": "right", "amount": "10"}}
+{"lang": "en", "input": "left click", "action": "mouse.click", "arguments": {}}
+{"lang": "it", "input": "fai un clic destro", "action": "mouse.click", "arguments": {"button": "right"}}
+{"lang": "en", "input": "put the mouse at 50, 75", "action": "mouse.move", "arguments": {"x": "50", "y": "75"}}
+{"lang": "it", "input": "apri Safari e vai su youtube.com", "action": "multi_step", "plan": [["app.open", "url.open"], ["url.open"]]}
+{"lang": "en", "input": "open TextEdit and write dear Anna", "action": "multi_step", "plan": [["app.open", "text.type"]]}
+{"lang": "it", "input": "chiudi Mail e apri Calendario", "action": "multi_step", "plan": [["app.quit", "app.open"]]}
+{"lang": "en", "input": "book a flight to Paris and add it to my calendar", "action": "multi_step"}
+{"lang": "it", "input": "che giorno sarà domani?", "action": "none"}
+{"lang": "en", "input": "who painted the Mona Lisa?", "action": "none"}
+{"lang": "it", "input": "silenzia le notifiche", "action": "none"}
+{"lang": "en", "input": "turn on dark mode", "action": "none"}
+{"lang": "it", "input": "svuota il cestino", "action": "none"}
+{"lang": "en", "input": "press the Submit button", "action": "none"}
+{"lang": "it", "input": "grazie mille!", "action": "none"}
+{"lang": "en", "input": "what's the price of bitcoin now?", "action": "none"}

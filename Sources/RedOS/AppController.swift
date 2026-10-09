@@ -21,6 +21,7 @@ final class AppController {
     /// Rebuilds the command engine from the current settings.
     func reload(_ settings: AppSettings = AppSettings()) {
         let ollama = OllamaClient(model: settings.systemOneModel)
+        let extraction = OllamaClient(model: settings.extractionModel)
         let systemOne: any SystemOne
         // Optional Jev-compatible backend, e.g. `make localjev-run` on http://127.0.0.1:8080.
         if let jevURL = URL(string: settings.jevURL), jevURL.scheme != nil {
@@ -33,8 +34,8 @@ final class AppController {
         let router = SystemOneRouter(
             registry: registry,
             systemOne: systemOne,
-            extractor: ArgumentExtractor(client: ollama),
-            warmUp: ollama,
+            extractor: ArgumentExtractor(client: extraction),
+            warmUp: [ollama, extraction],
             threshold: settings.threshold
         )
         let planner: (any Planning)?

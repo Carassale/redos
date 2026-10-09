@@ -98,7 +98,7 @@ struct SystemOneTests {
                 registry: registry,
                 systemOne: OllamaSystemOne(client: chat),
                 extractor: ArgumentExtractor(client: chat),
-                warmUp: chat,
+                warmUp: [chat],
                 threshold: 0.6
             )
         }

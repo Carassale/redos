@@ -19,18 +19,20 @@ public struct SystemOneRouter: CommandRouting {
     private let registry: ActionRegistry
     private let systemOne: any SystemOne
     private let extractor: ArgumentExtractor
-    private let warmUp: any ChatCompleting
+    private let warmUp: [any ChatCompleting]
     private let threshold: Double
     private let chainsExtraction: Bool
+    private let examples: [(command: String, label: String)]
 
     /// `chainsExtraction` reuses the decision conversation for the argument call (same model only).
     public init(
         registry: ActionRegistry,
         systemOne: any SystemOne,
         extractor: ArgumentExtractor,
-        warmUp: any ChatCompleting,
+        warmUp: [any ChatCompleting],
         threshold: Double = 0.5,
-        chainsExtraction: Bool = true
+        chainsExtraction: Bool = true,
+        examples: [(command: String, label: String)] = SystemOneRouter.defaultExamples
     ) {
         self.registry = registry
         self.systemOne = systemOne
@@ -38,6 +40,7 @@ public struct SystemOneRouter: CommandRouting {
         self.warmUp = warmUp
         self.threshold = threshold
         self.chainsExtraction = chainsExtraction
+        self.examples = examples
     }
 
     public var question: JevChoiceQuestion {
@@ -51,14 +54,39 @@ public struct SystemOneRouter: CommandRouting {
             description: "None of the above: questions, conversation, or actions not listed"
                 + " (e.g. clicking a named button, media, volume, screenshots, shutting down)."
         )
+        let options = actions + [multiStep, none]
+        let labels = Set(options.map(\.label))
+        let examples = self.examples.filter { labels.contains($0.label) }
+            .map { "- \"\($0.command)\" -> \($0.label)" }
+            .joined(separator: "\n")
         return JevChoiceQuestion(
-            instructions: "Pick the single action that fulfils the user's command on their Mac.",
-            options: actions + [multiStep, none]
+            instructions: "Pick the single action that fulfils the user's command on their Mac."
+                + (examples.isEmpty ? "" : "\nExamples (command -> option):\n\(examples)"),
+            options: options
         )
     }
 
+    /// Few-shot guidance in Italian and English; with prefix caching it costs nothing after the first command.
+    /// Kept distinct from eval/commands.jsonl.
+    public static let defaultExamples: [(command: String, label: String)] = [
+        ("lancia Spotify", "app.open"), ("I want to use Xcode", "app.open"), ("mostrami Finder", "app.open"),
+        ("chiudi Telegram", "app.quit"), ("get out of Zoom", "app.quit"), ("spegni Music", "app.quit"),
+        ("apri il sito ansa.it", "url.open"), ("load nytimes.com", "url.open"),
+        ("digita ciao Marco", "text.type"), ("write: on my way", "text.type"),
+        ("scendi di qualche riga", "scroll"), ("torna in cima", "scroll"), ("scroll a bit left", "scroll"),
+        ("clicca col tasto destro", "mouse.click"), ("do a click", "mouse.click"),
+        ("sposta il puntatore a 300, 200", "mouse.move"),
+        ("apri Mail e scrivi ciao", "multi_step"), ("open Notes then type groceries", "multi_step"),
+        ("che giorno è oggi?", "none"), ("tell me a joke", "none"), ("metti un po' di musica", "none"),
+        ("clicca su Invia", "none"), ("abbassa la luminosità", "none"),
+    ]
+
     public func prepare() async {
-        await warmUp.preload()
+        await withTaskGroup { group in
+            for client in warmUp {
+                group.addTask { await client.preload() }
+            }
+        }
     }
 
     public func route(_ input: String) async throws -> RouteDecision {

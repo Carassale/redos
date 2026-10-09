@@ -12,7 +12,7 @@ struct LiveSystemOneTests {
         registry: ActionRegistry(SystemActions.all),
         systemOne: OllamaSystemOne(client: ollama),
         extractor: ArgumentExtractor(client: ollama),
-        warmUp: ollama
+        warmUp: [ollama]
     )
 
     @Test(arguments: [

@@ -46,10 +46,10 @@
 {"lang": "en", "input": "show me apple.com in Safari", "action": "url.open", "arguments": {"url": "apple.com|https://apple.com|https://www.apple.com", "app": "Safari"}}
 {"lang": "it", "input": "naviga su wikipedia.org", "action": "url.open", "arguments": {"url": "wikipedia.org|https://wikipedia.org|https://www.wikipedia.org"}}
 {"lang": "it", "input": "fammi vedere il sito repubblica.it", "action": "url.open", "arguments": {"url": "repubblica.it|https://repubblica.it|https://www.repubblica.it"}}
-{"lang": "en", "input": "open Safari and go to github.com", "action": "multi_step"}
-{"lang": "en", "input": "launch TextEdit then type hello", "action": "multi_step"}
-{"lang": "it", "input": "apri chrom e naviga su google.com", "action": "multi_step"}
-{"lang": "it", "input": "apri Note e scrivi lista della spesa", "action": "multi_step"}
+{"lang": "en", "input": "open Safari and go to github.com", "action": "multi_step", "plan": [["app.open", "url.open"], ["url.open"]]}
+{"lang": "en", "input": "launch TextEdit then type hello", "action": "multi_step", "plan": [["app.open", "text.type"]]}
+{"lang": "it", "input": "apri chrom e naviga su google.com", "action": "multi_step", "plan": [["app.open", "url.open"], ["url.open"]]}
+{"lang": "it", "input": "apri Note e scrivi lista della spesa", "action": "multi_step", "plan": [["app.open", "text.type"]]}
 {"lang": "en", "input": "what's the weather tomorrow in Milan?", "action": "none"}
 {"lang": "en", "input": "how are you today?", "action": "none"}
 {"lang": "en", "input": "pause the music", "action": "none"}

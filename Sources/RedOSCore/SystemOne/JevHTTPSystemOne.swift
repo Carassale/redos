@@ -1,13 +1,16 @@
 import Foundation
 
-/// Client for a Jev-compatible `POST /v1/systemone` endpoint: LocalJev (`make localjev-run`) or Jev itself.
+/// Client for a Jev-compatible `POST /v1/systemone` endpoint: Ollama with a decision model (e.g. tev1),
+/// LocalJev (`make localjev-run`) or Jev itself.
 public struct JevHTTPSystemOne: SystemOne {
     public let baseURL: URL
+    public let model: String
     private let apiKey: String?
     private let session: URLSession
 
-    public init(baseURL: URL, apiKey: String? = nil, session: URLSession = .shared) {
+    public init(baseURL: URL, model: String = "jev-latest", apiKey: String? = nil, session: URLSession = .shared) {
         self.baseURL = baseURL
+        self.model = model
         self.apiKey = apiKey
         self.session = session
     }
@@ -16,12 +19,13 @@ public struct JevHTTPSystemOne: SystemOne {
         let answers: [String: JevChoiceAnswer]
     }
 
-    static func body(for question: JevChoiceQuestion, state: String) -> JSONValue {
+    static func body(for question: JevChoiceQuestion, state: String, model: String = "jev-latest") -> JSONValue {
         let criteria = Dictionary(
             uniqueKeysWithValues: question.options.map { ($0.label, JSONValue.string($0.description)) }
         )
         return .object([
-            "model": .string("jev-latest"),
+            "model": .string(model),
+            "keep_alive": .string("30m"),
             "state": .string(state),
             "questions": .object([
                 "action": .object([
@@ -47,7 +51,7 @@ public struct JevHTTPSystemOne: SystemOne {
         if let apiKey {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
-        request.httpBody = try JSONEncoder().encode(Self.body(for: question, state: state))
+        request.httpBody = try JSONEncoder().encode(Self.body(for: question, state: state, model: model))
 
         let (data, response): (Data, URLResponse)
         do {

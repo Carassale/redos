@@ -3,7 +3,10 @@ import RedOSActions
 import RedOSCore
 
 // System One evaluation on a labeled command set: decision accuracy, safety, calibration, latency.
-// Usage: swift run -c release RedOSEval [--model M] [--dataset PATH] [--jev-url URL] [--no-chain] [--out PATH]
+// Usage: swift run -c release RedOSEval [--model M] [--dataset PATH] [--no-chain] [--out PATH]
+//   [--jev-url URL --jev-model M]   decide through a Jev-compatible /v1/systemone endpoint
+//   [--extract-model M]             Ollama model for argument extraction (default: --model)
+//   [--system-two M]                evaluate the System Two planner with Ollama model M instead
 
 struct Sample: Decodable {
     let lang: String
@@ -11,6 +14,8 @@ struct Sample: Decodable {
     let action: String
     /// Expected values; "a|b" accepts either.
     let arguments: [String: String]?
+    /// Acceptable System Two action sequences; nil means no actions (an answer).
+    let plan: [[String]]?
 }
 
 struct Outcome: Encodable {
@@ -69,20 +74,53 @@ let ollama = OllamaClient(model: model)
 let registry = ActionRegistry(SystemActions.all)
 let parser = FastPathParser()
 let policy = Policy()
-let extractor = ArgumentExtractor(client: ollama)
+let extractor = ArgumentExtractor(client: OllamaClient(model: option("--extract-model") ?? model))
 let systemOne: any SystemOne = if let url = option("--jev-url").flatMap(URL.init(string:)) {
-    JevHTTPSystemOne(baseURL: url)
+    JevHTTPSystemOne(baseURL: url, model: option("--jev-model") ?? "jev-latest")
 } else {
     OllamaSystemOne(client: ollama)
 }
-let question = SystemOneRouter(registry: registry, systemOne: systemOne, extractor: extractor, warmUp: ollama).question
+let question = SystemOneRouter(
+    registry: registry, systemOne: systemOne, extractor: extractor, warmUp: [ollama],
+    examples: CommandLine.arguments.contains("--no-examples") ? [] : SystemOneRouter.defaultExamples
+).question
 
 let samples = try String(contentsOfFile: datasetPath, encoding: .utf8)
     .split(separator: "\n")
     .map { try JSONDecoder().decode(Sample.self, from: Data($0.utf8)) }
 
-print("System One eval · \(option("--jev-url") ?? model) · chain=\(chains) · \(samples.count) samples")
+if let plannerModel = option("--system-two") {
+    let client = OllamaClient(model: plannerModel)
+    let planner = ModelPlanner(client: client)
+    let cases = samples.filter { [SystemOneRouter.noneLabel, SystemOneRouter.multiStepLabel].contains($0.action) }
+    print("System Two eval · \(plannerModel) · \(cases.count) samples")
+    await client.preload()
+    var correct = 0
+    var latencies: [Double] = []
+    for sample in cases {
+        let start = ContinuousClock.now
+        let result = try? await planner.plan(sample.input, registry: registry)
+        let elapsed = seconds(ContinuousClock.now - start)
+        latencies.append(elapsed)
+        let actions = result?.steps.map(\.actionID)
+        let valid = result?.steps.allSatisfy { (try? registry.validate($0)) != nil } ?? false
+        let isCorrect = valid && (sample.plan ?? [[]]).contains { $0 == actions }
+            && (actions?.isEmpty == false || result?.answer != nil)
+        correct += isCorrect ? 1 : 0
+        let detail = actions.map { $0.isEmpty ? "answer: \(result?.answer ?? "-")" : $0.joined(separator: " → ") }
+        print(String(format: "%@ %5.2fs  %-52@ → %@", isCorrect ? "✓" : "✗", elapsed,
+                     sample.input as NSString, detail ?? "error"))
+    }
+    print("\naccuracy   ", pct(correct, cases.count))
+    print(String(format: "latency    p50 %.2f  p95 %.2f", percentile(latencies, 0.5), percentile(latencies, 0.95)))
+    exit(0)
+}
+
+let decider = option("--jev-model").map { "\($0) via /v1/systemone" } ?? model
+let extractorName = option("--extract-model") ?? model
+print("System One eval · \(decider) · extract=\(extractorName) · chain=\(chains) · \(samples.count) samples")
 await ollama.preload()
+await OllamaClient(model: option("--extract-model") ?? model).preload()
 _ = try? await systemOne.choose(question, state: "warm up")
 
 var outcomes: [Outcome] = []

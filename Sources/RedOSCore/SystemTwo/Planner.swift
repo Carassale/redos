@@ -52,29 +52,49 @@ public struct ModelPlanner: Planning {
         let answer: String?
     }
 
-    public func plan(_ input: String, registry: ActionRegistry) async throws -> PlanResult {
+    /// Constant prompt over ~512 tokens: Gemma-style models then reuse the KV cache (~1 s saved).
+    static func systemPrompt(for registry: ActionRegistry) -> String {
         let catalog = registry.all.map { action in
             let parameters = action.parameters
                 .map { "\($0.name)\(ArgumentExtractor.typeHint($0))\($0.isRequired ? "" : " optional")" }
                 .joined(separator: ", ")
             return "- \(action.id)(\(parameters)): \(action.summary)"
         }.joined(separator: "\n")
-        let response = try await client.chat(
-            [
-                .system("""
+        return """
                     You automate a Mac. Break the user's request into the shortest ordered list of these actions:
                     \(catalog)
                     Use only these actions and parameters, and only the steps the user asked for.
                     A website for a named browser is one url.open step with the app argument.
-                    Reply with JSON only: {"steps": [{"action": "<id>", "arguments": {"<parameter>": <value>}}]}
-                    Example: "apri Note e scrivi ciao" -> {"steps": [{"action": "app.open", "arguments": \
-                    {"name": "Notes"}}, {"action": "text.type", "arguments": {"text": "ciao"}}]}
-                    If the user asks a question or chats, or part of the request cannot be done with these actions,
-                    reply {"steps": [], "answer": "<one or two sentences in the user's language>"}.
-                    Never invent real-time facts (weather, news, prices, time): say you cannot access them.
-                    """),
-                .user(input),
-            ],
+                    Reply with compact JSON only: {"steps":[{"action":"<id>","arguments":{"<parameter>":<value>}}]}
+                    If the user asks a question or chats, or any part of the request needs something these actions
+                    cannot do, reply {"steps":[],"answer":"<one short sentence in the user's language>"}.
+                    Answer general knowledge and arithmetic directly. Never invent real-time facts (weather, news,
+                    prices, time): say you cannot access them.
+                    Examples:
+                    "apri Note e scrivi ciao" -> {"steps":[{"action":"app.open","arguments":{"name":"Notes"}},\
+                    {"action":"text.type","arguments":{"text":"ciao"}}]}
+                    "open github.com in Firefox" -> {"steps":[{"action":"url.open","arguments":\
+                    {"url":"github.com","app":"Firefox"}}]}
+                    "lancia il Terminale e scorri in basso" -> {"steps":[{"action":"app.open","arguments":\
+                    {"name":"Terminal"}},{"action":"scroll","arguments":{"direction":"down"}}]}
+                    "chiudi Slack e apri Teams" -> {"steps":[{"action":"app.quit","arguments":{"name":"Slack"}},\
+                    {"action":"app.open","arguments":{"name":"Microsoft Teams"}}]}
+                    "manda un messaggio a Luca su Slack" -> {"steps":[],"answer":"Non posso ancora inviare \
+                    messaggi, ma posso aprire Slack."}
+                    "press the Login button" -> {"steps":[],"answer":"I can't find buttons on screen yet."}
+                    "porta il puntatore in alto a destra" -> {"steps":[],"answer":"Dimmi le coordinate, ad \
+                    esempio 1200, 50."}
+                    "commit and push my changes" -> {"steps":[],"answer":"I can't run terminal commands yet."}
+                    "quanto fa 12 per 12?" -> {"steps":[],"answer":"144."}
+                    "chi ha scritto i Promessi Sposi?" -> {"steps":[],"answer":"Alessandro Manzoni."}
+                    "what's the weather in Rome?" -> {"steps":[],"answer":"I can't access live information \
+                    like the weather."}
+                    """
+    }
+
+    public func plan(_ input: String, registry: ActionRegistry) async throws -> PlanResult {
+        let response = try await client.chat(
+            [.system(Self.systemPrompt(for: registry)), .user(input)],
             format: .string("json"),
             maxTokens: 512,
             topLogprobs: nil

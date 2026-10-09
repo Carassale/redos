@@ -74,7 +74,13 @@ public struct OllamaClient: ChatCompleting, ModelListing {
             logprobs: topLogprobs == nil ? nil : true,
             topLogprobs: topLogprobs
         )
-        let data = try await post("api/chat", body: JSONEncoder().encode(body))
+        let data: Data
+        do {
+            data = try await post("api/chat", body: JSONEncoder().encode(body))
+        } catch SystemOneError.http(501) where format != nil {
+            // Some models (e.g. qwen3.5) reject structured output: callers parse JSON from plain text.
+            return try await chat(messages, format: nil, maxTokens: maxTokens, topLogprobs: topLogprobs)
+        }
         return try JSONDecoder().decode(ChatResponse.self, from: data)
     }
 

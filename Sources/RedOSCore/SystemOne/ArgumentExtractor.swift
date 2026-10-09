@@ -29,7 +29,8 @@ public struct ArgumentExtractor: Sendable {
             maxTokens: 256,
             topLogprobs: nil
         )
-        let values = try JSONDecoder().decode([String: JSONValue].self, from: Data(response.message.content.utf8))
+        let json = JSONText.firstObject(in: response.message.content) ?? response.message.content
+        let values = try JSONDecoder().decode([String: JSONValue].self, from: Data(json.utf8))
         return Self.arguments(from: values, for: action, input: input)
     }
 

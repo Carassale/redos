@@ -3,6 +3,7 @@ BUNDLE_ID ?= dev.redos.RedOS
 SIGN_ID   ?= RedOS Development
 CONFIG    ?= release
 SYSTEM_ONE_MODEL ?= gemma4:e4b-it-qat
+EXTRACTION_MODEL ?= gemma4:e2b-it-qat
 LOCALJEV_PORT    ?= 8080
 VERSION   := $(shell cat VERSION)
 BUILD     := $(shell git rev-list --count HEAD 2>/dev/null || echo 0)
@@ -18,7 +19,7 @@ TOOLCHAIN_DIR := $(if $(findstring CommandLineTools,$(DEV_DIR)),$(DEV_DIR),$(DEV
 TESTING_FW    := $(DEV_DIR)/Library/Developer/Frameworks
 TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) -Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays)
 
-.PHONY: all build app sign run install test test-live test-live-copilot eval lint format clean cert models localjev localjev-run
+.PHONY: all build app sign run install test test-live test-live-copilot eval lint format clean cert models ollama-tune localjev localjev-run
 
 all: app
 
@@ -70,10 +71,21 @@ test-live-copilot:
 
 models:
 	ollama pull $(SYSTEM_ONE_MODEL)
+	ollama pull $(EXTRACTION_MODEL)
+
+# Two cache slots per model: System One and System Two prompts stop evicting each other (~1.8 s -> ~0.15 s).
+# `brew services restart ollama` regenerates the plist: run this again afterwards.
+OLLAMA_PLIST := $(HOME)/Library/LaunchAgents/sh.brew.ollama.plist
+ollama-tune:
+	/usr/libexec/PlistBuddy -c "Delete :EnvironmentVariables:OLLAMA_NUM_PARALLEL" "$(OLLAMA_PLIST)" 2>/dev/null || true
+	/usr/libexec/PlistBuddy -c "Add :EnvironmentVariables:OLLAMA_NUM_PARALLEL string 2" "$(OLLAMA_PLIST)"
+	launchctl bootout gui/$$(id -u)/sh.brew.ollama 2>/dev/null || true
+	sleep 2
+	launchctl bootstrap gui/$$(id -u) "$(OLLAMA_PLIST)"
 
 # System One accuracy, safety and latency on eval/commands.jsonl; EVAL_FLAGS e.g. --no-chain.
 eval:
-	swift run -c release RedOSEval --model $(SYSTEM_ONE_MODEL) \
+	swift run -c release RedOSEval --model $(SYSTEM_ONE_MODEL) --extract-model $(EXTRACTION_MODEL) \
 		--out eval/runs/$$(date +%Y%m%d-%H%M%S)-$(subst :,_,$(SYSTEM_ONE_MODEL)).jsonl $(EVAL_FLAGS)
 
 # Optional Jev-compatible backend; RedOS uses it when the `systemOne.jevURL` default is set.

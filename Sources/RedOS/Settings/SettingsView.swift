@@ -17,7 +17,8 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("System One (local, Ollama)") {
-                TextField("Model", text: $settings.systemOneModel)
+                TextField("Decision model", text: $settings.systemOneModel)
+                TextField("Argument model", text: $settings.extractionModel)
                 LabeledContent("Minimum probability to act") {
                     HStack {
                         Slider(value: $settings.threshold, in: 0.3...0.95, step: 0.05)

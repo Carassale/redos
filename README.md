@@ -42,9 +42,10 @@ Commands that the fast path does not recognize are routed by a local model throu
 
 ```sh
 brew install ollama && brew services start ollama
-make models     # pulls gemma4:e4b-it-qat (~6 GB)
-make test-live  # routing check against the real model
-make eval       # accuracy, safety and latency on eval/commands.jsonl (SYSTEM_ONE_MODEL=..., EVAL_FLAGS=...)
+make models       # pulls gemma4:e4b-it-qat (decisions, ~6 GB) and gemma4:e2b-it-qat (arguments, ~4 GB)
+make ollama-tune  # 2 cache slots per model: much faster (re-run after `brew services restart ollama`)
+make test-live    # routing check against the real model
+make eval         # accuracy, safety and latency (EVAL_FLAGS="--dataset eval/holdout.jsonl", --system-two M)
 ```
 
 Model and minimum probability are in **Settings… (⌘,)**. Optional Jev-compatible backend (LocalJev):
