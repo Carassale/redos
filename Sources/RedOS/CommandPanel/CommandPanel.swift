@@ -23,8 +23,10 @@ final class CommandPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
 
         let hosting = NSHostingController(rootView: rootView)
-        hosting.sizingOptions = [.preferredContentSize]
+        // Fixed size: letting SwiftUI resize the window fed a layout loop that overflowed the stack.
+        hosting.sizingOptions = []
         contentViewController = hosting
+        setContentSize(CommandPanelView.size)
     }
 
     override var canBecomeKey: Bool { true }

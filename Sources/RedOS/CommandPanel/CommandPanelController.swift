@@ -362,8 +362,10 @@ extension CommandPanelController {
 
     private func position() {
         guard let screen = NSScreen.main else { return }
-        let size = panel.contentViewController?.preferredContentSize ?? NSSize(width: 640, height: 64)
         let frame = screen.visibleFrame
-        panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.minY + frame.height * 0.7))
+        // The card sits at the top of the transparent panel, about a quarter below the top of the screen.
+        let top = frame.minY + frame.height * 0.75
+        let size = CommandPanelView.size
+        panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: top - size.height))
     }
 }

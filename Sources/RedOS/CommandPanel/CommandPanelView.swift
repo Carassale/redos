@@ -2,12 +2,20 @@ import RedOSCore
 import SwiftUI
 
 struct CommandPanelView: View {
+    /// The panel never resizes: the card grows inside a fixed transparent window.
+    static let size = CGSize(width: 640, height: 460)
+
     @Bindable var model: CommandPanelModel
     let onSubmit: () -> Void
     let onCancel: () -> Void
     @FocusState private var isFocused: Bool
 
     var body: some View {
+        card
+            .frame(width: Self.size.width, height: Self.size.height, alignment: .top)
+    }
+
+    private var card: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 if model.state == .listening {
@@ -32,8 +40,8 @@ struct CommandPanelView: View {
             status
         }
         .padding(18)
-        .frame(width: 640, alignment: .leading)
-        // Not .glassEffect: in this borderless panel it recursed until the stack overflowed (macOS 26 crash).
+        .frame(width: Self.size.width, alignment: .leading)
+        // Plain material: .glassEffect and a self-sizing window both crashed with layout recursion (macOS 26).
         .background(.regularMaterial, in: .rect(cornerRadius: 22))
         .onExitCommand(perform: onCancel)
         .onAppear { isFocused = true }
@@ -76,11 +84,20 @@ struct CommandPanelView: View {
                 .foregroundStyle(isError ? .red : .secondary)
         case .answer(let text):
             Label {
-                Text(text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                // Long answers scroll inside the fixed-size panel.
+                ViewThatFits(in: .vertical) {
+                    answer(text)
+                    ScrollView { answer(text) }.frame(height: 320)
+                }
             } icon: {
                 Image(systemName: "sparkles").foregroundStyle(.red)
             }
         }
+    }
+
+    private func answer(_ text: String) -> some View {
+        Text(verbatim: text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private static func describe(_ step: ActionRequest) -> String {

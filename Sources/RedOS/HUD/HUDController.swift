@@ -10,6 +10,8 @@ final class HUDModel {
 }
 
 struct HUDView: View {
+    static let size = CGSize(width: 460, height: 56)
+
     let model: HUDModel
 
     var body: some View {
@@ -32,6 +34,7 @@ struct HUDView: View {
         .padding(.vertical, 10)
         .frame(width: 440)
         .background(.regularMaterial, in: .capsule)
+        .frame(width: Self.size.width, height: Self.size.height)
     }
 }
 
@@ -55,8 +58,9 @@ final class HUDController {
         panel.becomesKeyOnlyIfNeeded = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         let hosting = NSHostingController(rootView: HUDView(model: model))
-        hosting.sizingOptions = [.preferredContentSize]
+        hosting.sizingOptions = []
         panel.contentViewController = hosting
+        panel.setContentSize(HUDView.size)
         return panel
     }()
 
@@ -90,9 +94,9 @@ final class HUDController {
     /// Top right, under the menu bar: away from most content the agent clicks.
     private func position() {
         guard let screen = NSScreen.main else { return }
-        let size = panel.contentViewController?.preferredContentSize ?? NSSize(width: 440, height: 40)
+        let size = HUDView.size
         let frame = screen.visibleFrame
-        panel.setFrameOrigin(NSPoint(x: frame.maxX - size.width - 16, y: frame.maxY - size.height - 12))
+        panel.setFrameOrigin(NSPoint(x: frame.maxX - size.width - 8, y: frame.maxY - size.height - 4))
     }
 }
 
