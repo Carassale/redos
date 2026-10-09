@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.6.1</title>
+      <pubDate>Fri, 09 Oct 2026 14:24:29 +0000</pubDate>
+      <sparkle:version>27</sparkle:version>
+      <sparkle:shortVersionString>0.6.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>fix: reopen the panel while a request runs and keep results that arrive while it is closed (menu bar badge); version 0.6.1</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.6.1/RedOS-0.6.1.zip" type="application/octet-stream" sparkle:edSignature="cvxhH7C3pNe0gCGYPHNC4lrZ+gS6C2fBiAwrqwbXCAcZVSP+uOqXFk+tSmTHYnOZAbazNRp3Ot7ed1sHQ6NKBg==" length="2126549"/>
+    </item>
+    <item>
       <title>RedOS 0.6.0</title>
       <pubDate>Fri, 09 Oct 2026 14:14:07 +0000</pubDate>
       <sparkle:version>25</sparkle:version>
