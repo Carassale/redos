@@ -16,5 +16,7 @@ final class CommandPanelModel {
 
     var text = ""
     var state = State.idle
+    /// What a long-running request is doing, e.g. the web search in progress.
+    var progress: String?
     var focusRequest = 0
 }

@@ -12,11 +12,14 @@ public struct PlanResult: Sendable, Equatable {
     public let answer: String?
     /// The request needs to look at the screen between steps (handled by the agent).
     public let needsScreen: Bool
+    /// A web search query: the question needs current or checkable information (handled by the research agent).
+    public let research: String?
 
-    public init(steps: [ActionRequest], answer: String? = nil, needsScreen: Bool = false) {
+    public init(steps: [ActionRequest], answer: String? = nil, needsScreen: Bool = false, research: String? = nil) {
         self.steps = steps
         self.answer = answer
         self.needsScreen = needsScreen
+        self.research = research
     }
 }
 
@@ -55,6 +58,7 @@ public struct ModelPlanner: Planning {
         let steps: [Step]?
         let answer: String?
         let agent: Bool?
+        let research: String?
     }
 
     /// Constant prompt over ~512 tokens: Gemma-style models then reuse the KV cache (~1 s saved).
@@ -75,9 +79,12 @@ public struct ModelPlanner: Planning {
                     If the request needs to look at the screen to decide what to press or fill (elements described
                     by position, order or look, forms, several clicks inside an app), reply {"steps":[],"agent":true}.
                     If the user asks a question or chats, or any part of the request needs something these actions
-                    cannot do, reply {"steps":[],"answer":"<one short sentence in the user's language>"}.
-                    Answer general knowledge and arithmetic directly. Never invent real-time facts (weather, news,
-                    prices, time): say you cannot access them.
+                    cannot do, reply {"steps":[],"answer":"<a short answer in the user's language>"} (max 3 sentences).
+                    Answer stable general knowledge directly (definitions, history, books, classic films, science).
+                    Questions about anything current or worth checking online (news, weather, prices, exchange rates,
+                    sports results, recent or upcoming releases, schedules, who holds a role now, facts you are unsure
+                    of) need the web: reply {"steps":[],"research":"<web search query in the user's language>"}.
+                    Never invent real-time facts.
                     Examples:
                     "apri Note e scrivi ciao" -> {"steps":[{"action":"app.open","arguments":{"name":"Notes"}},\
                     {"action":"text.type","arguments":{"text":"ciao"}}]}
@@ -91,6 +98,7 @@ public struct ModelPlanner: Planning {
                     messaggi, ma posso aprire Slack."}
                     "press the Login button" -> {"steps":[{"action":"ui.press","arguments":{"target":"Login"}}]}
                     "apri il primo menu" -> {"steps":[],"agent":true}
+                    "apri il terzo link della pagina" -> {"steps":[],"agent":true}
                     "compila il modulo con nome Mario" -> {"steps":[],"agent":true}
                     "porta il puntatore in alto a destra" -> {"steps":[],"answer":"Dimmi le coordinate, ad \
                     esempio 1200, 50."}
@@ -98,8 +106,12 @@ public struct ModelPlanner: Planning {
                     {"command":"df -h /"}}]}
                     "quanto fa 12 per 12?" -> {"steps":[],"answer":"144."}
                     "chi ha scritto i Promessi Sposi?" -> {"steps":[],"answer":"Alessandro Manzoni."}
-                    "what's the weather in Rome?" -> {"steps":[],"answer":"I can't access live information \
-                    like the weather."}
+                    "what's the weather in Rome?" -> {"steps":[],"research":"weather Rome"}
+                    "ultime notizie sull'Ucraina" -> {"steps":[],"research":"Ucraina notizie"}
+                    "quando esce il prossimo film di Nolan?" -> {"steps":[],"research":\
+                    "prossimo film Christopher Nolan data di uscita"}
+                    "di cosa parla Inception?" -> {"steps":[],"answer":"Un ladro che ruba segreti nei sogni deve \
+                    invece impiantare un'idea nella mente di un erede: film di Christopher Nolan del 2010."}
                     """
     }
 
@@ -122,8 +134,10 @@ public struct ModelPlanner: Planning {
             return ActionRequest(step.action, arguments ?? [:])
         }
         let answer = plan.answer?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let research = plan.research?.trimmingCharacters(in: .whitespacesAndNewlines)
         return PlanResult(
-            steps: requests, answer: answer?.isEmpty == false ? answer : nil, needsScreen: plan.agent == true
+            steps: requests, answer: answer?.isEmpty == false ? answer : nil, needsScreen: plan.agent == true,
+            research: research?.isEmpty == false ? research : nil
         )
     }
 }

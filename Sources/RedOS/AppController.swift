@@ -61,11 +61,13 @@ final class AppController {
         let voice = VoiceSettings(
             locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers
         )
+        let web = WebTools(locale: settings.voiceLocale)
         commandPanel.update(
             engine: CommandEngine(
                 registry: registry, router: router, planner: planner, assistant: ModelPlanner(client: writer),
                 agent: ModelAgent(client: ollama), observer: AccessibilityObserver(),
-                routines: routines, memory: memory, writer: writer, audit: FileAuditLog()
+                routines: routines, memory: memory, writer: writer,
+                web: web, researcher: ResearchAgent(client: writer, tools: web), audit: FileAuditLog()
             ),
             voice: voice
         )

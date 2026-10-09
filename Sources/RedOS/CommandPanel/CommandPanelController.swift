@@ -208,6 +208,8 @@ final class CommandPanelController {
             }
         case .agent(let task):
             await run(task) { [engine] in await engine.runAgent(task, onStep: $0) }
+        case .research(let question, let query):
+            await research(question, query: query)
         case .answer(let text):
             model.state = .answer(text)
             say(text)
@@ -281,6 +283,8 @@ final class CommandPanelController {
         case .confirmingPlan(let plan):
             Task { [engine] in await engine.cancel(plan) }
             model.state = .idle
+        case .working:
+            work?.cancel()
         default:
             break
         }
@@ -289,6 +293,22 @@ final class CommandPanelController {
 }
 
 extension CommandPanelController {
+    /// Web research keeps the panel open with the current step; Esc or the kill switch stop it.
+    private func research(_ question: String, query: String) async {
+        model.state = .working
+        let result = await engine.runResearch(question, query: query) { [model] step in model.progress = step }
+        model.progress = nil
+        switch result {
+        case .success(let answer):
+            model.state = .answer(answer.display)
+            say(answer.text)
+        case .failure(.cancelled):
+            model.state = .idle
+        case .failure(let error):
+            fail(error.localizedDescription)
+        }
+    }
+
     /// Model answers, spoken as they are.
     private func say(_ text: String) {
         guard isVoiceCommand, voice.speaksAnswers else { return }
@@ -326,7 +346,7 @@ extension CommandPanelController {
         case .ready(let command, _): [command.request]
         case .plan(let plan, _): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
-        case .unrecognized, .unavailable, .answer, .agent: []
+        case .unrecognized, .unavailable, .answer, .agent, .research: []
         }
         let isSensitive = requests.contains { request in
             engine.registry.action(for: request.actionID)?.parameters

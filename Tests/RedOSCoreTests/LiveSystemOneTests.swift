@@ -50,7 +50,31 @@ struct LiveSystemOneTests {
     }
 
     @Test func answersQuestions() async throws {
-        try await LiveSystemTwo.expectAnswer("che tempo fa domani a Milano?", client: Self.ollama, registry: registry)
+        try await LiveSystemTwo.expectAnswer(
+            "chi ha scritto la Divina Commedia?", client: Self.ollama, registry: registry
+        )
+    }
+
+    @Test(arguments: [
+        "che tempo fa domani a Milano?", "ultime notizie su Apple", "quanto costa un bitcoin oggi?",
+        "quando esce il prossimo film Marvel?",
+    ])
+    func sendsCurrentQuestionsToResearch(_ input: String) async throws {
+        let result = try await ModelPlanner(client: Self.ollama).plan(input, registry: registry)
+        print("[live] route \(input) -> \(result)")
+        #expect(result.research != nil)
+    }
+
+    @Test(arguments: ["chi ha diretto Dune parte due?", "che tempo fa domani a Milano?", "ultime notizie su Apple"])
+    func researchesTheWeb(_ question: String) async throws {
+        let planned = try await ModelPlanner(client: Self.ollama).plan(question, registry: registry)
+        let start = ContinuousClock.now
+        let answer = try await ResearchAgent(client: Self.ollama, tools: WebTools(locale: "it_IT"))
+            .answer(question, query: planned.research ?? question)
+        let elapsed = (ContinuousClock.now - start)
+            .formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 1)))
+        print("[live] research \(elapsed) \(question) -> \(answer.display)")
+        #expect(!answer.text.isEmpty)
     }
 
     @Test(arguments: ["apri il mio editor", "open my editor"])

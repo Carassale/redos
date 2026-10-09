@@ -20,7 +20,7 @@ final class Updater {
         observation = controller.updater.observe(\.canCheckForUpdates, options: [.initial, .new]) { [weak self] in
             let updater = $0
             _ = $1
-            MainActor.assumeIsolated { self?.canCheckForUpdates = updater.canCheckForUpdates }
+            Task { @MainActor in self?.canCheckForUpdates = updater.canCheckForUpdates }
         }
     }
 

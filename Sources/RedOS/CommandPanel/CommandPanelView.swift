@@ -33,7 +33,8 @@ struct CommandPanelView: View {
         }
         .padding(18)
         .frame(width: 640, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: 22))
+        // Not .glassEffect: in this borderless panel it recursed until the stack overflowed (macOS 26 crash).
+        .background(.regularMaterial, in: .rect(cornerRadius: 22))
         .onExitCommand(perform: onCancel)
         .onAppear { isFocused = true }
         .onChange(of: model.focusRequest) { isFocused = true }
@@ -48,7 +49,11 @@ struct CommandPanelView: View {
     @ViewBuilder
     private var status: some View {
         switch model.state {
-        case .idle, .working, .listening:
+        case .working:
+            if let progress = model.progress {
+                Text(verbatim: progress).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+            }
+        case .idle, .listening:
             EmptyView()
         case .confirming(let command):
             Label(

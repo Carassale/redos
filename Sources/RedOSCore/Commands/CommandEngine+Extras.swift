@@ -29,6 +29,13 @@ extension CommandEngine {
         if let meta = MetaCommand.parse(input), let resolution = await handle(meta, input: input) {
             return resolution
         }
+        // Arithmetic and conversions: exact and instant, no model.
+        var quick = Calculator.answer(input)
+        if quick == nil { quick = await UnitConverter.answer(input, web: web) }
+        if let answer = quick {
+            await record(input, nil, .answered, route: .fastPath)
+            return .answer(answer)
+        }
         if let resolution = await resolveSelection(input) {
             return resolution
         }
@@ -156,6 +163,23 @@ extension CommandEngine {
         } catch {
             await record(input, nil, .failed, route: .systemTwo, error: .failed(error.localizedDescription))
             return .unavailable(error.localizedDescription)
+        }
+    }
+
+    /// Web research for `question`, starting from the planner's `query`. Remembered facts are not sent:
+    /// web pages could steer the model into leaking them through URLs.
+    public func runResearch(
+        _ question: String, query: String, onProgress: (@MainActor @Sendable (String) -> Void)? = nil
+    ) async -> Result<ResearchAnswer, ActionError> {
+        guard let researcher else { return .failure(.failed(String(localized: "Web research is not available."))) }
+        do {
+            let answer = try await researcher.answer(question, query: query, onProgress: onProgress)
+            await record(question, nil, .answered, route: .systemTwo)
+            return .success(answer)
+        } catch {
+            if Task.isCancelled || error is CancellationError { return .failure(.cancelled) }
+            await record(question, nil, .failed, route: .systemTwo, error: .failed(error.localizedDescription))
+            return .failure(.failed(error.localizedDescription))
         }
     }
 

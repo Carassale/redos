@@ -20,6 +20,8 @@ public enum Resolution: Sendable, Equatable {
     case answer(String)
     /// The task needs to look at the screen between steps: run it with `runAgent`.
     case agent(String)
+    /// The question needs the web: run it with `runResearch`.
+    case research(String, query: String)
 }
 
 /// Progress callback for the HUD: 1-based step number and the action about to run.
@@ -40,12 +42,15 @@ public struct CommandEngine: Sendable {
     let routines: RoutineStore?
     let memory: MemoryStore?
     let writer: (any ChatCompleting)?
+    let web: (any WebResearching)?
+    let researcher: ResearchAgent?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
     /// `planner` handles multi-step requests (fast, local); `assistant` questions and unclear commands
     /// (any provider, defaults to `planner`); `agent` and `observer` tasks that need to see the screen;
-    /// `writer` requests about the selected text.
+    /// `writer` requests about the selected text; `web` quick currency conversions; `researcher` questions
+    /// that need current information.
     public init(
         registry: ActionRegistry,
         parser: FastPathParser = FastPathParser(),
@@ -58,6 +63,8 @@ public struct CommandEngine: Sendable {
         routines: RoutineStore? = nil,
         memory: MemoryStore? = nil,
         writer: (any ChatCompleting)? = nil,
+        web: (any WebResearching)? = nil,
+        researcher: ResearchAgent? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -72,6 +79,8 @@ public struct CommandEngine: Sendable {
         self.routines = routines
         self.memory = memory
         self.writer = writer
+        self.web = web
+        self.researcher = researcher
         self.permissions = permissions
         self.audit = audit
     }
@@ -134,6 +143,9 @@ public struct CommandEngine: Sendable {
         guard !result.steps.isEmpty else {
             if result.needsScreen, agent != nil, observer != nil {
                 return .agent(input)
+            }
+            if let query = result.research, researcher != nil {
+                return .research(input, query: query)
             }
             await record(input, nil, result.answer == nil ? .unrecognized : .answered, route: .systemTwo)
             return result.answer.map(Resolution.answer) ?? .unrecognized

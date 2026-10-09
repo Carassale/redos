@@ -30,8 +30,10 @@ final class HotKeyCenter {
                     MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID
                 )
                 let isPress = GetEventKind(event) == UInt32(kEventHotKeyPressed)
-                MainActor.assumeIsolated {
-                    HotKeyCenter.shared.dispatch(id: hotKeyID.id, isPress: isPress)
+                let id = hotKeyID.id
+                // assumeIsolated crashed here once (executor check from a Carbon callback): hop explicitly.
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { HotKeyCenter.shared.dispatch(id: id, isPress: isPress) }
                 }
                 return noErr
             },

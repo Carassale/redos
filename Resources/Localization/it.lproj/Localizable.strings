@@ -143,3 +143,10 @@
 "Forget" = "Dimentica";
 "Say “ricorda che il mio editor è Visual Studio Code”." = "Di' “ricorda che il mio editor è Visual Studio Code”.";
 "Remembered facts are sent to System Two as context, including cloud providers." = "I fatti ricordati vengono inviati a System Two come contesto, anche ai provider cloud.";
+
+/* Web research */
+"Sources: %@" = "Fonti: %@";
+"Web research is not available." = "La ricerca web non è disponibile.";
+"Blocked address: %@" = "Indirizzo bloccato: %@";
+"The website replied HTTP %lld." = "Il sito ha risposto HTTP %lld.";
+"Not found: %@" = "Non trovato: %@";

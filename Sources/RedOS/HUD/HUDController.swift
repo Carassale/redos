@@ -31,7 +31,7 @@ struct HUDView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(width: 440)
-        .glassEffect(.regular, in: .capsule)
+        .background(.regularMaterial, in: .capsule)
     }
 }
 

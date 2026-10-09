@@ -157,6 +157,35 @@ Candidati provati con `make eval` (78 comandi) e `RedOSEval --system-two` (30 ri
 - **Costi**: `MeteredClient` conta richieste e token stimati (caratteri/4) per i provider cloud; oltre il
   limite giornaliero usa il modello locale. Interruttore "Solo offline". Comandi meta: `MetaCommand`.
 
+### Orchestratore delle domande e ricerca web (09/10/2026)
+
+```mermaid
+flowchart LR
+  Q[Domanda] --> M{Meta / routine / memoria}
+  M -->|no| C{Calcolo o conversione}
+  C -->|sì| A0[Risposta esatta, 0 ms]
+  C -->|no| S1[System One]
+  S1 -->|azione| ACT[Azioni / piano / agente schermo]
+  S1 -->|none| S2[System Two: provider scelto]
+  S2 -->|conoscenza stabile| A1[Risposta diretta]
+  S2 -->|attualità| R[Agente di ricerca]
+  R --> T[search · news · read · weather · currency]
+  T --> R
+  R --> A2[Risposta con fonti]
+```
+
+- `Calculator` (parser ricorsivo, niente NSExpression) e `UnitConverter` (Foundation `Dimension`, valute
+  ECB/Frankfurter) rispondono prima di qualsiasi modello: "2+2" non passa più da Copilot.
+- Il planner/assistente risponde `{"research":"<query>"}` per tutto ciò che è attuale; il `ResearchAgent` usa il
+  client di System Two (cloud o locale), max 4 strumenti, primo strumento scelto senza modello (ricerca o
+  notizie; per il meteo decide il modello), JSON non valido ritentato una volta, fonti mostrate sempre.
+- Strumenti senza chiavi: DuckDuckGo HTML, Google News RSS, Open-Meteo, Frankfurter. `read` accetta solo
+  http(s) pubblici su porte standard (niente localhost, reti private, .local, link-local) anche dopo i redirect.
+- Live (gemma4:e4b locale): "chi ha diretto Dune parte due?" 10 s, "che tempo fa domani a Milano?" 7 s,
+  "ultime notizie su Apple" 12 s; 4/4 domande attuali instradate alla ricerca. Eval System Two 83.9%.
+- Crash risolti: `.glassEffect` nel pannello borderless andava in ricorsione infinita in SwiftUI (sostituito da
+  `.regularMaterial`); callback Carbon degli hotkey ora passano dalla main queue.
+
 ## Architettura
 
 ```mermaid

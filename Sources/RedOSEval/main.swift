@@ -118,11 +118,12 @@ if let plannerModel = option("--system-two") {
         let isCorrect = sample.agent == true
             ? result?.needsScreen == true
             : valid && (sample.plan ?? [[]]).contains { $0 == actions } && result?.needsScreen != true
-                && (actions?.isEmpty == false || result?.answer != nil)
+                && (actions?.isEmpty == false || result?.answer != nil || result?.research != nil)
         correct += isCorrect ? 1 : 0
         let detail = result?.needsScreen == true
             ? "agent"
-            : actions.map { $0.isEmpty ? "answer: \(result?.answer ?? "-")" : $0.joined(separator: " → ") }
+            : result?.research.map { "research: \($0)" }
+                ?? actions.map { $0.isEmpty ? "answer: \(result?.answer ?? "-")" : $0.joined(separator: " → ") }
         print(String(format: "%@ %5.2fs  %-52@ → %@", isCorrect ? "✓" : "✗", elapsed,
                      sample.input as NSString, detail ?? "error"))
     }

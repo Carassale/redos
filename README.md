@@ -54,6 +54,14 @@ The agent never runs dangerous actions (shell) and treats screen content as data
 | `avvia la routine focus quando apro Xcode` / `run routine focus when I open Xcode` | app-launch trigger |
 | `ricorda che il mio editor è Visual Studio Code` → `apri il mio editor` | memory, given to System Two |
 | `traduci in inglese il testo selezionato` / `summarize the selected text` | answer about the selection |
+| `2+2`, `quanto fa 3,5 per 4`, `20% di 150` | instant, exact (no model) |
+| `converti 10 miglia in km`, `100 °F in °C`, `100 dollari in euro` | instant (currencies: ECB rates) |
+| `che tempo fa domani a Milano?`, `ultime notizie su Apple`, `chi ha diretto Dune parte due?` | web research with sources |
+
+Questions go through an orchestrator: arithmetic and conversions are computed locally; System Two answers
+stable knowledge directly and sends anything current to a research agent that searches the web (DuckDuckGo),
+reads pages, news (Google News), weather (Open-Meteo) and exchange rates (ECB), then answers with sources.
+No API keys needed; web content is treated as data and remembered facts are never sent to it.
 
 Triggered routines ask for confirmation when a step is above `safe`. Routines, memory and cloud usage are
 in `~/Library/Application Support/RedOS/` and in **Settings**, which also has an offline-only switch and a

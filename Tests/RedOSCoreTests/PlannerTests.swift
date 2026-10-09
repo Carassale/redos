@@ -111,7 +111,7 @@ struct PlannerTests {
     @Test func questionsAndUncertainCommandsGetSystemTwoAnswers() async {
         let answer = "17 × 23 = 391"
         let question = engine([], answer: answer, decision: .noAction(confidence: 0.9))
-        #expect(await question.resolve("17 per 23?") == .answer(answer))
+        #expect(await question.resolve("quanto è alto il Monte Bianco?") == .answer(answer))
         let uncertain = RouteDecision.uncertain(actionID: "app.open", confidence: 0.4)
         #expect(await engine([], answer: "?", decision: uncertain).resolve("boh") == .answer("?"))
         #expect(await audit.entries.map(\.outcome) == [.answered, .answered])
