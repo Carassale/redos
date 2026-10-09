@@ -47,15 +47,23 @@ make test-live  # routing check against the real model
 make eval       # accuracy, safety and latency on eval/commands.jsonl (SYSTEM_ONE_MODEL=..., EVAL_FLAGS=...)
 ```
 
-Settings (until the Settings window exists):
+Model and minimum probability are in **Settings… (⌘,)**. Optional Jev-compatible backend (LocalJev):
 
 ```sh
-defaults write dev.redos.RedOS systemOne.model gemma4:12b-it-qat     # another Ollama model
-defaults write dev.redos.RedOS systemOne.threshold -float 0.7         # minimum probability to act (default 0.5)
-defaults write dev.redos.RedOS systemOne.jevURL http://127.0.0.1:8080  # use LocalJev (`make localjev-run`)
+make localjev-run
+defaults write dev.redos.RedOS systemOne.jevURL http://127.0.0.1:8080  # then restart RedOS
 ```
 
-Restart RedOS after changing them.
+## System Two (multi-step tasks, questions)
+
+What System One does not run goes to System Two, which returns a plan (always confirmed) or a short
+answer. Choose the provider in **Settings…**: Ollama (local, default), GitHub Copilot (via the
+official `copilot` CLI, tools disabled), OpenAI, Anthropic Claude, Google Gemini. API keys are stored
+in the Keychain.
+
+```sh
+make test-live-copilot COPILOT_MODEL=claude-haiku-5.5   # check Copilot CLI as System Two
+```
 
 ## License
 

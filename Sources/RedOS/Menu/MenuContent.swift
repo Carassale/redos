@@ -8,6 +8,7 @@ struct MenuContent: View {
     var body: some View {
         Text(verbatim: "RedOS \(AppInfo.version)")
         Text("System One: \(controller.systemOneDescription)")
+        Text("System Two: \(controller.systemTwoDescription)")
 
         Divider()
 
@@ -19,6 +20,12 @@ struct MenuContent: View {
         Button("Show Audit Log") {
             controller.revealAuditLog()
         }
+
+        Button("Settings…") {
+            openWindow(id: WindowID.settings)
+            NSApp.activate()
+        }
+        .keyboardShortcut(",")
 
         Divider()
 

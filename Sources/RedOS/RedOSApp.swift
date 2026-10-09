@@ -17,11 +17,18 @@ struct RedOSApp: App {
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(controller.permissions.allGranted ? .suppressed : .presented)
+
+        Window("Settings", id: WindowID.settings) {
+            SettingsView(controller: controller)
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(.suppressed)
     }
 }
 
 enum WindowID {
     static let permissions = "permissions"
+    static let settings = "settings"
 }
 
 enum AppInfo {

@@ -16,6 +16,8 @@ public enum Resolution: Sendable, Equatable {
     case ready(ResolvedCommand, needsConfirmation: Bool)
     /// Plans are always shown to the user and confirmed before running.
     case plan(ResolvedPlan)
+    /// System Two replied with text instead of actions (questions, things it cannot do).
+    case answer(String)
 }
 
 /// Turns user input into validated, policy-checked and audited action executions.
@@ -66,14 +68,11 @@ public struct CommandEngine: Sendable {
                 return await check(
                     ResolvedCommand(input: input, request: request, route: .systemOne, confidence: confidence)
                 )
-            case .noAction(let confidence):
-                await record(input, nil, .unrecognized, route: .systemOne, confidence: confidence)
-            case .multiStep(let confidence):
-                return await plan(input, confidence: confidence)
+            case .noAction(let confidence), .multiStep(let confidence):
+                return await escalate(input, guess: nil, confidence: confidence)
             case .uncertain(let actionID, let confidence):
-                await record(input, ActionRequest(actionID), .unrecognized, route: .systemOne, confidence: confidence)
+                return await escalate(input, guess: ActionRequest(actionID), confidence: confidence)
             }
-            return .unrecognized
         } catch {
             let actionError = ActionError.failed(error.localizedDescription)
             await record(input, nil, .failed, route: .systemOne, error: actionError)
@@ -81,30 +80,31 @@ public struct CommandEngine: Sendable {
         }
     }
 
-    private func plan(_ input: String, confidence: Double) async -> Resolution {
+    /// Hands the request to System Two; without one, System One's verdict is final.
+    private func escalate(_ input: String, guess: ActionRequest?, confidence: Double) async -> Resolution {
         guard let planner else {
-            await record(input, nil, .unrecognized, route: .systemOne, confidence: confidence)
+            await record(input, guess, .unrecognized, route: .systemOne, confidence: confidence)
             return .unrecognized
         }
-        let steps: [ActionRequest]
+        let result: PlanResult
         do {
-            steps = try await planner.plan(input, registry: registry)
+            result = try await planner.plan(input, registry: registry)
         } catch {
             await record(input, nil, .failed, route: .systemTwo, error: .failed(error.localizedDescription))
             return .unavailable(error.localizedDescription)
         }
-        guard !steps.isEmpty else {
-            await record(input, nil, .unrecognized, route: .systemTwo)
-            return .unrecognized
+        guard !result.steps.isEmpty else {
+            await record(input, nil, result.answer == nil ? .unrecognized : .answered, route: .systemTwo)
+            return result.answer.map(Resolution.answer) ?? .unrecognized
         }
-        for step in steps {
+        for step in result.steps {
             let command = ResolvedCommand(input: input, request: step, route: .systemTwo, confidence: nil)
             switch await check(command) {
             case .ready: continue
             case let other: return other
             }
         }
-        return .plan(ResolvedPlan(input: input, steps: steps))
+        return .plan(ResolvedPlan(input: input, steps: result.steps))
     }
 
     private func check(_ command: ResolvedCommand) async -> Resolution {

@@ -10,6 +10,7 @@ final class CommandPanelModel {
         case confirming(ResolvedCommand)
         case confirmingPlan(ResolvedPlan)
         case message(String, isError: Bool)
+        case answer(String)
     }
 
     var text = ""

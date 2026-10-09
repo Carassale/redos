@@ -70,6 +70,16 @@ grammatica in Ollama, quindi la validazione stretta resta in `ActionRegistry`.
 - Eval con 78 comandi (catalogo più ampio): accuratezza 89.7%, copertura 89.6%, 1 azione `safe`
   sbagliata eseguita ("spegni Xcode" → apre Xcode), latenza p50 1.74 s.
 
+### M3: System Two con provider a scelta
+
+- Tutto ciò che System One non esegue (nessuna azione, incerto, più passi) va a System Two, che
+  restituisce un **piano** (sempre confermato) oppure una **risposta** testuale mostrata nel pannello.
+- Provider: Ollama locale (default, offline), **GitHub Copilot CLI** (abbonamento Copilot, tool e MCP
+  disattivati, eseguito in una cartella vuota), OpenAI, Anthropic Claude, Google Gemini (endpoint
+  OpenAI-compatibile). Chiavi API nel Portachiavi; finestra Impostazioni con elenco modelli e test.
+- GitHub Models è stato dismesso il 30/07/2026: per Copilot si usa la CLI ufficiale.
+- Misure: Ollama piano ~3.8 s / risposta ~2.7 s; Copilot `claude-haiku-5.5` piano ~7.3 s / risposta ~4.4 s.
+
 ## Architettura
 
 ```mermaid
@@ -123,7 +133,7 @@ RedOS da VS Code / altri agenti.
 | M1 | Pannello testo stile Spotlight, hotkey globale, ActionRegistry, executor base, Policy, audit log, fast path it/en | ✅ |
 | M2 | System One: protocollo Jev, decisione via logprob su Ollama, estrazione argomenti, LocalJev opzionale | ✅ |
 | M2.5 | Eval su comandi reali it/en, scelta modello, soglie | ✅ |
-| M3 | System Two: provider cloud + locale, Portachiavi | |
+| M3 | System Two: provider cloud + locale, Portachiavi | ✅ |
 | M4 | Voce: push-to-talk, SpeechAnalyzer/WhisperKit, TTS, openWakeWord | |
 | M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell/PTY, HUD, kill switch | |
 | M6 | MCP client e server | |

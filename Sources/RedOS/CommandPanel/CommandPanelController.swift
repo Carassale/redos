@@ -5,7 +5,7 @@ import RedOSCore
 final class CommandPanelController {
     private static let historyKey = "commandHistory"
 
-    private let engine: CommandEngine
+    private var engine: CommandEngine
     private let defaults: UserDefaults
     private let model = CommandPanelModel()
     private var history: CommandHistory
@@ -25,6 +25,10 @@ final class CommandPanelController {
         self.engine = engine
         self.defaults = defaults
         self.history = CommandHistory(entries: defaults.stringArray(forKey: Self.historyKey) ?? [])
+    }
+
+    func update(engine: CommandEngine) {
+        self.engine = engine
     }
 
     func toggle() {
@@ -74,7 +78,7 @@ final class CommandPanelController {
         case .ready(let command, _): [command.request]
         case .plan(let plan): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
-        case .unrecognized, .unavailable: []
+        case .unrecognized, .unavailable, .answer: []
         }
         let isSensitive = requests.contains { request in
             engine.registry.action(for: request.actionID)?.parameters
@@ -103,7 +107,7 @@ final class CommandPanelController {
             Task { await run { [engine] in await engine.execute(command) } }
         case .confirmingPlan(let plan):
             Task { await run { [engine] in await engine.execute(plan) } }
-        case .idle, .message:
+        case .idle, .message, .answer:
             let input = model.text
             model.state = .working
             Task { await resolve(input) }
@@ -115,10 +119,7 @@ final class CommandPanelController {
         remember(input, resolution)
         switch resolution {
         case .unrecognized:
-            model.state = .message(
-                String(localized: "I'm not sure what to do. Complex requests will be handled by System Two."),
-                isError: true
-            )
+            model.state = .message(String(localized: "I don't know how to do that yet."), isError: true)
         case .unavailable(let reason):
             model.state = .message(reason, isError: true)
         case .invalid(_, let error):
@@ -133,6 +134,8 @@ final class CommandPanelController {
             }
         case .plan(let plan):
             model.state = .confirmingPlan(plan)
+        case .answer(let text):
+            model.state = .answer(text)
         }
     }
 

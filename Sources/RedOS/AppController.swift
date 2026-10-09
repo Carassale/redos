@@ -1,38 +1,52 @@
 import AppKit
+import Observation
 import RedOSActions
 import RedOSCore
 
 @MainActor
+@Observable
 final class AppController {
     let permissions = PermissionCenter()
-    let systemOneDescription: String
-    let commandPanel: CommandPanelController
-    private var hotKey: GlobalHotKey?
+    let registry = ActionRegistry(SystemActions.all)
+    private(set) var systemOneDescription = ""
+    private(set) var systemTwoDescription = ""
+    @ObservationIgnored let commandPanel: CommandPanelController
+    @ObservationIgnored private var hotKey: GlobalHotKey?
 
-    init(defaults: UserDefaults = .standard) {
-        let registry = ActionRegistry(SystemActions.all)
-        let ollama = OllamaClient(model: defaults.string(forKey: "systemOne.model") ?? "gemma4:e4b-it-qat")
+    init() {
+        commandPanel = CommandPanelController(engine: CommandEngine(registry: registry, audit: FileAuditLog()))
+        reload()
+    }
+
+    /// Rebuilds the command engine from the current settings.
+    func reload(_ settings: AppSettings = AppSettings()) {
+        let ollama = OllamaClient(model: settings.systemOneModel)
         let systemOne: any SystemOne
         // Optional Jev-compatible backend, e.g. `make localjev-run` on http://127.0.0.1:8080.
-        if let jevURL = defaults.string(forKey: "systemOne.jevURL").flatMap(URL.init(string:)) {
+        if let jevURL = URL(string: settings.jevURL), jevURL.scheme != nil {
             systemOne = JevHTTPSystemOne(baseURL: jevURL)
             systemOneDescription = "Jev · \(jevURL.absoluteString)"
         } else {
             systemOne = OllamaSystemOne(client: ollama)
             systemOneDescription = "Ollama · \(ollama.model)"
         }
-        let threshold = defaults.object(forKey: "systemOne.threshold") as? Double ?? 0.5
         let router = SystemOneRouter(
             registry: registry,
             systemOne: systemOne,
             extractor: ArgumentExtractor(client: ollama),
             warmUp: ollama,
-            threshold: threshold
+            threshold: settings.threshold
         )
-        commandPanel = CommandPanelController(
-            engine: CommandEngine(
-                registry: registry, router: router, planner: OllamaPlanner(client: ollama), audit: FileAuditLog()
-            )
+        let planner: (any Planning)?
+        do {
+            planner = ModelPlanner(client: try settings.systemTwo().client())
+            systemTwoDescription = settings.systemTwo().displayName
+        } catch {
+            planner = nil
+            systemTwoDescription = error.localizedDescription
+        }
+        commandPanel.update(
+            engine: CommandEngine(registry: registry, router: router, planner: planner, audit: FileAuditLog())
         )
     }
 

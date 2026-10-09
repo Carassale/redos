@@ -18,7 +18,7 @@ TOOLCHAIN_DIR := $(if $(findstring CommandLineTools,$(DEV_DIR)),$(DEV_DIR),$(DEV
 TESTING_FW    := $(DEV_DIR)/Library/Developer/Frameworks
 TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) -Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays)
 
-.PHONY: all build app sign run install test test-live eval lint format clean cert models localjev localjev-run
+.PHONY: all build app sign run install test test-live test-live-copilot eval lint format clean cert models localjev localjev-run
 
 all: app
 
@@ -61,6 +61,12 @@ test:
 # Needs a running Ollama with $(SYSTEM_ONE_MODEL).
 test-live:
 	REDOS_LIVE_MODEL=$(SYSTEM_ONE_MODEL) swift test $(TEST_FLAGS) --filter LiveSystemOneTests
+
+# System Two through GitHub Copilot CLI (uses your Copilot subscription).
+COPILOT_MODEL ?= claude-haiku-5.5
+test-live-copilot:
+	REDOS_COPILOT_PATH="$$(zsh -ilc 'command -v copilot' 2>/dev/null | tail -1)" REDOS_COPILOT_MODEL=$(COPILOT_MODEL) \
+		swift test $(TEST_FLAGS) --filter LiveCopilotTests
 
 models:
 	ollama pull $(SYSTEM_ONE_MODEL)

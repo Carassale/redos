@@ -42,13 +42,51 @@ struct LiveSystemOneTests {
 
     @Test(arguments: ["apri chrom e naviga su google.com", "open Safari and go to github.com"])
     func plans(_ input: String) async throws {
+        try await LiveSystemTwo.expectPlan(input, client: Self.ollama, registry: registry)
+    }
+
+    @Test func answersQuestions() async throws {
+        try await LiveSystemTwo.expectAnswer("che tempo fa domani a Milano?", client: Self.ollama, registry: registry)
+    }
+}
+
+/// System Two through Copilot CLI: `make test-live-copilot`.
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["REDOS_COPILOT_PATH"] != nil), .serialized)
+struct LiveCopilotTests {
+    private let registry = ActionRegistry(SystemActions.all)
+    private let client = CopilotCLIClient(
+        executable: URL(filePath: ProcessInfo.processInfo.environment["REDOS_COPILOT_PATH"] ?? ""),
+        model: ProcessInfo.processInfo.environment["REDOS_COPILOT_MODEL"]
+    )
+
+    @Test func plans() async throws {
+        try await LiveSystemTwo.expectPlan("apri chrom e naviga su google.com", client: client, registry: registry)
+    }
+
+    @Test func answersQuestions() async throws {
+        try await LiveSystemTwo.expectAnswer("quanto fa 17 per 23?", client: client, registry: registry)
+    }
+}
+
+enum LiveSystemTwo {
+    static func expectPlan(_ input: String, client: any ChatCompleting, registry: ActionRegistry) async throws {
+        let result = try await timed(input) { try await ModelPlanner(client: client).plan(input, registry: registry) }
+        #expect(result.steps.allSatisfy { (try? registry.validate($0)) != nil })
+        #expect(result.steps.contains { $0.actionID == "url.open" })
+    }
+
+    static func expectAnswer(_ input: String, client: any ChatCompleting, registry: ActionRegistry) async throws {
+        let result = try await timed(input) { try await ModelPlanner(client: client).plan(input, registry: registry) }
+        #expect(result.steps.isEmpty)
+        #expect(result.answer?.isEmpty == false)
+    }
+
+    private static func timed(_ input: String, _ work: () async throws -> PlanResult) async throws -> PlanResult {
         let start = ContinuousClock.now
-        let steps = try await OllamaPlanner(client: Self.ollama).plan(input, registry: registry)
+        let result = try await work()
         let elapsed = ContinuousClock.now - start
         let seconds = elapsed.formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 2)))
-        print("[live] \(seconds) plan \(input) -> \(steps)")
-
-        #expect(steps.allSatisfy { (try? registry.validate($0)) != nil })
-        #expect(steps.contains { $0.actionID == "url.open" })
+        print("[live] \(seconds) system two \(input) -> \(result)")
+        return result
     }
 }

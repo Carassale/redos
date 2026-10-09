@@ -44,7 +44,7 @@ public protocol ChatCompleting: Sendable {
 }
 
 /// Minimal client for Ollama's native `/api/chat`, with thinking disabled.
-public struct OllamaClient: ChatCompleting {
+public struct OllamaClient: ChatCompleting, ModelListing {
     public let baseURL: URL
     public let model: String
     public let keepAlive: String
@@ -81,6 +81,19 @@ public struct OllamaClient: ChatCompleting {
     public func preload() async {
         let body = try? JSONEncoder().encode(["model": model, "keep_alive": keepAlive])
         _ = try? await post("api/generate", body: body ?? Data())
+    }
+
+    public func listModels() async throws -> [String] {
+        struct Tags: Decodable {
+            struct Model: Decodable {
+                let name: String
+            }
+
+            let models: [Model]
+        }
+        let request = try HTTP.request(baseURL.appending(path: "api/tags"), headers: [:])
+        let data = try await HTTP.send(request, service: "Ollama", session: session)
+        return try JSONDecoder().decode(Tags.self, from: data).models.map(\.name).sorted()
     }
 
     private func post(_ path: String, body: Data) async throws -> Data {

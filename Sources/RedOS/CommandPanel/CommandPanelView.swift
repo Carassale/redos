@@ -62,6 +62,12 @@ struct CommandPanelView: View {
         case .message(let text, let isError):
             Label(text, systemImage: isError ? "xmark.octagon" : "checkmark.circle")
                 .foregroundStyle(isError ? .red : .secondary)
+        case .answer(let text):
+            Label {
+                Text(text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "sparkles").foregroundStyle(.red)
+            }
         }
     }
 

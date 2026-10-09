@@ -4,6 +4,7 @@ import OSLog
 public struct AuditEntry: Codable, Sendable, Equatable {
     public enum Outcome: String, Codable, Sendable {
         case unrecognized
+        case answered
         case invalid
         case denied
         case cancelled

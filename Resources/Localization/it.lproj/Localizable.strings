@@ -18,7 +18,7 @@
 "Show Audit Log" = "Mostra registro azioni";
 "Ask RedOS…" = "Chiedi a RedOS…";
 "Run %@? Press Return to confirm, Esc to cancel." = "Eseguire %@? Invio per confermare, Esc per annullare.";
-"I'm not sure what to do. Complex requests will be handled by System Two." = "Non so bene cosa fare. Le richieste complesse le gestirà System Two.";
+"I don't know how to do that yet." = "Non so ancora come farlo.";
 "Action disabled: %@" = "Azione disattivata: %@";
 "Run this plan? Press Return to confirm, Esc to cancel." = "Eseguire questo piano? Invio per confermare, Esc per annullare.";
 "The plan has too many steps (%lld)." = "Il piano ha troppi passi (%lld).";
@@ -31,6 +31,36 @@
 "Too many options for System One." = "Troppe opzioni per System One.";
 "Ollama is not reachable at %@" = "Ollama non raggiungibile su %@";
 "Jev is not reachable at %@" = "Jev non raggiungibile su %@";
+
+/* System Two */
+"System Two: %@" = "System Two: %@";
+"%@ is not reachable." = "%@ non è raggiungibile.";
+"The AI provider returned HTTP %lld: %@" = "Il provider AI ha risposto HTTP %1$lld: %2$@";
+"The AI provider returned an empty answer." = "Il provider AI ha dato una risposta vuota.";
+"Missing API key for %@. Add it in Settings." = "Manca la chiave API per %@. Aggiungila nelle Impostazioni.";
+"The AI command failed: %@" = "Il comando AI è fallito: %@";
+"System Two replied with an unreadable plan." = "System Two ha risposto con un piano illeggibile.";
+"Copilot CLI not found. Set its path in Settings." = "Copilot CLI non trovata. Imposta il percorso nelle Impostazioni.";
+
+/* Settings */
+"Settings" = "Impostazioni";
+"Settings…" = "Impostazioni…";
+"System One (local, Ollama)" = "System One (locale, Ollama)";
+"Model" = "Modello";
+"Minimum probability to act" = "Probabilità minima per agire";
+"Provider" = "Provider";
+"Models" = "Modelli";
+"Load from provider" = "Carica dal provider";
+"API key" = "Chiave API";
+"Copilot CLI path" = "Percorso di Copilot CLI";
+"Detect" = "Rileva";
+"Test System Two" = "Prova System Two";
+"Save" = "Salva";
+"Saved." = "Salvato.";
+"%lld models available." = "%lld modelli disponibili.";
+"OK in %@: %@" = "OK in %1$@: %2$@";
+"Everything stays on this Mac." = "Tutto resta su questo Mac.";
+"Commands that System One cannot handle, with the list of available actions, are sent to this provider." = "I comandi che System One non gestisce, con l'elenco delle azioni disponibili, vengono inviati a questo provider.";
 
 /* Action errors */
 "Unknown action: %@" = "Azione sconosciuta: %@";
