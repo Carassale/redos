@@ -8,6 +8,7 @@ final class CommandPanelModel {
         case idle
         case working
         case confirming(ResolvedCommand)
+        case confirmingPlan(ResolvedPlan)
         case message(String, isError: Bool)
     }
 

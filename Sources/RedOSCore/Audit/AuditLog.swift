@@ -14,6 +14,7 @@ public struct AuditEntry: Codable, Sendable, Equatable {
     public enum Route: String, Codable, Sendable {
         case fastPath
         case systemOne
+        case systemTwo
     }
 
     public var date: Date

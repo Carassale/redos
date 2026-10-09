@@ -20,6 +20,8 @@
 "Run %@? Press Return to confirm, Esc to cancel." = "Eseguire %@? Invio per confermare, Esc per annullare.";
 "I'm not sure what to do. Complex requests will be handled by System Two." = "Non so bene cosa fare. Le richieste complesse le gestirà System Two.";
 "Action disabled: %@" = "Azione disattivata: %@";
+"Run this plan? Press Return to confirm, Esc to cancel." = "Eseguire questo piano? Invio per confermare, Esc per annullare.";
+"The plan has too many steps (%lld)." = "Il piano ha troppi passi (%lld).";
 
 /* System One */
 "System One: %@" = "System One: %@";

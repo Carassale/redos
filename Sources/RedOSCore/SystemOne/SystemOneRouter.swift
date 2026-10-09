@@ -1,7 +1,9 @@
 public enum RouteDecision: Sendable, Equatable {
     case action(ActionRequest, confidence: Double)
-    /// No single action fits: a question, a conversation or a multi-step task (System Two territory).
+    /// No single action fits: a question, a conversation or something not supported.
     case noAction(confidence: Double)
+    /// Several actions in sequence: handed to the System Two planner.
+    case multiStep(confidence: Double)
     case uncertain(actionID: String, confidence: Double)
 }
 
@@ -12,6 +14,7 @@ public protocol CommandRouting: Sendable {
 
 public struct SystemOneRouter: CommandRouting {
     public static let noneLabel = "none"
+    public static let multiStepLabel = "multi_step"
 
     private let registry: ActionRegistry
     private let systemOne: any SystemOne
@@ -39,14 +42,18 @@ public struct SystemOneRouter: CommandRouting {
 
     public var question: JevChoiceQuestion {
         let actions = registry.all.map { JevOption(label: $0.id, description: $0.summary) }
+        let multiStep = JevOption(
+            label: Self.multiStepLabel,
+            description: "Several of the actions above in sequence (e.g. open an app and then go to a website in it)."
+        )
         let none = JevOption(
             label: Self.noneLabel,
-            description: "None of the above: questions, conversation, tasks with several steps, or actions not listed"
+            description: "None of the above: questions, conversation, or actions not listed"
                 + " (e.g. clicking a named button, media, volume, screenshots, shutting down)."
         )
         return JevChoiceQuestion(
             instructions: "Pick the single action that fulfils the user's command on their Mac.",
-            options: actions + [none]
+            options: actions + [multiStep, none]
         )
     }
 
@@ -59,6 +66,9 @@ public struct SystemOneRouter: CommandRouting {
         let answer = try await systemOne.choose(question, state: input)
         if answer.choice == Self.noneLabel {
             return .noAction(confidence: answer.probability)
+        }
+        if answer.choice == Self.multiStepLabel {
+            return .multiStep(confidence: answer.probability)
         }
         guard answer.probability >= threshold, let action = registry.action(for: answer.choice) else {
             return .uncertain(actionID: answer.choice, confidence: answer.probability)

@@ -4,6 +4,7 @@ import Foundation
 public struct FastPathParser: Sendable {
     public struct Vocabulary: Sendable {
         public var openApp: [String]
+        public var openURL: [String]
         public var quitApp: [String]
         public var typeText: [String]
         public var scroll: [String]
@@ -18,9 +19,10 @@ public struct FastPathParser: Sendable {
         public init(
             openApp: [String], quitApp: [String], typeText: [String], scroll: [String],
             directions: [String: String], click: [String], moveMouse: [String],
-            connectors: [String] = [], courtesies: [String] = []
+            openURL: [String] = [], connectors: [String] = [], courtesies: [String] = []
         ) {
             self.openApp = openApp
+            self.openURL = openURL
             self.quitApp = quitApp
             self.typeText = typeText
             self.scroll = scroll
@@ -49,25 +51,34 @@ public struct FastPathParser: Sendable {
         if let rest = remainder(of: text, after: vocabulary.typeText) {
             return ActionRequest("text.type", ["text": unquoted(rest)])
         }
+        if let rest = remainder(of: text, after: vocabulary.openURL), WebAddress.url(from: rest) != nil {
+            return ActionRequest("url.open", ["url": rest])
+        }
         if let rest = remainder(of: text, after: vocabulary.openApp) {
-            return appName(rest, vocabulary).map { ActionRequest("app.open", ["name": $0]) }
+            return openRequest(rest, vocabulary)
         }
         if let rest = remainder(of: text, after: vocabulary.quitApp) {
             return appName(rest, vocabulary).map { ActionRequest("app.quit", ["name": $0]) }
         }
         if let rest = remainder(of: text, after: vocabulary.moveMouse) {
-            guard let (x, y) = coordinates(in: rest) else { return nil }
-            return ActionRequest("mouse.move", ["x": String(x), "y": String(y)])
+            return coordinates(in: rest).map { ActionRequest("mouse.move", ["x": String($0), "y": String($1)]) }
         }
         if let rest = remainder(of: text, after: vocabulary.click, allowEmpty: true) {
             if rest.isEmpty { return ActionRequest("mouse.click") }
-            guard let (x, y) = coordinates(in: rest) else { return nil }
-            return ActionRequest("mouse.click", ["x": String(x), "y": String(y)])
+            return coordinates(in: rest).map { ActionRequest("mouse.click", ["x": String($0), "y": String($1)]) }
         }
         if let rest = remainder(of: text, after: vocabulary.scroll, allowEmpty: true) {
             return scrollRequest(rest, directions: vocabulary.directions)
         }
         return nil
+    }
+
+    /// "apri Safari" opens the app, "apri google.com" the website.
+    private func openRequest(_ rest: String, _ vocabulary: Vocabulary) -> ActionRequest? {
+        guard let name = appName(rest, vocabulary) else { return nil }
+        return WebAddress.url(from: name) == nil
+            ? ActionRequest("app.open", ["name": name])
+            : ActionRequest("url.open", ["url": name])
     }
 
     private func scrollRequest(_ rest: String, directions: [String: String]) -> ActionRequest? {
@@ -144,6 +155,7 @@ extension FastPathParser.Vocabulary {
         directions: ["up": "up", "down": "down", "left": "left", "right": "right"],
         click: ["click", "click at"],
         moveMouse: ["move mouse to", "move the mouse to", "move mouse", "move the mouse"],
+        openURL: ["go to", "browse to", "navigate to", "open website", "open the website", "open the site"],
         connectors: ["and", "then"],
         courtesies: ["please", "for me"]
     )
@@ -159,6 +171,7 @@ extension FastPathParser.Vocabulary {
         ],
         click: ["clicca", "clic", "click", "clicca a", "clicca in"],
         moveMouse: ["muovi il mouse a", "muovi il mouse su", "muovi il mouse", "sposta il mouse a", "sposta il mouse"],
+        openURL: ["vai su", "vai a", "naviga su", "naviga a", "apri il sito"],
         connectors: ["e", "poi", "quindi"],
         courtesies: ["per favore", "per piacere", "grazie"]
     )

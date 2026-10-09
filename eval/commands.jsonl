@@ -42,13 +42,21 @@
 {"lang": "en", "input": "move the pointer to x 100 y 250", "action": "mouse.move", "arguments": {"x": "100", "y": "250"}}
 {"lang": "it", "input": "sposta il cursore alle coordinate 500, 300", "action": "mouse.move", "arguments": {"x": "500", "y": "300"}}
 {"lang": "it", "input": "porta il puntatore a 1200 800", "action": "mouse.move", "arguments": {"x": "1200", "y": "800"}}
+{"lang": "en", "input": "open the website github.com", "action": "url.open", "arguments": {"url": "github.com|https://github.com|https://www.github.com"}}
+{"lang": "en", "input": "show me apple.com in Safari", "action": "url.open", "arguments": {"url": "apple.com|https://apple.com|https://www.apple.com", "app": "Safari"}}
+{"lang": "it", "input": "naviga su wikipedia.org", "action": "url.open", "arguments": {"url": "wikipedia.org|https://wikipedia.org|https://www.wikipedia.org"}}
+{"lang": "it", "input": "fammi vedere il sito repubblica.it", "action": "url.open", "arguments": {"url": "repubblica.it|https://repubblica.it|https://www.repubblica.it"}}
+{"lang": "en", "input": "open Safari and go to github.com", "action": "multi_step"}
+{"lang": "en", "input": "launch TextEdit then type hello", "action": "multi_step"}
+{"lang": "it", "input": "apri chrom e naviga su google.com", "action": "multi_step"}
+{"lang": "it", "input": "apri Note e scrivi lista della spesa", "action": "multi_step"}
 {"lang": "en", "input": "what's the weather tomorrow in Milan?", "action": "none"}
 {"lang": "en", "input": "how are you today?", "action": "none"}
 {"lang": "en", "input": "pause the music", "action": "none"}
 {"lang": "en", "input": "turn the volume down", "action": "none"}
 {"lang": "en", "input": "take a screenshot", "action": "none"}
-{"lang": "en", "input": "email Marco the latest report and then archive it", "action": "none"}
-{"lang": "en", "input": "open the repo, pull and run the tests", "action": "none"}
+{"lang": "en", "input": "email Marco the latest report and then archive it", "action": "multi_step"}
+{"lang": "en", "input": "open the repo, pull and run the tests", "action": "multi_step"}
 {"lang": "en", "input": "what is 17 times 23?", "action": "none"}
 {"lang": "en", "input": "remind me to call mum at 6", "action": "none"}
 {"lang": "en", "input": "summarize this page", "action": "none"}
@@ -59,8 +67,8 @@
 {"lang": "it", "input": "metti in pausa la musica", "action": "none"}
 {"lang": "it", "input": "alza il volume", "action": "none"}
 {"lang": "it", "input": "fai uno screenshot", "action": "none"}
-{"lang": "it", "input": "manda una mail a Marco con il report e poi archiviala", "action": "none"}
-{"lang": "it", "input": "apri il progetto, fai pull e lancia i test", "action": "none"}
+{"lang": "it", "input": "manda una mail a Marco con il report e poi archiviala", "action": "multi_step"}
+{"lang": "it", "input": "apri il progetto, fai pull e lancia i test", "action": "multi_step"}
 {"lang": "it", "input": "quanto fa 17 per 23?", "action": "none"}
 {"lang": "it", "input": "ricordami di chiamare la mamma alle 18", "action": "none"}
 {"lang": "it", "input": "riassumi questa pagina", "action": "none"}

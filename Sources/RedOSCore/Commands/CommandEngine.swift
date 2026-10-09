@@ -14,6 +14,8 @@ public enum Resolution: Sendable, Equatable {
     case invalid(ActionRequest, ActionError)
     case denied(ActionRequest)
     case ready(ResolvedCommand, needsConfirmation: Bool)
+    /// Plans are always shown to the user and confirmed before running.
+    case plan(ResolvedPlan)
 }
 
 /// Turns user input into validated, policy-checked and audited action executions.
@@ -24,6 +26,7 @@ public struct CommandEngine: Sendable {
     public var parser: FastPathParser
     public var policy: Policy
     private let router: (any CommandRouting)?
+    private let planner: (any Planning)?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
@@ -32,6 +35,7 @@ public struct CommandEngine: Sendable {
         parser: FastPathParser = FastPathParser(),
         policy: Policy = Policy(),
         router: (any CommandRouting)? = nil,
+        planner: (any Planning)? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -39,6 +43,7 @@ public struct CommandEngine: Sendable {
         self.parser = parser
         self.policy = policy
         self.router = router
+        self.planner = planner
         self.permissions = permissions
         self.audit = audit
     }
@@ -63,6 +68,8 @@ public struct CommandEngine: Sendable {
                 )
             case .noAction(let confidence):
                 await record(input, nil, .unrecognized, route: .systemOne, confidence: confidence)
+            case .multiStep(let confidence):
+                return await plan(input, confidence: confidence)
             case .uncertain(let actionID, let confidence):
                 await record(input, ActionRequest(actionID), .unrecognized, route: .systemOne, confidence: confidence)
             }
@@ -72,6 +79,32 @@ public struct CommandEngine: Sendable {
             await record(input, nil, .failed, route: .systemOne, error: actionError)
             return .unavailable(error.localizedDescription)
         }
+    }
+
+    private func plan(_ input: String, confidence: Double) async -> Resolution {
+        guard let planner else {
+            await record(input, nil, .unrecognized, route: .systemOne, confidence: confidence)
+            return .unrecognized
+        }
+        let steps: [ActionRequest]
+        do {
+            steps = try await planner.plan(input, registry: registry)
+        } catch {
+            await record(input, nil, .failed, route: .systemTwo, error: .failed(error.localizedDescription))
+            return .unavailable(error.localizedDescription)
+        }
+        guard !steps.isEmpty else {
+            await record(input, nil, .unrecognized, route: .systemTwo)
+            return .unrecognized
+        }
+        for step in steps {
+            let command = ResolvedCommand(input: input, request: step, route: .systemTwo, confidence: nil)
+            switch await check(command) {
+            case .ready: continue
+            case let other: return other
+            }
+        }
+        return .plan(ResolvedPlan(input: input, steps: steps))
     }
 
     private func check(_ command: ResolvedCommand) async -> Resolution {
@@ -95,6 +128,30 @@ public struct CommandEngine: Sendable {
 
     public func cancel(_ command: ResolvedCommand) async {
         await record(command, .cancelled)
+    }
+
+    public func cancel(_ plan: ResolvedPlan) async {
+        for command in commands(of: plan) {
+            await record(command, .cancelled)
+        }
+    }
+
+    /// Runs the steps in order and stops at the first failure.
+    public func execute(_ plan: ResolvedPlan) async -> Result<Void, ActionError> {
+        for (index, command) in commands(of: plan).enumerated() {
+            if index > 0 {
+                // Let the previous step settle (window focus, page load) before the next one.
+                try? await Task.sleep(for: .milliseconds(400))
+            }
+            if case .failure(let error) = await execute(command) {
+                return .failure(error)
+            }
+        }
+        return .success(())
+    }
+
+    private func commands(of plan: ResolvedPlan) -> [ResolvedCommand] {
+        plan.steps.map { ResolvedCommand(input: plan.input, request: $0, route: .systemTwo, confidence: nil) }
     }
 
     public func execute(_ command: ResolvedCommand) async -> Result<Void, ActionError> {

@@ -30,7 +30,7 @@ struct Outcome: Encodable {
     let error: String?
 
     var decisionCorrect: Bool { predicted == expected }
-    var shouldAct: Bool { expected != SystemOneRouter.noneLabel }
+    var shouldAct: Bool { ![SystemOneRouter.noneLabel, SystemOneRouter.multiStepLabel].contains(expected) }
     func acts(at threshold: Double) -> Bool { argumentsValid && probability >= threshold }
 }
 
@@ -146,7 +146,7 @@ let brier = outcomes.map { pow($0.probability - ($0.decisionCorrect ? 1 : 0), 2)
 print(String(format: "brier score      %.3f (lower is better)", brier))
 
 print("\n## Threshold sweep (act only when p ≥ t and arguments are valid)")
-print("t     coverage            precision           false actions on 'none'")
+print("t     coverage            precision           false actions on 'none'/'multi_step'")
 for threshold in [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95] {
     let acted = outcomes.filter { $0.acts(at: threshold) }
     let shouldAct = outcomes.filter(\.shouldAct)

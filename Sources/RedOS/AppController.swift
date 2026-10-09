@@ -30,7 +30,9 @@ final class AppController {
             threshold: threshold
         )
         commandPanel = CommandPanelController(
-            engine: CommandEngine(registry: registry, router: router, audit: FileAuditLog())
+            engine: CommandEngine(
+                registry: registry, router: router, planner: OllamaPlanner(client: ollama), audit: FileAuditLog()
+            )
         )
     }
 

@@ -10,6 +10,9 @@ struct FastPathParserTests {
         ("chiudi Slack", ActionRequest("app.quit", ["name": "Slack"])),
         ("chiudi Spotify per favore", ActionRequest("app.quit", ["name": "Spotify"])),
         ("open Xcode, please", ActionRequest("app.open", ["name": "Xcode"])),
+        ("vai su google.com", ActionRequest("url.open", ["url": "google.com"])),
+        ("apri github.com/apple", ActionRequest("url.open", ["url": "github.com/apple"])),
+        ("go to the bottom", nil),
         ("esci da Mail", ActionRequest("app.quit", ["name": "Mail"])),
         ("scrivi \"ciao mondo\"", ActionRequest("text.type", ["text": "ciao mondo"])),
         ("type open safari", ActionRequest("text.type", ["text": "open safari"])),
@@ -21,13 +24,28 @@ struct FastPathParserTests {
         ("click at 100, 200", ActionRequest("mouse.click", ["x": "100", "y": "200"])),
         ("muovi il mouse a 300 400", ActionRequest("mouse.move", ["x": "300", "y": "400"])),
     ])
-    func recognizes(_ input: String, _ expected: ActionRequest) {
+    func recognizes(_ input: String, _ expected: ActionRequest?) {
         #expect(parser.parse(input) == expected)
+    }
+
+    @Test(arguments: [
+        ("google.com", "https://google.com"),
+        ("https://github.com/apple", "https://github.com/apple"),
+        ("http://example.org", "http://example.org"),
+    ])
+    func normalizesWebAddresses(_ text: String, _ expected: String) {
+        #expect(WebAddress.url(from: text)?.absoluteString == expected)
+    }
+
+    @Test(arguments: ["", "Safari", "google com", "file:///etc/passwd", "javascript:alert(1)", "localhost", "a."])
+    func rejectsNonWebAddresses(_ text: String) {
+        #expect(WebAddress.url(from: text) == nil)
     }
 
     @Test(arguments: [
         "", "   ", "apri", "apriti sesamo", "what's the weather?", "clicca su Salva", "scroll the page",
         "apri il progetto, fai pull e lancia i test", "open the repo and run the tests", "apri Mail poi scrivi",
+        "apri chrom e naviga su google.com",
     ])
     func ignores(_ input: String) {
         #expect(parser.parse(input) == nil)

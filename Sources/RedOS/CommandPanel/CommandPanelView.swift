@@ -1,3 +1,4 @@
+import RedOSCore
 import SwiftUI
 
 struct CommandPanelView: View {
@@ -30,7 +31,10 @@ struct CommandPanelView: View {
         .onAppear { isFocused = true }
         .onChange(of: model.focusRequest) { isFocused = true }
         .onChange(of: model.text) {
-            if case .confirming = model.state { model.state = .idle }
+            switch model.state {
+            case .confirming, .confirmingPlan: model.state = .idle
+            default: break
+            }
         }
     }
 
@@ -45,9 +49,24 @@ struct CommandPanelView: View {
                 systemImage: "exclamationmark.triangle"
             )
             .foregroundStyle(.orange)
+        case .confirmingPlan(let plan):
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Run this plan? Press Return to confirm, Esc to cancel.", systemImage: "list.number")
+                    .foregroundStyle(.orange)
+                ForEach(Array(plan.steps.enumerated()), id: \.offset) { index, step in
+                    Text(verbatim: "\(index + 1). \(Self.describe(step))")
+                        .font(.callout.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+            }
         case .message(let text, let isError):
             Label(text, systemImage: isError ? "xmark.octagon" : "checkmark.circle")
                 .foregroundStyle(isError ? .red : .secondary)
         }
+    }
+
+    private static func describe(_ step: ActionRequest) -> String {
+        let arguments = step.arguments.sorted { $0.key < $1.key }.map { "\($0.key): \($0.value)" }
+        return arguments.isEmpty ? step.actionID : "\(step.actionID)  \(arguments.joined(separator: ", "))"
     }
 }

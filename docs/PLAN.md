@@ -59,6 +59,17 @@ grammatica in Ollama, quindi la validazione stretta resta in `ActionRegistry`.
 - Limite: catalogo tarato sullo stesso set (rischio overfitting). Da ampliare con comandi reali
   presi dal registro azioni (`route`, `confidence` sono già registrati).
 
+### Richieste in più passi (anticipo di M3, System Two locale)
+
+- System One ha l'opzione `multi_step`; `OllamaPlanner` (stesso modello, JSON mode) produce una lista
+  di azioni del catalogo (max 6), ognuna validata e controllata dalla policy.
+- Il piano è **sempre mostrato e confermato** (Invio) prima di eseguirlo; i passi girano in ordine e si
+  fermano al primo errore. Nuova azione `url.open` (solo http/https).
+- "apri chrom e naviga su google.com" → `app.open Google Chrome` + `url.open google.com (Google Chrome)`.
+  Decisione ~1.2 s + piano ~3.5 s.
+- Eval con 78 comandi (catalogo più ampio): accuratezza 89.7%, copertura 89.6%, 1 azione `safe`
+  sbagliata eseguita ("spegni Xcode" → apre Xcode), latenza p50 1.74 s.
+
 ## Architettura
 
 ```mermaid

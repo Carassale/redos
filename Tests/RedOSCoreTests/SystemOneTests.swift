@@ -103,14 +103,15 @@ struct SystemOneTests {
             )
         }
 
-        // Options are lettered in registry order, with "none" last: A = app.open, B = none.
-        #expect(try await router([("B", 0.9), ("A", 0.1)]).route("ciao") == .noAction(confidence: 0.9))
+        // Options are lettered in registry order, then "multi_step" and "none": A = app.open, B = multi_step, C = none.
+        #expect(try await router([("C", 0.9), ("A", 0.1)]).route("ciao") == .noAction(confidence: 0.9))
+        #expect(try await router([("B", 0.8), ("A", 0.2)]).route("apri e naviga") == .multiStep(confidence: 0.8))
         #expect(
-            try await router([("A", 0.5), ("B", 0.5)]).route("boh")
+            try await router([("A", 0.5), ("C", 0.5)]).route("boh")
                 == .uncertain(actionID: "app.open", confidence: 0.5)
         )
         #expect(
-            try await router([("A", 0.95), ("B", 0.05)]).route("bring up my terminal")
+            try await router([("A", 0.95), ("C", 0.05)]).route("bring up my terminal")
                 == .action(ActionRequest("app.open", ["name": "Terminal"]), confidence: 0.95)
         )
     }

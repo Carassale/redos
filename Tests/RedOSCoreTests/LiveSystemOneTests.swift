@@ -6,15 +6,14 @@ import Testing
 /// Runs against a real Ollama: `make test-live`.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["REDOS_LIVE_MODEL"] != nil), .serialized)
 struct LiveSystemOneTests {
-    private let router: SystemOneRouter = {
-        let ollama = OllamaClient(model: ProcessInfo.processInfo.environment["REDOS_LIVE_MODEL"] ?? "")
-        return SystemOneRouter(
-            registry: ActionRegistry(SystemActions.all),
-            systemOne: OllamaSystemOne(client: ollama),
-            extractor: ArgumentExtractor(client: ollama),
-            warmUp: ollama
-        )
-    }()
+    private static let ollama = OllamaClient(model: ProcessInfo.processInfo.environment["REDOS_LIVE_MODEL"] ?? "")
+    private let registry = ActionRegistry(SystemActions.all)
+    private let router = SystemOneRouter(
+        registry: ActionRegistry(SystemActions.all),
+        systemOne: OllamaSystemOne(client: ollama),
+        extractor: ArgumentExtractor(client: ollama),
+        warmUp: ollama
+    )
 
     @Test(arguments: [
         ("bring up my terminal please", "app.open"),
@@ -22,6 +21,7 @@ struct LiveSystemOneTests {
         ("chiudi Spotify per favore", "app.quit"),
         ("vai in fondo alla pagina", "scroll"),
         ("scrivi buongiorno a tutti", "text.type"),
+        ("apri chrom e naviga su google.com", SystemOneRouter.multiStepLabel),
         ("che tempo fa domani a Milano?", SystemOneRouter.noneLabel),
     ])
     func routes(_ input: String, _ expected: String) async throws {
@@ -35,7 +35,20 @@ struct LiveSystemOneTests {
         switch decision {
         case .action(let request, _): #expect(request.actionID == expected)
         case .noAction: #expect(expected == SystemOneRouter.noneLabel)
+        case .multiStep: #expect(expected == SystemOneRouter.multiStepLabel)
         case .uncertain(let actionID, _): Issue.record("Uncertain: \(actionID)")
         }
+    }
+
+    @Test(arguments: ["apri chrom e naviga su google.com", "open Safari and go to github.com"])
+    func plans(_ input: String) async throws {
+        let start = ContinuousClock.now
+        let steps = try await OllamaPlanner(client: Self.ollama).plan(input, registry: registry)
+        let elapsed = ContinuousClock.now - start
+        let seconds = elapsed.formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 2)))
+        print("[live] \(seconds) plan \(input) -> \(steps)")
+
+        #expect(steps.allSatisfy { (try? registry.validate($0)) != nil })
+        #expect(steps.contains { $0.actionID == "url.open" })
     }
 }

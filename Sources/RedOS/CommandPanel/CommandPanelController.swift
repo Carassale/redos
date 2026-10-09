@@ -70,13 +70,17 @@ final class CommandPanelController {
 
     /// Commands carrying sensitive arguments (e.g. typed text) are kept out of the persisted history.
     private func remember(_ input: String, _ resolution: Resolution) {
-        let request: ActionRequest? = switch resolution {
-        case .ready(let command, _): command.request
-        case .invalid(let request, _), .denied(let request): request
-        case .unrecognized, .unavailable: nil
+        let requests: [ActionRequest] = switch resolution {
+        case .ready(let command, _): [command.request]
+        case .plan(let plan): plan.steps
+        case .invalid(let request, _), .denied(let request): [request]
+        case .unrecognized, .unavailable: []
         }
-        if let request, let action = engine.registry.action(for: request.actionID),
-           action.parameters.contains(where: { $0.isSensitive && request.arguments[$0.name] != nil }) {
+        let isSensitive = requests.contains { request in
+            engine.registry.action(for: request.actionID)?.parameters
+                .contains { $0.isSensitive && request.arguments[$0.name] != nil } ?? false
+        }
+        if isSensitive {
             history.resetNavigation()
             return
         }
@@ -96,7 +100,9 @@ final class CommandPanelController {
         case .working:
             return
         case .confirming(let command):
-            Task { await run(command) }
+            Task { await run { [engine] in await engine.execute(command) } }
+        case .confirmingPlan(let plan):
+            Task { await run { [engine] in await engine.execute(plan) } }
         case .idle, .message:
             let input = model.text
             model.state = .working
@@ -123,17 +129,19 @@ final class CommandPanelController {
             if needsConfirmation {
                 model.state = .confirming(command)
             } else {
-                await run(command)
+                await run { [engine] in await engine.execute(command) }
             }
+        case .plan(let plan):
+            model.state = .confirmingPlan(plan)
         }
     }
 
-    private func run(_ command: ResolvedCommand) async {
+    private func run(_ work: () async -> Result<Void, ActionError>) async {
         model.state = .working
         hide()
         // Give focus back to the previous app before posting keyboard or mouse events.
         try? await Task.sleep(for: .milliseconds(150))
-        switch await engine.execute(command) {
+        switch await work() {
         case .success:
             model.text = ""
             model.state = .idle
@@ -145,9 +153,15 @@ final class CommandPanelController {
     }
 
     private func cancel() {
-        if case .confirming(let command) = model.state {
+        switch model.state {
+        case .confirming(let command):
             Task { [engine] in await engine.cancel(command) }
             model.state = .idle
+        case .confirmingPlan(let plan):
+            Task { [engine] in await engine.cancel(plan) }
+            model.state = .idle
+        default:
+            break
         }
         hide()
     }

@@ -30,6 +30,11 @@ public struct ArgumentExtractor: Sendable {
             topLogprobs: nil
         )
         let values = try JSONDecoder().decode([String: JSONValue].self, from: Data(response.message.content.utf8))
+        return Self.arguments(from: values, for: action, input: input)
+    }
+
+    /// Model JSON to string arguments, dropping integers the user never said.
+    static func arguments(from values: [String: JSONValue], for action: any Action, input: String) -> ActionArguments {
         let arguments = values.reduce(into: ActionArguments()) { result, pair in
             switch pair.value {
             case .string(let text) where !text.isEmpty: result[pair.key] = text
@@ -46,7 +51,7 @@ public struct ArgumentExtractor: Sendable {
         }
     }
 
-    private static func typeHint(_ parameter: ActionParameter) -> String {
+    static func typeHint(_ parameter: ActionParameter) -> String {
         switch parameter.kind {
         case .string: " (string)"
         case .integer: " (integer)"
