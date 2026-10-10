@@ -88,6 +88,27 @@
 "Beyond the limit the assistant uses the local model." = "Oltre il limite l'assistente usa il modello locale.";
 "Activity log" = "Registro attività";
 
+/* Setup */
+"Setup" = "Configurazione";
+"Complete these steps to start using RedOS. You can change everything later." = "Completa questi passaggi per iniziare a usare RedOS. Puoi cambiare tutto in seguito.";
+"Local models" = "Modelli locali";
+"Assistant" = "Assistente";
+"Uses the local model: no account needed, nothing leaves this Mac." = "Usa il modello locale: nessun account, niente esce da questo Mac.";
+"More Options…" = "Altre opzioni…";
+"Speech recognition" = "Riconoscimento vocale";
+"Installed" = "Installato";
+"Not installed" = "Non installato";
+"Start" = "Avvia";
+"Download Ollama" = "Scarica Ollama";
+"Download All Models" = "Scarica tutti i modelli";
+"Ollama did not start. Open it from Applications." = "Ollama non si è avviato. Aprilo dalle Applicazioni.";
+"Get an API key" = "Ottieni una chiave API";
+"Copy" = "Copia";
+"Install the GitHub Copilot CLI in Terminal (needs Node.js and a Copilot subscription), then run “copilot” once to sign in:" = "Installa GitHub Copilot CLI dal Terminale (servono Node.js e un abbonamento Copilot), poi esegui “copilot” una volta per accedere:";
+"The speech model for the language chosen in General is downloaded once and works offline. The wake word model is included." = "Il modello vocale della lingua scelta in Generali si scarica una volta e funziona offline. Il modello della wake word è incluso.";
+"Ollama runs the models that understand commands on this Mac. After installing it, open it once. The two models take about 10 GB." = "Ollama esegue su questo Mac i modelli che capiscono i comandi. Dopo l'installazione aprilo una volta. I due modelli occupano circa 10 GB.";
+"Questions, multi-step tasks, screen questions and diagrams go to the assistant. Ollama keeps everything on this Mac; cloud providers are faster and more accurate." = "Domande, attività in più passi, domande sullo schermo e diagrammi vanno all'assistente. Ollama tiene tutto su questo Mac; i provider cloud sono più veloci e precisi.";
+
 /* Wake word */
 "Listen for “Hey Red”" = "Ascolta “Hey Red”";
 "Sensitivity" = "Sensibilità";

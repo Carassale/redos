@@ -25,7 +25,12 @@ struct SettingsView: View {
 
     private var draft: Draft { Draft(settings: settings, apiKey: apiKey) }
 
-    @State private var pane: SettingsPane? = .general
+    @State private var pane: SettingsPane? = SettingsView.needsSetup ? .setup : .general
+
+    /// First launch, or a permission is still missing.
+    @MainActor static var needsSetup: Bool {
+        !UserDefaults.standard.bool(forKey: SetupView.seenKey) || !PermissionCenter().allGranted
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -67,6 +72,8 @@ struct SettingsView: View {
     @ViewBuilder
     private func detail(_ pane: SettingsPane) -> some View {
         switch pane {
+        case .setup:
+            SetupView(controller: controller, settings: $settings, apiKey: $apiKey, pane: $pane)
         case .general:
             GeneralSettingsView(controller: controller, settings: $settings)
         case .models:
@@ -95,12 +102,13 @@ struct SettingsView: View {
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, models, privacy, routines, memory
+    case setup, general, models, privacy, routines, memory
 
     var id: String { rawValue }
 
     var title: LocalizedStringKey {
         switch self {
+        case .setup: "Setup"
         case .general: "General"
         case .models: "Models"
         case .privacy: "Privacy & Cloud"
@@ -111,6 +119,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     var symbol: String {
         switch self {
+        case .setup: "checklist"
         case .general: "gearshape.fill"
         case .models: "cpu.fill"
         case .privacy: "lock.shield.fill"
@@ -121,6 +130,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
+        case .setup: .green
         case .general: .gray
         case .models: .purple
         case .privacy: .blue

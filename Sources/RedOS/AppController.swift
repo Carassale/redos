@@ -13,6 +13,7 @@ final class AppController {
     let routines = RoutineStore()
     let memory = MemoryStore()
     let usage = UsageStore()
+    let ollama = OllamaSetup()
     @ObservationIgnored private lazy var triggers = TriggerCenter(routines: routines) { [weak self] routine in
         self?.commandPanel.runRoutine(named: routine.name)
     }

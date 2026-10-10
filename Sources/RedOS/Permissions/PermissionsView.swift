@@ -34,7 +34,7 @@ struct PermissionsView: View {
     }
 }
 
-private struct PermissionRow: View {
+struct PermissionRow: View {
     let permission: Permission
     let status: PermissionStatus
     let onRequest: () -> Void
@@ -66,7 +66,7 @@ private struct PermissionRow: View {
     }
 }
 
-private extension Permission {
+extension Permission {
     var title: LocalizedStringKey {
         switch self {
         case .accessibility: "Accessibility"

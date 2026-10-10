@@ -23,6 +23,10 @@ make lint
 
 Version is read from `VERSION`; build number is the git commit count.
 
+At first launch RedOS opens **Settings > Setup**, a checklist with a button for each missing piece:
+permissions, Ollama (download, start, download the models with progress), the assistant provider
+(API key links, Copilot CLI install command and detection, Test) and the speech model for the voice language.
+
 ## Usage
 
 Press **⌥ Space** (or menu bar > Command…) and type a command, in English or Italian.

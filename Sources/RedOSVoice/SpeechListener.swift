@@ -33,6 +33,22 @@ public final class SpeechListener {
         get async { await SpeechTranscriber.supportedLocales }
     }
 
+    /// The on-device speech model for `locale` is downloaded.
+    public static func isInstalled(_ locale: Locale) async -> Bool {
+        guard let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else { return false }
+        let installed = await SpeechTranscriber.installedLocales
+        return installed.contains { $0.identifier(.bcp47) == supported.identifier(.bcp47) }
+    }
+
+    /// Downloads the on-device speech model for `locale` (otherwise done on first use).
+    public static func install(_ locale: Locale) async throws {
+        guard let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
+            throw VoiceError.unsupportedLocale(locale.identifier)
+        }
+        let transcriber = SpeechTranscriber(locale: supported, preset: .progressiveTranscription)
+        try await AssetInventory.assetInstallationRequest(supporting: [transcriber])?.downloadAndInstall()
+    }
+
     public var transcript: String {
         (finalized + volatile).trimmingCharacters(in: .whitespacesAndNewlines)
     }

@@ -19,13 +19,14 @@ struct RedOSApp: App {
             PermissionsView(permissions: controller.permissions)
         }
         .windowResizability(.contentSize)
-        .defaultLaunchBehavior(controller.permissions.allGranted ? .suppressed : .presented)
+        .defaultLaunchBehavior(.suppressed)
 
+        // Opens on Setup at first launch or while a permission is missing.
         Window("Settings", id: WindowID.settings) {
             SettingsView(controller: controller)
         }
         .windowResizability(.contentSize)
-        .defaultLaunchBehavior(.suppressed)
+        .defaultLaunchBehavior(SettingsView.needsSetup ? .presented : .suppressed)
     }
 }
 
