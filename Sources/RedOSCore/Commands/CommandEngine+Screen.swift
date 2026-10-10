@@ -33,4 +33,22 @@ extension CommandEngine {
             return .unavailable(error.localizedDescription)
         }
     }
+
+    /// A request kind recognized by Jev goes straight to its handler, skipping the planner; without the
+    /// handler (e.g. no screen reading, no researcher) System Two decides as usual.
+    func resolveKind(of input: String, _ decision: RouteDecision, confidence: Double) async -> Resolution {
+        switch decision {
+        case .screenQuestion:
+            if let resolution = await resolveLook(input) { return resolution }
+        case .screenTask where agent != nil && observer != nil:
+            return .agent(input)
+        case .research where researcher != nil:
+            return .research(input, query: "")
+        case .diagram where designer != nil:
+            return .diagram(input, description: input)
+        default:
+            break
+        }
+        return await escalate(input, to: assistant ?? planner, guess: nil, confidence: confidence)
+    }
 }

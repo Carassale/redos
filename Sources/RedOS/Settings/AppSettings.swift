@@ -1,12 +1,26 @@
 import Foundation
 import RedOSCore
 
+/// Who makes the fast decisions (System One): the local model, or a Jev-compatible service.
+enum DecisionProvider: String, CaseIterable, Identifiable {
+    case local
+    case codiv
+    case custom
+
+    var id: String { rawValue }
+
+    static let keyAccount = "jev"
+}
+
 /// User settings in UserDefaults; API keys are stored separately in the Keychain.
 struct AppSettings: Equatable {
     var systemOneModel: String
     var extractionModel: String
     var threshold: Double
+    var decisionProvider: DecisionProvider
+    /// Base URL of a custom Jev-compatible server.
     var jevURL: String
+    var jevModel: String
     var systemTwoProvider: SystemTwoProvider
     var systemTwoModel: String
     var copilotPath: String
@@ -35,6 +49,9 @@ struct AppSettings: Equatable {
         extractionModel = defaults.string(forKey: "systemOne.extractionModel") ?? Self.defaultExtractionModel
         threshold = defaults.object(forKey: "systemOne.threshold") as? Double ?? 0.5
         jevURL = defaults.string(forKey: "systemOne.jevURL") ?? ""
+        decisionProvider = defaults.string(forKey: "systemOne.provider").flatMap(DecisionProvider.init)
+            ?? (jevURL.isEmpty ? .local : .custom)
+        jevModel = defaults.string(forKey: "systemOne.jevModel") ?? "openjev-latest"
         systemTwoProvider = defaults.string(forKey: "systemTwo.provider").flatMap(SystemTwoProvider.init) ?? .ollama
         systemTwoModel = defaults.string(forKey: "systemTwo.model") ?? systemTwoProvider.defaultModel
         copilotPath = defaults.string(forKey: "systemTwo.copilotPath") ?? ""
@@ -60,6 +77,8 @@ struct AppSettings: Equatable {
         defaults.set(extractionModel, forKey: "systemOne.extractionModel")
         defaults.set(threshold, forKey: "systemOne.threshold")
         defaults.set(jevURL.isEmpty ? nil : jevURL, forKey: "systemOne.jevURL")
+        defaults.set(decisionProvider.rawValue, forKey: "systemOne.provider")
+        defaults.set(jevModel, forKey: "systemOne.jevModel")
         defaults.set(systemTwoProvider.rawValue, forKey: "systemTwo.provider")
         defaults.set(systemTwoModel, forKey: "systemTwo.model")
         defaults.set(copilotPath, forKey: "systemTwo.copilotPath")

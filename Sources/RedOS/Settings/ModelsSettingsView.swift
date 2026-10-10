@@ -19,6 +19,7 @@ struct ModelsSettingsView: View {
     var body: some View {
         Form {
             assistantSection
+            DecisionsSection(controller: controller, settings: $settings)
             localSection
             Section {
                 LabeledContent("Minimum probability to act") {

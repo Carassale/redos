@@ -106,11 +106,14 @@ public struct WebTools: WebResearching {
     public func weather(_ place: String) async throws -> ToolOutput {
         var geocode = URLComponents(string: "https://geocoding-api.open-meteo.com/v1/search")!
         geocode.queryItems = [
-            .init(name: "name", value: place), .init(name: "count", value: "1"),
+            .init(name: "name", value: place), .init(name: "count", value: "10"),
             .init(name: "language", value: language),
         ]
         let found = try JSONDecoder().decode(GeocodeResponse.self, from: try await data(at: geocode.url!))
-        guard let location = found.results?.first else { throw WebError.notFound(place) }
+        // With count=1 "Milano" is Milano, Texas (421 people): the most populated match is meant.
+        guard let location = found.results?.max(by: { ($0.population ?? 0) < ($1.population ?? 0) }) else {
+            throw WebError.notFound(place)
+        }
         var forecast = URLComponents(string: "https://api.open-meteo.com/v1/forecast")!
         forecast.queryItems = [
             .init(name: "latitude", value: String(location.latitude)),
@@ -122,9 +125,7 @@ public struct WebTools: WebResearching {
             ),
             .init(name: "timezone", value: "auto"), .init(name: "forecast_days", value: "4"),
         ]
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let response = try decoder.decode(ForecastResponse.self, from: try await data(at: forecast.url!))
+        let response = try JSONDecoder().decode(ForecastResponse.self, from: try await data(at: forecast.url!))
         let name = [location.name, location.country].compactMap(\.self).joined(separator: ", ")
         return ToolOutput(response.summary(for: name), chart: response.chart(for: location.name, language: language))
     }
@@ -322,6 +323,7 @@ private struct GeocodeResponse: Decodable {
         let latitude: Double
         let longitude: Double
         let country: String?
+        let population: Int?
     }
 
     let results: [Place]?
@@ -333,6 +335,14 @@ private struct ForecastResponse: Decodable {
         let temperature2m: Double
         let weatherCode: Int
         let windSpeed10m: Double
+
+        // Explicit: snake_case conversion turns "temperature_2m" into "temperature2M".
+        enum CodingKeys: String, CodingKey {
+            case time
+            case temperature2m = "temperature_2m"
+            case weatherCode = "weather_code"
+            case windSpeed10m = "wind_speed_10m"
+        }
     }
 
     struct Daily: Decodable {
@@ -341,6 +351,14 @@ private struct ForecastResponse: Decodable {
         let temperature2mMax: [Double]
         let temperature2mMin: [Double]
         let precipitationProbabilityMax: [Int?]
+
+        enum CodingKeys: String, CodingKey {
+            case time
+            case weatherCode = "weather_code"
+            case temperature2mMax = "temperature_2m_max"
+            case temperature2mMin = "temperature_2m_min"
+            case precipitationProbabilityMax = "precipitation_probability_max"
+        }
     }
 
     let current: Current

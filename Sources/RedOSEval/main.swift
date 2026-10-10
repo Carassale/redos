@@ -5,6 +5,9 @@ import RedOSCore
 // System One evaluation on a labeled command set: decision accuracy, safety, calibration, latency.
 // Usage: swift run -c release RedOSEval [--model M] [--dataset PATH] [--no-chain] [--out PATH]
 //   [--jev-url URL --jev-model M]   decide through a Jev-compatible /v1/systemone endpoint
+//   [--jev-intents]                 with --jev-url: kind + action in one request (JevIntentRouter), key from
+//                                   JEV_API_KEY or the RedOS Keychain item; --dataset eval/intents.jsonl
+//                                   scores the request kinds
 //   [--extract-model M]             Ollama model for argument extraction (default: --model)
 //   [--system-two M]                evaluate the System Two planner with Ollama model M instead
 //   [--screen]                      print what the agent sees in the frontmost app (Accessibility needed)
@@ -25,6 +28,23 @@ struct Sample: Decodable {
     let plan: [[String]]?
     /// System Two should hand the request to the screen agent.
     let agent: Bool?
+    /// Request kind for `JevIntentRouter` (eval/intents.jsonl).
+    let kind: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case lang, input, action, arguments, plan, agent, kind
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        lang = try container.decode(String.self, forKey: .lang)
+        input = try container.decode(String.self, forKey: .input)
+        action = try container.decodeIfPresent(String.self, forKey: .action) ?? SystemOneRouter.noneLabel
+        arguments = try container.decodeIfPresent([String: String].self, forKey: .arguments)
+        plan = try container.decodeIfPresent([[String]].self, forKey: .plan)
+        agent = try container.decodeIfPresent(Bool.self, forKey: .agent)
+        kind = try container.decodeIfPresent(String.self, forKey: .kind)
+    }
 }
 
 struct Outcome: Encodable {
@@ -86,11 +106,13 @@ let registry = ActionRegistry(SystemActions.all)
 let parser = FastPathParser()
 let policy = Policy()
 let extractor = ArgumentExtractor(client: OllamaClient(model: option("--extract-model") ?? model))
-let systemOne: any SystemOne = if let url = option("--jev-url").flatMap(URL.init(string:)) {
-    JevHTTPSystemOne(baseURL: url, model: option("--jev-model") ?? "jev-latest")
-} else {
-    OllamaSystemOne(client: ollama)
+let jevKey = ProcessInfo.processInfo.environment["JEV_API_KEY"] ?? Keychain.secret(for: "jev")
+let jev = option("--jev-url").flatMap(URL.init(string:)).map {
+    JevHTTPSystemOne(baseURL: $0, model: option("--jev-model") ?? "jev-latest", apiKey: jevKey)
 }
+let systemOne: any SystemOne = jev ?? OllamaSystemOne(client: ollama)
+let intents = CommandLine.arguments.contains("--jev-intents")
+    ? jev.map { JevIntentRouter(registry: registry, jev: $0, extractor: nil) } : nil
 let question = SystemOneRouter(
     registry: registry, systemOne: systemOne, extractor: extractor, warmUp: [ollama],
     examples: CommandLine.arguments.contains("--no-examples") ? [] : SystemOneRouter.defaultExamples
@@ -99,6 +121,38 @@ let question = SystemOneRouter(
 let samples = try String(contentsOfFile: datasetPath, encoding: .utf8)
     .split(separator: "\n")
     .map { try JSONDecoder().decode(Sample.self, from: Data($0.utf8)) }
+
+if let intents, let jev, samples.contains(where: { $0.kind != nil }) {
+    await evaluateKinds(samples, router: intents, jev: jev)
+    exit(0)
+}
+
+struct Decision {
+    let label: String
+    let probability: Double
+    let context: [ChatMessage]
+}
+
+/// The dataset's label for a decision: an action id, "none" or "multi_step".
+func decide(_ input: String) async throws -> Decision {
+    guard let intents, let jev else {
+        let answer = try await systemOne.choose(question, state: input)
+        let context = systemOne.transcript(for: question, state: input, answer: answer)
+        return Decision(label: answer.choice, probability: answer.probability, context: context)
+    }
+    let answers = try await jev.decide(state: "User request: \(input)", questions: intents.questions)
+    let kind = answers["kind"]
+    switch kind?.choice {
+    case "action":
+        return Decision(
+            label: answers["action"]?.choice ?? "none", probability: answers["action"]?.probability ?? 0, context: []
+        )
+    case "steps", "screen_task":
+        return Decision(label: SystemOneRouter.multiStepLabel, probability: kind?.probability ?? 0, context: [])
+    default:
+        return Decision(label: SystemOneRouter.noneLabel, probability: kind?.probability ?? 0, context: [])
+    }
+}
 
 if let plannerModel = option("--system-two") {
     let client = OllamaClient(model: plannerModel)
@@ -132,38 +186,39 @@ if let plannerModel = option("--system-two") {
     exit(0)
 }
 
-let decider = option("--jev-model").map { "\($0) via /v1/systemone" } ?? model
+let decider = option("--jev-model").map { "\($0) via /v1/systemone\(intents == nil ? "" : " (intents)")" } ?? model
 let extractorName = option("--extract-model") ?? model
 print("System One eval · \(decider) · extract=\(extractorName) · chain=\(chains) · \(samples.count) samples")
 await ollama.preload()
 await OllamaClient(model: option("--extract-model") ?? model).preload()
-_ = try? await systemOne.choose(question, state: "warm up")
+_ = try? await decide("warm up")
 
 var outcomes: [Outcome] = []
 for sample in samples {
     let clock = ContinuousClock()
     let start = clock.now
     do {
-        let answer = try await systemOne.choose(question, state: sample.input)
+        let answer = try await decide(sample.input)
         let decisionSeconds = seconds(clock.now - start)
         var arguments: [String: String]?
         var extractionSeconds: Double?
-        if let action = registry.action(for: answer.choice), !action.parameters.isEmpty {
+        if let action = registry.action(for: answer.label), !action.parameters.isEmpty {
             let extractionStart = clock.now
-            let context = chains ? systemOne.transcript(for: question, state: sample.input, answer: answer) : []
-            arguments = try await extractor.arguments(for: action, input: sample.input, context: context)
+            arguments = try await extractor.arguments(
+                for: action, input: sample.input, context: chains ? answer.context : []
+            )
             extractionSeconds = seconds(clock.now - extractionStart)
-        } else if registry.action(for: answer.choice) != nil {
+        } else if registry.action(for: answer.label) != nil {
             arguments = [:]
         }
         var argumentsCorrect: Bool?
-        if answer.choice == sample.action, let expected = sample.arguments, let arguments {
+        if answer.label == sample.action, let expected = sample.arguments, let arguments {
             argumentsCorrect = matches(arguments, expected: expected)
         }
-        let request = ActionRequest(answer.choice, arguments ?? [:])
+        let request = ActionRequest(answer.label, arguments ?? [:])
         let validated = arguments == nil ? nil : try? registry.validate(request)
         outcomes.append(Outcome(
-            lang: sample.lang, input: sample.input, expected: sample.action, predicted: answer.choice,
+            lang: sample.lang, input: sample.input, expected: sample.action, predicted: answer.label,
             probability: answer.probability, fastPath: parser.parse(sample.input)?.actionID,
             arguments: arguments, argumentsCorrect: argumentsCorrect, argumentsValid: validated != nil,
             policy: validated.map { "\(policy.decide(for: $0, confidence: answer.probability))" },

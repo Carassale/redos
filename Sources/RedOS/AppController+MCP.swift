@@ -43,7 +43,15 @@ extension AppController {
         do {
             let server = try LocalHTTPServer(port: port) { await endpoint.respond($0) }
             server.start { [weak self] error in
-                Task { @MainActor in self?.mcpServerError = error }
+                // Right after a restart the old process may still hold the port: try again shortly.
+                Task { @MainActor in
+                    guard let self, self.mcpServer === server else { return }
+                    self.mcpServerError = error
+                    try? await Task.sleep(for: .seconds(3))
+                    guard self.mcpServer === server else { return }
+                    self.mcpServerKey = ""
+                    self.configureMCPServer(self.settings)
+                }
             }
             mcpServer = server
         } catch {

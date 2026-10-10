@@ -52,23 +52,7 @@ final class AppController {
     func rebuildEngine(_ settings: AppSettings) {
         let ollama = OllamaClient(model: settings.systemOneModel)
         let extraction = OllamaClient(model: settings.extractionModel)
-        let systemOne: any SystemOne
-        // Optional Jev-compatible backend, e.g. `make localjev-run` on http://127.0.0.1:8080.
-        if let jevURL = URL(string: settings.jevURL), jevURL.scheme != nil {
-            systemOne = JevHTTPSystemOne(baseURL: jevURL)
-            systemOneDescription = "Jev · \(jevURL.absoluteString)"
-        } else {
-            systemOne = OllamaSystemOne(client: ollama)
-            systemOneDescription = "Ollama · \(ollama.model)"
-        }
-        let router = SystemOneRouter(
-            registry: registry,
-            systemOne: systemOne,
-            extractor: ArgumentExtractor(client: extraction),
-            warmUp: [ollama, extraction],
-            // Accuracy: unsure single actions go to System Two instead of running.
-            threshold: settings.prefersAccuracy ? max(settings.threshold, 0.85) : settings.threshold
-        )
+        let router = makeRouter(settings, ollama: ollama, extraction: extraction)
         let writer: any ChatCompleting
         do {
             writer = try systemTwoClient(settings, local: ollama)
@@ -112,6 +96,42 @@ final class AppController {
         return Bundle.main.resourceURL
             .flatMap { DiagramLibrary(directory: $0.appending(path: "DiagramDesign")) }
             .map { DiagramDesigner(client: drawer, library: $0) }
+    }
+
+    /// The local model picks single actions; Jev (Codiv or a custom server) recognizes every other kind of
+    /// request at the same time. Offline, unreachable or not configured, the local model works alone.
+    private func makeRouter(
+        _ settings: AppSettings, ollama: OllamaClient, extraction: OllamaClient
+    ) -> any CommandRouting {
+        // Accuracy: unsure single actions go to System Two instead of running.
+        let threshold = settings.prefersAccuracy ? max(settings.threshold, 0.85) : settings.threshold
+        let extractor = ArgumentExtractor(client: extraction)
+        let local = SystemOneRouter(
+            registry: registry, systemOne: OllamaSystemOne(client: ollama), extractor: extractor,
+            warmUp: [ollama, extraction], threshold: threshold
+        )
+        systemOneDescription = "Ollama · \(ollama.model)"
+        guard !settings.offlineOnly, let jev = jevClient(settings) else { return local }
+        systemOneDescription = "Jev · \(jev.model) · \(jev.baseURL.host() ?? "")"
+        let remote = JevIntentRouter(
+            registry: ActionRegistry(SystemActions.all + mcpActions), jev: jev, extractor: extractor,
+            warmUp: [extraction], threshold: threshold
+        )
+        return HybridRouter(local: local, remote: remote)
+    }
+
+    func jevClient(_ settings: AppSettings) -> JevHTTPSystemOne? {
+        let key = Keychain.secret(for: DecisionProvider.keyAccount)
+        switch settings.decisionProvider {
+        case .local:
+            return nil
+        case .codiv:
+            guard let key, !key.isEmpty else { return nil }
+            return JevHTTPSystemOne(baseURL: JevHTTPSystemOne.codivURL, model: settings.jevModel, apiKey: key)
+        case .custom:
+            guard let url = URL(string: settings.jevURL), url.scheme != nil else { return nil }
+            return JevHTTPSystemOne(baseURL: url, model: settings.jevModel, apiKey: key)
+        }
     }
 
     private func configureWakeWord(_ settings: AppSettings) {

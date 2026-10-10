@@ -1,7 +1,8 @@
 # RedOS – Piano di progetto
 
 Assistente AI per macOS che vive nella menu bar: riceve comandi a voce o testo, decide l'azione con un
-modello "System One" locale (Jev via LocalJev) e controlla il Mac (mouse, tastiera, app, terminale, CLI).
+modello "System One" (decisione via logprob su Ollama, più Jev/OpenJev su Codiv per il tipo di richiesta) e
+controlla il Mac (mouse, tastiera, app, terminale, CLI).
 
 ## Decisioni
 
@@ -13,7 +14,7 @@ modello "System One" locale (Jev via LocalJev) e controlla il Mac (mouse, tastie
 | Firma | Certificato self-signed stabile (`make cert`). Niente Developer ID / notarizzazione per ora |
 | Lingue | UI e comandi multilingua configurabili: `en` (base) + `it`, estendibili aggiungendo `*.lproj` e locale STT |
 | Wake word | openWakeWord (ONNX Runtime, on-device) |
-| System One | Protocollo Jev (`choice`). Default: decisione nativa su Ollama dai logprob del modello; opzionale: LocalJev / Jev via HTTP |
+| System One | Protocollo Jev. Decisione dell'azione su Ollama dai logprob del modello; in parallelo Jev (OpenJev su Codiv o server Jev) per il tipo di richiesta. LocalJev rimosso in M10 |
 | System Two | Cloud opzionale (GitHub Models/Copilot, Claude, OpenAI, Gemini) o modello locale on-demand |
 | Repo | GitHub, pubblico |
 
@@ -258,7 +259,7 @@ flowchart LR
   IN[Voce / Hotkey / Testo / Shortcuts / CLI / MCP] --> CTX[Contesto: app attiva, selezione, clipboard]
   CTX --> FP{Fast path}
   FP -->|match| POL
-  FP -->|no| J[LocalJev /v1/systemone]
+  FP -->|no| J[System One: Ollama logprob + Jev /v1/systemone in parallelo]
   J -->|azione + confidenza| ARGS[Estrazione argomenti con JSON Schema via Ollama]
   J -->|multi-step o bassa confidenza| S2[System Two]
   ARGS --> POL[Policy: rischio, conferme, dry-run]
@@ -269,9 +270,8 @@ flowchart LR
 
 - Domanda Jev: `action` (choice sul catalogo azioni + `none`). Il rischio NON lo decide il modello: è
   dichiarato da ogni azione; le azioni scelte dal modello sopra `safe` chiedono conferma se p < 0.85.
-- LocalJev (submodule + patch in `Vendor/patches/`) si compila con `make localjev` e si avvia con
-  `make localjev-run`; RedOS lo usa se `systemOne.jevURL` è impostato. Lo stesso client può puntare a
-  Jev cloud cambiando base URL.
+- Jev via HTTP (`JevHTTPSystemOne`): Codiv (`api.codiv.ai`) o qualsiasi server compatibile, scelto in
+  Impostazioni > Modelli > Decisioni rapide. LocalJev (submodule + patch) è stato rimosso in M10.
 - Ordine degli executor: integrazioni dirette (CLI/AppleScript/Shortcuts) → Accessibility API → visione.
 
 ## Sicurezza
@@ -320,3 +320,57 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M7 | Sparkle, pacchetti release | ✅ |
 | M8 | Extra (routine, memoria, trigger, costi) | ✅ |
 | M9 | CI/CD GitHub Actions | ✅ |
+| M10 | Jev come nucleo decisionale: intento + azione in una chiamata (OpenJev su Codiv), fallback locale | 🚧 |
+| M16 | Azioni mancanti: sistema (volume, luminosità, Non disturbare, aspetto, media), finestre, file, Calendario/Promemoria, Mail/Messaggi, Comandi rapidi | |
+| M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | |
+| M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | |
+| M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | |
+| M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | |
+| M15 | Proattività: calendario, batteria, riunioni, notifiche; Jev decide se interrompere; briefing | |
+
+### Verso un "maggiordomo" (piano del 10/10/2026)
+
+Obiettivo: un assistente con cui parlare in tempo reale, che si può correggere mentre lavora e che
+prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M13 → M14 → M15.
+
+- **Perché Jev**: risposte tipizzate (choice fino a 255 opzioni, noul, score) lette in un solo passaggio,
+  70–500 ms anche con molte domande nella stessa richiesta, probabilità calibrate, nessuna risposta fuori
+  schema (TypeSafe, "Introducing System One Models & Jev"; demo di Doom a ~10 decisioni/s). Adatto a tante
+  piccole valutazioni continue: tipo di richiesta, azione, "devo interrompere?", "questa frase cambia il
+  compito?", "quale elemento premo?".
+- **Fornitore**: OpenJev (DiffusionGemma 26B-A4B, Apache-2.0) ospitato da Codiv (`api.codiv.ai`,
+  100M token gratuiti). In locale OpenJev/MLX richiede ~16 GB solo per il modello: non sta su 24 GB con
+  Ollama. **Tutto deve restare possibile offline**: senza rete o con "Solo offline" RedOS torna alla
+  decisione via logprob su Ollama e al planner locale.
+- **Privacy**: lo stato inviato a Jev contiene il comando e, dove serve, il contesto della finestra.
+- **Voce**: per ora voci di sistema locali.
+- **Rimosso** (M10): LocalJev (probabilità auto-dichiarate, 4–5 s). **Da togliere**: il client Copilot a riga
+  di comando per
+  le richieste (resta solo per trovare la CLI ed elencare i modelli); meno regex dove Jev classifica meglio.
+
+### M10: Jev come nucleo decisionale (10/10/2026)
+
+- `JevQuestion` (choice / noul / score) e `JevDeciding`: più domande sullo stesso stato in una richiesta;
+  `JevHTTPSystemOne` le invia a `/v1/systemone` (Codiv: `https://api.codiv.ai`, modello `openjev-latest`,
+  chiave nel Portachiavi, account `jev`).
+- `JevIntentRouter`: una richiesta con due domande, **tipo** (azione, più passi, compito sullo schermo,
+  domanda sullo schermo, conoscenza, informazione attuale, diagramma) e **azione** (catalogo + MCP).
+  Domanda sullo schermo, ricerca, diagramma e agente partono senza la chiamata di pianificazione a System Two.
+- Misure (`make eval-jev`, Codiv da Milano):
+
+  | | Jev (Codiv) | Locale (gemma4:e4b logprob) |
+  |---|---|---|
+  | Tipo di richiesta (`eval/intents.jsonl`, 43) | **100%** | – (regex + System Two) |
+  | Azione (`eval/commands.jsonl`, 89) | 88.8% con esempi (76.4% senza), 4 azioni errate eseguite | **92.3%**, 0 errate |
+  | Latenza decisione | p50 0.68–0.80 s (modello 26–145 ms, il resto è rete/gateway) | **0.25 s** |
+
+- Quindi `HybridRouter`: locale e Jev **in parallelo**. Un'azione sicura del modello locale parte subito
+  (salvo una domanda sullo schermo / ricerca / diagramma con Jev ≥ 0.9 entro 0.7 s: "di cosa parla questa
+  finestra?" non diventa `ui.read`); per tutto il resto decide il tipo di Jev; senza rete, con "Solo offline"
+  o senza chiave lavora solo il locale (comportamento precedente).
+- Prova dal vivo (via MCP): "di cosa parla questa finestra?" → risposta sul contenuto in ~5–6 s, "che tempo fa
+  domani a Milano?" → previsioni in ~6.4 s, "chi ha scritto i Promessi Sposi?" ~2 s.
+- Corretti nel frattempo: meteo (decodifica Open-Meteo rotta da `convertFromSnakeCase`: "temperature_2m" →
+  "temperature2M"; "Milano" geocodificata in Texas con `count=1`), lettura delle app Electron (VS Code, Slack:
+  `AXManualAccessibility`), server MCP che non ripartiva subito dopo un riavvio (porta ancora occupata).
+- Da fare: "apri Calcolatrice" non trova l'app (nome localizzato di Calculator) → M16.

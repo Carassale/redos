@@ -5,6 +5,11 @@ public enum RouteDecision: Sendable, Equatable {
     /// Several actions in sequence: handed to the System Two planner.
     case multiStep(confidence: Double)
     case uncertain(actionID: String, confidence: Double)
+    /// Request kinds recognized by `JevIntentRouter`: handled without a System Two planning call.
+    case screenQuestion(confidence: Double)
+    case screenTask(confidence: Double)
+    case research(confidence: Double)
+    case diagram(confidence: Double)
 }
 
 public protocol CommandRouting: Sendable {

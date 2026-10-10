@@ -95,11 +95,18 @@ enum ScreenReader {
     ]
     private static let textRoles: Set<String> = ["AXStaticText", "AXHeading"]
 
+    /// Electron and Chromium apps (VS Code, Slack, Teams…) build their Accessibility tree only when asked.
+    private static func applicationElement(_ app: NSRunningApplication) -> AXUIElement {
+        let root = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetAttributeValue(root, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+        return root
+    }
+
     static func snapshot() throws(ActionError) -> ScreenSnapshot {
         guard let app = NSWorkspace.shared.frontmostApplication else {
             throw .failed(String(localized: "No app is in front."))
         }
-        let root = AXUIElementCreateApplication(app.processIdentifier)
+        let root = applicationElement(app)
         AXUIElementSetMessagingTimeout(root, 1)
         let window = root.element(kAXFocusedWindowAttribute) ?? root.element(kAXMainWindowAttribute)
         var builder = Builder(bounds: window?.frame)
@@ -123,7 +130,7 @@ enum ScreenReader {
         guard let app = NSWorkspace.shared.frontmostApplication else {
             throw .failed(String(localized: "No app is in front."))
         }
-        let root = AXUIElementCreateApplication(app.processIdentifier)
+        let root = applicationElement(app)
         AXUIElementSetMessagingTimeout(root, 2)
         let window = root.element(kAXFocusedWindowAttribute) ?? root.element(kAXMainWindowAttribute)
         var builder = Builder(bounds: nil, reading: true)

@@ -1,0 +1,43 @@
+{"lang": "it", "input": "apri Safari", "kind": "action", "action": "app.open"}
+{"lang": "en", "input": "quit Slack please", "kind": "action", "action": "app.quit"}
+{"lang": "it", "input": "vai su repubblica.it", "kind": "action", "action": "url.open"}
+{"lang": "en", "input": "scroll down a bit", "kind": "action", "action": "scroll"}
+{"lang": "it", "input": "premi il pulsante Salva", "kind": "action", "action": "ui.press"}
+{"lang": "en", "input": "type pizza in the search field", "kind": "action", "action": "ui.fill"}
+{"lang": "it", "input": "esegui git status nel terminale", "kind": "action", "action": "shell.run"}
+{"lang": "it", "input": "apri Note e scrivi la lista della spesa", "kind": "steps"}
+{"lang": "en", "input": "open Chrome and go to github.com", "kind": "steps"}
+{"lang": "it", "input": "chiudi Mail e apri Calendario", "kind": "steps"}
+{"lang": "en", "input": "open Terminal then run ls", "kind": "steps"}
+{"lang": "it", "input": "apri Spotify e poi Slack", "kind": "steps"}
+{"lang": "en", "input": "launch Xcode and then open Simulator", "kind": "steps"}
+{"lang": "it", "input": "apri il secondo risultato", "kind": "screen_task"}
+{"lang": "en", "input": "click the first link in the list", "kind": "screen_task"}
+{"lang": "it", "input": "compila il modulo con i miei dati", "kind": "screen_task"}
+{"lang": "en", "input": "open the third email", "kind": "screen_task"}
+{"lang": "it", "input": "metti like al primo post", "kind": "screen_task"}
+{"lang": "en", "input": "select the blue button at the bottom", "kind": "screen_task"}
+{"lang": "it", "input": "di cosa parla questa pagina?", "kind": "screen_question"}
+{"lang": "en", "input": "what does this email ask me to do?", "kind": "screen_question"}
+{"lang": "it", "input": "riassumi quello che c'è sullo schermo", "kind": "screen_question"}
+{"lang": "en", "input": "which flights on this page leave before 10?", "kind": "screen_question"}
+{"lang": "it", "input": "chi ha scritto questo documento?", "kind": "screen_question"}
+{"lang": "en", "input": "is there an error in this code?", "kind": "screen_question"}
+{"lang": "it", "input": "chi ha scritto i Promessi Sposi?", "kind": "knowledge"}
+{"lang": "en", "input": "tell me a joke", "kind": "knowledge"}
+{"lang": "it", "input": "come si dice grazie in giapponese?", "kind": "knowledge"}
+{"lang": "en", "input": "what is the difference between TCP and UDP?", "kind": "knowledge"}
+{"lang": "it", "input": "scrivimi una mail per chiedere un giorno di ferie", "kind": "knowledge"}
+{"lang": "en", "input": "how many legs does a spider have?", "kind": "knowledge"}
+{"lang": "it", "input": "che tempo fa domani a Milano?", "kind": "current_info"}
+{"lang": "en", "input": "latest news about Apple", "kind": "current_info"}
+{"lang": "it", "input": "quanto vale un euro in dollari oggi?", "kind": "current_info"}
+{"lang": "en", "input": "who won the Formula 1 race last Sunday?", "kind": "current_info"}
+{"lang": "it", "input": "a che ora chiude oggi l'Esselunga di via Ripamonti?", "kind": "current_info"}
+{"lang": "en", "input": "what is the price of bitcoin right now?", "kind": "current_info"}
+{"lang": "it", "input": "disegna il flusso di login con due fattori", "kind": "diagram"}
+{"lang": "en", "input": "draw a sequence diagram of an online payment", "kind": "diagram"}
+{"lang": "it", "input": "fammi un grafico a barre: gennaio 10, febbraio 15", "kind": "diagram"}
+{"lang": "en", "input": "make a timeline of the project phases", "kind": "diagram"}
+{"lang": "it", "input": "crea un organigramma del team: Anna capo, Luca e Marta sviluppatori", "kind": "diagram"}
+{"lang": "en", "input": "draw the architecture of a web app with database and cache", "kind": "diagram"}

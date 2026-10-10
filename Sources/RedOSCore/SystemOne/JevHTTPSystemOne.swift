@@ -1,8 +1,10 @@
 import Foundation
 
-/// Client for a Jev-compatible `POST /v1/systemone` endpoint: Ollama with a decision model (e.g. tev1),
-/// LocalJev (`make localjev-run`) or Jev itself.
-public struct JevHTTPSystemOne: SystemOne {
+/// Client for a Jev-compatible `POST /v1/systemone` endpoint: Jev, OpenJev (e.g. Codiv) or Ollama with a
+/// decision model (e.g. tev1).
+public struct JevHTTPSystemOne: SystemOne, JevDeciding {
+    public static let codivURL = URL(string: "https://api.codiv.ai")!
+
     public let baseURL: URL
     public let model: String
     private let apiKey: String?
@@ -16,42 +18,38 @@ public struct JevHTTPSystemOne: SystemOne {
     }
 
     private struct Response: Decodable {
-        let answers: [String: JevChoiceAnswer]
+        let answers: [String: JevAnswer]
     }
 
-    static func body(for question: JevChoiceQuestion, state: String, model: String = "jev-latest") -> JSONValue {
-        let criteria = Dictionary(
-            uniqueKeysWithValues: question.options.map { ($0.label, JSONValue.string($0.description)) }
-        )
-        return .object([
+    static func body(state: String, questions: [String: JevQuestion], model: String) -> JSONValue {
+        .object([
             "model": .string(model),
             "keep_alive": .string("30m"),
             "state": .string(state),
-            "questions": .object([
-                "action": .object([
-                    "type": .string("choice"),
-                    "instructions": .string(question.instructions),
-                    "criteria": .object(criteria),
-                ])
-            ]),
+            "questions": .object(questions.mapValues(\.json)),
         ])
     }
 
-    static func answer(from data: Data) throws -> JevChoiceAnswer {
-        guard let answer = try JSONDecoder().decode(Response.self, from: data).answers["action"] else {
-            throw SystemOneError.noDecision
-        }
-        return answer
+    static func answers(from data: Data) throws -> [String: JevAnswer] {
+        try JSONDecoder().decode(Response.self, from: data).answers
     }
 
-    public func choose(_ question: JevChoiceQuestion, state: String) async throws -> JevChoiceAnswer {
-        var request = URLRequest(url: baseURL.appending(path: "v1/systemone"), timeoutInterval: 120)
+    static func answer(from data: Data) throws -> JevChoiceAnswer {
+        guard let answer = try answers(from: data)["action"], let choice = answer.choice else {
+            throw SystemOneError.noDecision
+        }
+        return JevChoiceAnswer(choice: choice, probabilities: answer.probabilities, confidence: answer.confidence ?? 0)
+    }
+
+    public func decide(state: String, questions: [String: JevQuestion]) async throws -> [String: JevAnswer] {
+        // Decisions take well under a second: a slow service falls back to the local model sooner.
+        var request = URLRequest(url: baseURL.appending(path: "v1/systemone"), timeoutInterval: 8)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let apiKey {
+        if let apiKey, !apiKey.isEmpty {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
-        request.httpBody = try JSONEncoder().encode(Self.body(for: question, state: state, model: model))
+        request.httpBody = try JSONEncoder().encode(Self.body(state: state, questions: questions, model: model))
 
         let (data, response): (Data, URLResponse)
         do {
@@ -61,6 +59,14 @@ public struct JevHTTPSystemOne: SystemOne {
         }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200 else { throw SystemOneError.http(status) }
-        return try Self.answer(from: data)
+        return try Self.answers(from: data)
+    }
+
+    public func choose(_ question: JevChoiceQuestion, state: String) async throws -> JevChoiceAnswer {
+        let answers = try await decide(
+            state: state, questions: ["action": .choice(instructions: question.instructions, options: question.options)]
+        )
+        guard let answer = answers["action"], let choice = answer.choice else { throw SystemOneError.noDecision }
+        return JevChoiceAnswer(choice: choice, probabilities: answer.probabilities, confidence: answer.confidence ?? 0)
     }
 }

@@ -39,7 +39,7 @@ public struct CommandEngine: Sendable {
     private let router: (any CommandRouting)?
     let planner: (any Planning)?
     let assistant: (any Planning)?
-    private let agent: (any Acting)?
+    let agent: (any Acting)?
     let observer: (any ScreenObserving)?
     let routines: RoutineStore?
     let memory: MemoryStore?
@@ -110,7 +110,8 @@ public struct CommandEngine: Sendable {
         }
         do {
             await ActivityReporter.report(.understanding)
-            switch try await router.route(input) {
+            let decision = try await router.route(input)
+            switch decision {
             case .action(let request, let confidence):
                 return await check(
                     ResolvedCommand(input: input, request: request, route: .systemOne, confidence: confidence)
@@ -123,6 +124,9 @@ public struct CommandEngine: Sendable {
                 return await escalate(
                     input, to: assistant ?? planner, guess: ActionRequest(actionID), confidence: confidence
                 )
+            case .screenQuestion(let confidence), .screenTask(let confidence), .research(let confidence),
+                 .diagram(let confidence):
+                return await resolveKind(of: input, decision, confidence: confidence)
             }
         } catch {
             let actionError = ActionError.failed(error.localizedDescription)

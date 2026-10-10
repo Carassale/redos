@@ -300,7 +300,7 @@ with many tools make the assistant's prompt longer: enable only the ones you nee
 |---|---|
 | Setup | the first-run checklist (permissions, Ollama, assistant, voice) |
 | General | **Priority** (Accuracy / Speed), voice language, spoken answers, wake word and sensitivity, updates |
-| Models | assistant provider, API key or Copilot CLI, model (loaded from the provider), Test; Ollama status, model for commands and for parameters, downloads; minimum probability to act |
+| Models | assistant provider, API key or Copilot CLI, model (loaded from the provider), Test; **fast decisions** (on this Mac, [Codiv](https://codiv.ai) OpenJev, or a custom Jev server); Ollama status, model for commands and for parameters, downloads; minimum probability to act |
 | Privacy & Cloud | offline only, daily cloud request limit and usage, audit log |
 | Integrations | MCP server and MCP servers used by RedOS |
 | Routines | run, remove triggers, delete |
@@ -332,6 +332,10 @@ flowchart LR
 - **Fast path**: a deterministic grammar for frequent commands (`open X`, `quit X`, `type …`), ~0 ms.
 - **System One**: a small local model chooses among the available actions using the Jev protocol (a choice
   with probabilities from the model's logprobs); a second small model extracts arguments.
+  Optionally ([Codiv](https://codiv.ai)'s OpenJev or any Jev server, Settings > Models > Fast decisions) a
+  Jev model recognizes at the same time the **kind** of every request (action, steps, screen task, screen
+  question, knowledge, current info, diagram: 43/43 in `eval/intents.jsonl`), so screen questions, research,
+  diagrams and the screen agent start without a planning call. Without network the local model works alone.
   Below the minimum probability the request goes to System Two.
 - **System Two**: the chosen provider plans multi-step tasks, answers questions, decides whether to read
   the screen, research the web, draw a diagram or use the screen agent.
@@ -408,7 +412,7 @@ eval/             evaluation datasets
 | `make test-live` | routing tests against the real local models |
 | `make test-live-copilot COPILOT_MODEL=claude-haiku-5.5` | System Two tests through Copilot |
 | `make eval` | accuracy, safety and latency on `eval/commands.jsonl` (`EVAL_FLAGS="--dataset eval/holdout.jsonl"`, `--system-two M`) |
-| `make localjev` / `make localjev-run` | optional Jev-compatible backend (then `defaults write dev.redos.RedOS systemOne.jevURL http://127.0.0.1:8080`) |
+| `make eval-jev` | request kinds (`eval/intents.jsonl`) and actions through Jev (Codiv by default; key from `JEV_API_KEY` or the Keychain) |
 | `make cert` | create the stable self-signed signing identity |
 | `make release` / `make publish` | release archives and GitHub release (see below) |
 

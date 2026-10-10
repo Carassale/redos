@@ -4,7 +4,6 @@ SIGN_ID   ?= RedOS Development
 CONFIG    ?= release
 SYSTEM_ONE_MODEL ?= gemma4:e4b-it-qat
 EXTRACTION_MODEL ?= gemma4:e2b-it-qat
-LOCALJEV_PORT    ?= 8080
 VERSION   := $(shell cat VERSION)
 BUILD     := $(shell git rev-list --count HEAD 2>/dev/null || echo 0)
 
@@ -19,7 +18,7 @@ TOOLCHAIN_DIR := $(if $(findstring CommandLineTools,$(DEV_DIR)),$(DEV_DIR),$(DEV
 TESTING_FW    := $(DEV_DIR)/Library/Developer/Frameworks
 TEST_FLAGS    := $(if $(findstring CommandLineTools,$(DEV_DIR)),-Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -F -Xlinker $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) -Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays)
 
-.PHONY: all build app sign run install release publish test test-live test-live-copilot eval lint format clean cert models ollama-tune localjev localjev-run
+.PHONY: all build app sign run install release publish test test-live test-live-copilot eval eval-jev lint format clean cert models ollama-tune
 
 all: app
 
@@ -113,17 +112,14 @@ eval:
 	swift run -c release RedOSEval --model $(SYSTEM_ONE_MODEL) --extract-model $(EXTRACTION_MODEL) \
 		--out eval/runs/$$(date +%Y%m%d-%H%M%S)-$(subst :,_,$(SYSTEM_ONE_MODEL)).jsonl $(EVAL_FLAGS)
 
-# Optional Jev-compatible backend; RedOS uses it when the `systemOne.jevURL` default is set.
-localjev:
-	rm -rf build/localjev-src && mkdir -p build
-	cp -R Vendor/localjev/src build/localjev-src
-	patch -s -p2 -d build/localjev-src < Vendor/patches/localjev-upstream-extra-body.patch
-	bun build build/localjev-src/index.ts --compile --minify \
-		--no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile build/localjev
-
-localjev-run: localjev
-	LOCALJEV_UPSTREAM=http://127.0.0.1:11434 LOCALJEV_UPSTREAM_MODEL=$(SYSTEM_ONE_MODEL) \
-	LOCALJEV_UPSTREAM_EXTRA_BODY='{"reasoning_effort":"none"}' LOCALJEV_PORT=$(LOCALJEV_PORT) build/localjev
+# Jev (Codiv OpenJev by default): request kinds, then actions. Key from JEV_API_KEY or the RedOS Keychain.
+JEV_URL ?= https://api.codiv.ai
+JEV_MODEL ?= openjev-latest
+eval-jev:
+	swift run -c release RedOSEval --jev-url $(JEV_URL) --jev-model $(JEV_MODEL) --jev-intents \
+		--dataset eval/intents.jsonl
+	swift run -c release RedOSEval --jev-url $(JEV_URL) --jev-model $(JEV_MODEL) --jev-intents \
+		--extract-model $(EXTRACTION_MODEL) --out eval/runs/$$(date +%Y%m%d-%H%M%S)-jev.jsonl $(EVAL_FLAGS)
 
 lint:
 	TOOLCHAIN_DIR=$(TOOLCHAIN_DIR) swiftlint --strict

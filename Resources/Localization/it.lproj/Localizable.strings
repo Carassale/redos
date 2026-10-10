@@ -102,6 +102,18 @@
 "Download Ollama" = "Scarica Ollama";
 "Download All Models" = "Scarica tutti i modelli";
 
+/* Fast decisions (Jev) */
+"Fast decisions (System One)" = "Decisioni rapide (System One)";
+"Decisions" = "Decisioni";
+"Codiv (OpenJev, cloud)" = "Codiv (OpenJev, cloud)";
+"Custom Jev server" = "Server Jev personalizzato";
+"Server URL" = "URL del server";
+"Get a free key (100M tokens)" = "Ottieni una chiave gratuita (100M token)";
+"Enter the server and the API key." = "Inserisci il server e la chiave API.";
+"OK in %@: %@, %@" = "OK in %1$@: %2$@, %3$@";
+"The local model chooses the action; questions and screen tasks are sorted by System Two. Works offline." = "Il modello locale sceglie l'azione; domande e attività sullo schermo le smista System Two. Funziona offline.";
+"One request decides the kind of request and the action in a fraction of a second; the command text is sent to the service. Without network or with Offline only, the local model takes over." = "Una sola richiesta decide il tipo di richiesta e l'azione in una frazione di secondo; il testo del comando viene inviato al servizio. Senza rete o con Solo offline subentra il modello locale.";
+
 /* MCP */
 "Integrations" = "Integrazioni";
 "RedOS as MCP server" = "RedOS come server MCP";

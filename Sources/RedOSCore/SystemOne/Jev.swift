@@ -28,6 +28,12 @@ public struct JevChoiceAnswer: Decodable, Sendable, Equatable {
 
     public var probability: Double { probabilities[choice] ?? 0 }
 
+    public init(choice: String, probabilities: [String: Double], confidence: Double) {
+        self.choice = choice
+        self.probabilities = probabilities
+        self.confidence = confidence
+    }
+
     /// Normalizes raw probability mass over `labels`; confidence is 1 - normalized entropy, as in Jev.
     public init(normalizing mass: [String: Double], labels: [String]) throws(SystemOneError) {
         let total = labels.reduce(0) { $0 + max(mass[$1] ?? 0, 0) }
