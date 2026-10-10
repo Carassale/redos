@@ -124,6 +124,11 @@ public struct FastPathParser: Sendable {
             return ActionRequest("ui.read")
         }
         if let rest = remainder(of: text, after: vocabulary.shell) {
+            // "esegui il comando rapido Casa" is a Shortcut, not a shell command line.
+            let words = rest.split(separator: " ", maxSplits: 1).map(String.init)
+            if let first = words.first?.lowercased(), ["rapido", "shortcut"].contains(first), words.count == 2 {
+                return ActionRequest("shortcut.run", ["name": unquoted(words[1])])
+            }
             return ActionRequest("shell.run", ["command": unquoted(rest)])
         }
         if let rest = remainder(of: text, after: vocabulary.press), let target = UITarget.clean(rest) {

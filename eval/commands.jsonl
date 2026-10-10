@@ -52,25 +52,25 @@
 {"lang": "it", "input": "apri Note e scrivi lista della spesa", "action": "multi_step", "plan": [["app.open", "text.type"]]}
 {"lang": "en", "input": "what's the weather tomorrow in Milan?", "action": "none"}
 {"lang": "en", "input": "how are you today?", "action": "none"}
-{"lang": "en", "input": "pause the music", "action": "none"}
-{"lang": "en", "input": "turn the volume down", "action": "none"}
+{"lang": "en", "input": "pause the music", "action": "media.control", "arguments": {"command": "pause|play"}}
+{"lang": "en", "input": "turn the volume down", "action": "volume.set", "arguments": {"change": "down"}}
 {"lang": "en", "input": "take a screenshot", "action": "none"}
 {"lang": "en", "input": "email Marco the latest report and then archive it", "action": "multi_step"}
 {"lang": "en", "input": "open the repo, pull and run the tests", "action": "multi_step"}
 {"lang": "en", "input": "what is 17 times 23?", "action": "none"}
-{"lang": "en", "input": "remind me to call mum at 6", "action": "none"}
+{"lang": "en", "input": "remind me to call mum at 6", "action": "reminder.add"}
 {"lang": "en", "input": "summarize this page", "action": "none"}
 {"lang": "en", "input": "move the mouse to the center of the screen", "action": "none"}
 {"lang": "en", "input": "click the Save button", "action": "ui.press", "arguments": {"target": "Save"}}
 {"lang": "it", "input": "che tempo fa domani a Milano?", "action": "none"}
 {"lang": "it", "input": "ciao, come stai?", "action": "none"}
-{"lang": "it", "input": "metti in pausa la musica", "action": "none"}
-{"lang": "it", "input": "alza il volume", "action": "none"}
+{"lang": "it", "input": "metti in pausa la musica", "action": "media.control", "arguments": {"command": "pause|play"}}
+{"lang": "it", "input": "alza il volume", "action": "volume.set", "arguments": {"change": "up"}}
 {"lang": "it", "input": "fai uno screenshot", "action": "none"}
 {"lang": "it", "input": "manda una mail a Marco con il report e poi archiviala", "action": "multi_step"}
 {"lang": "it", "input": "apri il progetto, fai pull e lancia i test", "action": "multi_step"}
 {"lang": "it", "input": "quanto fa 17 per 23?", "action": "none"}
-{"lang": "it", "input": "ricordami di chiamare la mamma alle 18", "action": "none"}
+{"lang": "it", "input": "ricordami di chiamare la mamma alle 18", "action": "reminder.add"}
 {"lang": "it", "input": "riassumi questa pagina", "action": "none"}
 {"lang": "it", "input": "porta il mouse al centro dello schermo", "action": "none"}
 {"lang": "it", "input": "clicca sul pulsante Salva", "action": "ui.press", "arguments": {"target": "Salva"}}
@@ -87,3 +87,19 @@
 {"lang": "it", "input": "clicca sul terzo link", "action": "multi_step", "agent": true}
 {"lang": "en", "input": "fill in the signup form with my name", "action": "multi_step", "agent": true}
 {"lang": "it", "input": "apri il secondo menu", "action": "multi_step", "agent": true}
+{"lang": "it", "input": "metti il volume a 40", "action": "volume.set", "arguments": {"level": "40"}}
+{"lang": "en", "input": "mute the sound", "action": "volume.set", "arguments": {"change": "mute"}}
+{"lang": "it", "input": "schermo più luminoso", "action": "brightness.set", "arguments": {"direction": "up"}}
+{"lang": "en", "input": "dim the screen", "action": "brightness.set", "arguments": {"direction": "down"}}
+{"lang": "it", "input": "canzone successiva", "action": "media.control", "arguments": {"command": "next"}}
+{"lang": "en", "input": "switch to light mode", "action": "appearance.set", "arguments": {"mode": "light"}}
+{"lang": "it", "input": "blocca lo schermo", "action": "screen.lock"}
+{"lang": "en", "input": "run my shortcut Good Morning", "action": "shortcut.run", "arguments": {"name": "Good Morning"}}
+{"lang": "it", "input": "avvia il comando rapido Lavoro", "action": "shortcut.run", "arguments": {"name": "Lavoro"}}
+{"lang": "it", "input": "metti la finestra a sinistra", "action": "window.arrange", "arguments": {"position": "left"}}
+{"lang": "en", "input": "maximize this window", "action": "window.arrange", "arguments": {"position": "maximize"}}
+{"lang": "it", "input": "trova i file della fattura di settembre", "action": "file.find"}
+{"lang": "en", "input": "open my resume document", "action": "file.open"}
+{"lang": "it", "input": "che impegni ho domani?", "action": "calendar.agenda", "arguments": {"day": "tomorrow"}}
+{"lang": "en", "input": "what's on my calendar today?", "action": "calendar.agenda", "arguments": {"day": "today"}}
+{"lang": "it", "input": "prepara una mail a luca@example.com con oggetto riunione", "action": "mail.draft"}

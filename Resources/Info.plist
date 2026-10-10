@@ -35,6 +35,12 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>RedOS listens for the wake word and your voice commands.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>RedOS controls apps you ask it to use, such as dark mode in System Events and drafts in Mail.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>RedOS reads your calendar events when you ask what is on your agenda.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>RedOS adds the reminders you ask for.</string>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/Carassale/redos/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>

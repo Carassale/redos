@@ -320,8 +320,8 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M7 | Sparkle, pacchetti release | ✅ |
 | M8 | Extra (routine, memoria, trigger, costi) | ✅ |
 | M9 | CI/CD GitHub Actions | ✅ |
-| M10 | Jev come nucleo decisionale: intento + azione in una chiamata (OpenJev su Codiv), fallback locale | 🚧 |
-| M16 | Azioni mancanti: sistema (volume, luminosità, Non disturbare, aspetto, media), finestre, file, Calendario/Promemoria, Mail/Messaggi, Comandi rapidi | |
+| M10 | Jev come nucleo decisionale: intento + azione in una chiamata (OpenJev su Codiv), fallback locale | ✅ |
+| M16 | Azioni mancanti: sistema (volume, luminosità, aspetto, media, blocco schermo), finestre, file, Calendario/Promemoria, Mail, Comandi rapidi | ✅ |
 | M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | |
@@ -374,3 +374,16 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M
   "temperature2M"; "Milano" geocodificata in Texas con `count=1`), lettura delle app Electron (VS Code, Slack:
   `AXManualAccessibility`), server MCP che non ripartiva subito dopo un riavvio (porta ancora occupata).
 - Da fare: "apri Calcolatrice" non trova l'app (nome localizzato di Calculator) → M16.
+
+### M16: azioni mancanti (11/10/2026)
+
+- 12 azioni nuove: `volume.set`, `brightness.set` (tasti multimediali), `media.control`, `appearance.set`,
+  `screen.lock`, `shortcut.run` (`/usr/bin/shortcuts`), `window.arrange` (Accessibility), `file.find` /
+  `file.open` (Spotlight), `calendar.agenda` / `reminder.add` (EventKit), `mail.draft` (solo bozza).
+- App con nome localizzato ("Calcolatrice", "Impostazioni di Sistema"): catalogo con i nomi da
+  `InfoPlist.loctable` / `*.lproj/InfoPlist.strings`.
+- "esegui il comando rapido X" va a `shortcut.run`, non più a `shell.run`.
+- `make eval`: decisione 86.7%, argomenti 95.7%, p50 0.26 s; tutti i campioni delle azioni nuove corretti.
+- Dal vivo (via MCP): Calcolatrice aperta, volume, luminosità su/giù, comando rapido inesistente →
+  "Shortcut not found". Le azioni che finiscono senza testo rispondono "Fatto." ai client MCP.
+- Rimandati: Non disturbare (nessuna API pubblica; si può fare con un Comando rapido), Messaggi.

@@ -7,6 +7,7 @@ extension CommandPanelController {
             return MCPToolResult(String(localized: "RedOS is busy with another request."), isError: true)
         }
         show()
+        let completed = completedSilently
         model.text = text
         submit()
         let deadline = ContinuousClock.now + .seconds(600)
@@ -20,6 +21,8 @@ extension CommandPanelController {
                 return MCPToolResult(([answer.text] + extras).joined(separator: "\n"))
             case .message(let message, let isError):
                 return MCPToolResult(message, isError: isError)
+            case .idle where completedSilently > completed:
+                return MCPToolResult(String(localized: "Done."))
             case .idle:
                 return MCPToolResult(String(localized: "Cancelled by the user."), isError: true)
             }

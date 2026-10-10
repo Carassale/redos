@@ -23,7 +23,7 @@
 {"lang": "it", "input": "che giorno sarà domani?", "action": "none"}
 {"lang": "en", "input": "who painted the Mona Lisa?", "action": "none"}
 {"lang": "it", "input": "silenzia le notifiche", "action": "none"}
-{"lang": "en", "input": "turn on dark mode", "action": "none"}
+{"lang": "en", "input": "turn on dark mode", "action": "appearance.set", "arguments": {"mode": "dark"}}
 {"lang": "it", "input": "svuota il cestino", "action": "none"}
 {"lang": "en", "input": "press the Submit button", "action": "ui.press", "arguments": {"target": "Submit"}}
 {"lang": "it", "input": "grazie mille!", "action": "none"}

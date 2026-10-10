@@ -5,6 +5,9 @@ public enum SystemActions {
         [
             OpenAppAction(), QuitAppAction(), OpenURLAction(), TypeTextAction(), ScrollAction(), MoveMouseAction(),
             ClickAction(), PressElementAction(), FillFieldAction(), ReadScreenAction(), RunShellAction(),
+            VolumeAction(), BrightnessAction(), MediaAction(), AppearanceAction(), LockScreenAction(),
+            ShortcutAction(), WindowAction(), FindFileAction(), OpenFileAction(), MailDraftAction(),
+            AgendaAction(), ReminderAction(),
         ]
     }
 }

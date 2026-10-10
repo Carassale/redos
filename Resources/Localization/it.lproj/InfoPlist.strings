@@ -1,1 +1,4 @@
 "NSMicrophoneUsageDescription" = "RedOS ascolta la wake word e i tuoi comandi vocali.";
+"NSAppleEventsUsageDescription" = "RedOS controlla le app che gli chiedi di usare, come la modalità scura in System Events e le bozze in Mail.";
+"NSCalendarsFullAccessUsageDescription" = "RedOS legge gli eventi del calendario quando chiedi i tuoi impegni.";
+"NSRemindersFullAccessUsageDescription" = "RedOS aggiunge i promemoria che gli chiedi.";

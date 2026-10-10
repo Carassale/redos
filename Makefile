@@ -57,12 +57,15 @@ sign:
 	codesign --force --sign "$$ID" "$$FW" && \
 	codesign --force --sign "$$ID" "$(APP)"
 
+# `open` while the old instance is still quitting would only activate it: wait until it is gone.
+QUIT_APP = pkill -x $(APP_NAME); while pgrep -x $(APP_NAME) >/dev/null; do sleep 0.2; done
+
 run: app
-	-pkill -x $(APP_NAME)
+	@$(QUIT_APP)
 	open "$(APP)"
 
 install: app
-	-pkill -x $(APP_NAME)
+	@$(QUIT_APP)
 	rm -rf "/Applications/$(APP_NAME).app"
 	cp -R "$(APP)" /Applications/
 	open "/Applications/$(APP_NAME).app"

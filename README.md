@@ -109,6 +109,8 @@ itself at first launch and whenever a permission is missing.
    | Accessibility | control mouse, keyboard and app interfaces; read windows |
    | Microphone | push-to-talk and the wake word |
    | Screen Recording | read the screen when an action needs visual context (restart RedOS after granting) |
+   | Calendars, Reminders | asked the first time you use the agenda or a reminder |
+   | Automation | asked the first time RedOS controls Mail, System Events or Music |
 2. **Local models (Ollama)** — *Download Ollama* (or `brew install ollama`), *Start*, then *Download All
    Models*: `gemma4:e4b-it-qat` (commands, ~6 GB) and `gemma4:e2b-it-qat` (parameters, ~4 GB), with progress.
 3. **Assistant** — pick the provider for questions, plans, screen questions and diagrams:
@@ -155,6 +157,17 @@ Everything can be changed later in the other Settings panes.
 | `type pizza in the Search field` | `ui.fill` | moderate |
 | `read the screen` | `ui.read` | safe |
 | `run the command git status` | `shell.run` | dangerous (always confirmed) |
+| `volume to 30` / `mute` | `volume.set` | safe |
+| `brightness up` | `brightness.set` | safe |
+| `pause the music` / `next song` | `media.control` | safe |
+| `dark mode` | `appearance.set` | safe |
+| `lock the screen` | `screen.lock` | moderate |
+| `run the shortcut Focus` | `shortcut.run` (Shortcuts app) | moderate |
+| `put the window on the left half` | `window.arrange` | safe |
+| `find the file invoice` / `open the file budget` | `file.find` / `file.open` (Spotlight) | safe |
+| `what do I have today?` | `calendar.agenda` | safe |
+| `remind me to call Marco tomorrow at 10` | `reminder.add` | safe |
+| `write an email to anna@example.com` | `mail.draft` (draft only, never sent) | moderate |
 | `open Notes and type hello` | plan of two steps | confirmed |
 
 The same commands work in Italian (`apri Safari`, `chiudi Slack`, `clicca su Salva`…).
@@ -385,6 +398,7 @@ Preferences are in the `dev.redos.RedOS` defaults domain; secrets in the Keychai
 | Answers are slow | use a cloud provider, or Priority: Speed; diagrams take 40–90 s by design |
 | The app does not open after download | right click > Open, or System Settings > Privacy & Security > Open Anyway |
 | An MCP server shows an error | check its command in Terminal; *Reconnect* in Settings > Integrations |
+| Agenda, reminders, dark mode or email do nothing | allow RedOS in System Settings > Privacy & Security > Calendars / Reminders / Automation |
 
 ## Development
 

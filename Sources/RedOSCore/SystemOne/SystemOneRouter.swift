@@ -58,7 +58,7 @@ public struct SystemOneRouter: CommandRouting {
         let none = JevOption(
             label: Self.noneLabel,
             description: "None of the above: questions, conversation, or actions not listed"
-                + " (e.g. media, volume, screenshots, shutting down)."
+                + " (e.g. screenshots, emptying the trash, shutting down)."
         )
         let options = actions + [multiStep, none]
         let labels = Set(options.map(\.label))
@@ -81,7 +81,7 @@ public struct SystemOneRouter: CommandRouting {
         ("digita ciao Marco", "text.type"), ("write: on my way", "text.type"),
         ("type hello in this box", "text.type"), ("scrivi qui a domani", "text.type"),
         ("scendi di qualche riga", "scroll"), ("torna in cima", "scroll"), ("scroll a bit left", "scroll"),
-        ("clicca col tasto destro", "mouse.click"), ("do a click", "mouse.click"),
+        ("clicca col tasto destro", "mouse.click"), ("do a click", "mouse.click"), ("clicca lì adesso", "mouse.click"),
         ("sposta il puntatore a 300, 200", "mouse.move"),
         ("tocca il bottone Invia", "ui.press"), ("hit Cancel", "ui.press"), ("apri il menu Modifica", "ui.press"),
         ("metti mario nel campo utente", "ui.fill"), ("enter my email in the Email box", "ui.fill"),
@@ -89,8 +89,16 @@ public struct SystemOneRouter: CommandRouting {
         ("fai git status nel terminale", "shell.run"), ("list the files in Downloads", "shell.run"),
         ("apri Mail e scrivi ciao", "multi_step"), ("open Notes then type groceries", "multi_step"),
         ("apri il primo risultato", "multi_step"), ("compila il modulo", "multi_step"),
-        ("che giorno è oggi?", "none"), ("tell me a joke", "none"), ("metti un po' di musica", "none"),
-        ("abbassa la luminosità", "none"),
+        ("che giorno è oggi?", "none"), ("tell me a joke", "none"), ("svuota il cestino", "none"),
+        ("abbassa un po' l'audio", "volume.set"), ("volume at 70", "volume.set"), ("togli l'audio", "volume.set"),
+        ("abbassa la luminosità", "brightness.set"), ("make the screen brighter", "brightness.set"),
+        ("metti un po' di musica", "media.control"), ("skip this song", "media.control"),
+        ("attiva il tema scuro", "appearance.set"), ("lock my Mac", "screen.lock"),
+        ("esegui il comando rapido Casa", "shortcut.run"), ("run the Focus shortcut", "shortcut.run"),
+        ("affianca la finestra a destra", "window.arrange"), ("minimize the window", "window.arrange"),
+        ("dov'è il file del contratto?", "file.find"), ("apri il documento preventivo", "file.open"),
+        ("cosa ho in agenda oggi?", "calendar.agenda"), ("remind me to buy milk tomorrow", "reminder.add"),
+        ("scrivi una mail a Paolo per il pranzo", "mail.draft"),
     ]
 
     public func prepare() async {

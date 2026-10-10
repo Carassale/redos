@@ -106,12 +106,15 @@ enum InputEvents {
 
     /// Cmd+A in the focused app.
     static func selectAll() throws(ActionError) {
-        let keyA: CGKeyCode = 0
+        try press(keyCode: 0, flags: .maskCommand)
+    }
+
+    static func press(keyCode: CGKeyCode, flags: CGEventFlags) throws(ActionError) {
         for keyDown in [true, false] {
-            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: keyA, keyDown: keyDown) else {
+            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: keyDown) else {
                 throw creationFailed
             }
-            event.flags = .maskCommand
+            event.flags = flags
             event.post(tap: .cghidEventTap)
         }
     }

@@ -68,17 +68,27 @@ public final class LocalHTTPServer: @unchecked Sendable {
 
     public init(port: UInt16, handler: @escaping @Sendable (HTTPRequest) async -> HTTPResponse) throws {
         let parameters = NWParameters.tcp
-        parameters.requiredInterfaceType = .loopback
         parameters.allowLocalEndpointReuse = true
         guard let port = NWEndpoint.Port(rawValue: port) else { throw URLError(.badURL) }
-        listener = try NWListener(using: parameters, on: port)
+        // Bound to 127.0.0.1 only: other machines cannot connect.
+        parameters.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: port)
+        listener = try NWListener(using: parameters)
         self.handler = handler
     }
 
     /// Calls `onFailure` if the port cannot be used (e.g. already taken).
     public func start(onFailure: @escaping @Sendable (String) -> Void = { _ in }) {
-        listener.stateUpdateHandler = { state in
-            if case .failed(let error) = state { onFailure(error.localizedDescription) }
+        listener.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .failed(let error):
+                onFailure(error.localizedDescription)
+            // A port still held by another process leaves the listener waiting: report it so the caller retries.
+            case .waiting(.posix(.EADDRINUSE)):
+                self?.listener.cancel()
+                onFailure(POSIXError(.EADDRINUSE).localizedDescription)
+            default:
+                break
+            }
         }
         listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
         listener.start(queue: queue)

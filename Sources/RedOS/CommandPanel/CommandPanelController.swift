@@ -42,6 +42,8 @@ final class CommandPanelController {
         didSet { if hasUnseenResult != oldValue { onUnseenResultChange?(hasUnseenResult) } }
     }
     var onUnseenResultChange: (@MainActor (Bool) -> Void)?
+    /// Actions that finished without output (the panel just closes): MCP callers need to tell them from a cancel.
+    private(set) var completedSilently = 0
     private var history: CommandHistory
     private lazy var panel: CommandPanel = {
         let panel = CommandPanel(
@@ -325,6 +327,7 @@ extension CommandPanelController {
         case .success(nil):
             model.text = ""
             model.state = .idle
+            completedSilently += 1
         case .failure(.cancelled):
             model.state = .idle
             show()
