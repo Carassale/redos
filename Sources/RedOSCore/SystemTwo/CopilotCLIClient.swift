@@ -65,6 +65,19 @@ public struct CopilotCLIClient: ChatCompleting, ModelListing {
     /// Process is not Sendable; it is only touched to terminate it on timeout.
     private final class ProcessBox: @unchecked Sendable {
         let process = Process()
+        private let lock = NSLock()
+        private var expired = false
+
+        var timedOut: Bool {
+            get { lock.withLock { expired } }
+            set { lock.withLock { expired = newValue } }
+        }
+    }
+
+    private static func readToEnd(_ handle: FileHandle) async -> Data {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global().async { continuation.resume(returning: handle.readDataToEndOfFile()) }
+        }
     }
 
     static func run(
@@ -93,19 +106,25 @@ public struct CopilotCLIClient: ChatCompleting, ModelListing {
         } catch {
             throw ProviderError.commandFailed(error.localizedDescription)
         }
-        let watchdog = Task {
-            try await Task.sleep(for: timeout)
+        // Dispatch, not Task: blocking pipe reads must not starve the watchdog on busy machines (CI).
+        let watchdog = DispatchWorkItem {
+            box.timedOut = true
             box.process.terminate()
         }
+        let seconds = Double(timeout.components.seconds) + Double(timeout.components.attoseconds) / 1e18
+        DispatchQueue.global().asyncAfter(deadline: .now() + seconds, execute: watchdog)
         defer { watchdog.cancel() }
 
         let outputHandle = stdout.fileHandleForReading
         let errorHandle = stderr.fileHandleForReading
-        async let output = Task.detached { outputHandle.readDataToEndOfFile() }.value
-        async let errors = Task.detached { errorHandle.readDataToEndOfFile() }.value
+        async let output = Self.readToEnd(outputHandle)
+        async let errors = Self.readToEnd(errorHandle)
         let (outputData, errorData) = await (output, errors)
         process.waitUntilExit()
 
+        if box.timedOut {
+            throw ProviderError.commandFailed(String(localized: "The command timed out."))
+        }
         if checkStatus, process.terminationStatus != 0 {
             let detail = String(bytes: errorData.prefix(300), encoding: .utf8) ?? ""
             throw ProviderError.commandFailed(detail.isEmpty ? "exit \(process.terminationStatus)" : detail)
