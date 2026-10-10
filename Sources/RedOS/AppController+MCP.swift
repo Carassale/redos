@@ -64,8 +64,8 @@ extension AppController {
     }
 
     private static let mcpInstructions = """
-        RedOS controls this Mac. Use run_command for anything on the Mac: open apps and websites, change \
-        volume or brightness, press buttons and fill fields in apps, run routines, or ask a question. \
+        RedOS controls this Mac. Use run_command for anything on the Mac: open or quit apps and websites, \
+        press buttons and fill fields in apps, type text, run routines, or ask a question. \
         Commands that change things wait for the user to confirm in RedOS.
         """
 
@@ -73,7 +73,7 @@ extension AppController {
         MCPServerTool(
             name: "run_command",
             description: "Runs a command on the user's Mac through RedOS, as if typed in its panel "
-                + "(English or Italian), e.g. \"open Safari and go to apple.com\", \"volume 30\", "
+                + "(English or Italian), e.g. \"open Safari and go to apple.com\", \"quit Slack\", "
                 + "\"press the Save button\". Returns RedOS's answer or the outcome.",
             inputSchema: .object([
                 "type": "object",
