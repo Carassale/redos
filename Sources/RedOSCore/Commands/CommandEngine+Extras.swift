@@ -176,7 +176,7 @@ extension CommandEngine {
     public func runResearch(_ question: String, query: String) async -> Result<ResearchAnswer, ActionError> {
         guard let researcher else { return .failure(.failed(String(localized: "Web research is not available."))) }
         do {
-            let answer = try await researcher.answer(question, query: query)
+            let answer = try await researcher.answer(await withConversation(question), query: query)
             await record(question, nil, .answered, route: .systemTwo)
             return .success(answer)
         } catch {
@@ -205,16 +205,26 @@ extension CommandEngine {
         return !(await memory.facts()).isEmpty
     }
 
-    /// Remembered facts and the frontmost window, so "il mio editor" or "questa MR" make sense to System Two.
+    /// Remembered facts, the recent conversation and the frontmost window, so "il mio editor", "e domani?"
+    /// or "questa MR" make sense to System Two.
     func withContext(_ input: String) async -> String {
         var lines: [String] = []
         if let facts = await memory?.facts(), !facts.isEmpty {
             lines.append("Facts the user told you (use them only if relevant):")
             lines += facts.map { "- \($0)" }
         }
+        lines += await conversation?.transcript() ?? []
         if let front = await observer?.frontmost() {
             lines.append("On screen now: \(front)")
         }
+        guard !lines.isEmpty else { return input }
+        return lines.joined(separator: "\n") + "\nRequest: \(input)"
+    }
+
+    /// The request with the recent conversation only: no remembered facts for prompts that read web pages
+    /// or screens.
+    func withConversation(_ input: String) async -> String {
+        let lines = await conversation?.transcript() ?? []
         guard !lines.isEmpty else { return input }
         return lines.joined(separator: "\n") + "\nRequest: \(input)"
     }

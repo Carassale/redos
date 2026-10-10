@@ -18,6 +18,8 @@ public final class Speaker {
         synthesizer.stopSpeaking(at: .immediate)
     }
 
+    public var isSpeaking: Bool { synthesizer.isSpeaking }
+
     static func voice(for locale: Locale) -> AVSpeechSynthesisVoice? {
         let language = locale.language.languageCode?.identifier ?? "en"
         let region = locale.region?.identifier

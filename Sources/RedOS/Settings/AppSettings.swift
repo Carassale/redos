@@ -32,6 +32,8 @@ struct AppSettings: Equatable {
     var prefersAccuracy: Bool
     var voiceLocale: String
     var speaksAnswers: Bool
+    /// After a spoken request the microphone stays open for a follow-up.
+    var keepsListening: Bool
     var wakeWordEnabled: Bool
     /// Minimum wake word score: lower hears more, but also triggers by mistake more often.
     var wakeWordThreshold: Double
@@ -60,6 +62,7 @@ struct AppSettings: Equatable {
         prefersAccuracy = defaults.object(forKey: "routing.prefersAccuracy") as? Bool ?? true
         voiceLocale = defaults.string(forKey: "voice.locale") ?? Self.defaultVoiceLocale
         speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
+        keepsListening = defaults.object(forKey: "voice.conversation") as? Bool ?? true
         wakeWordEnabled = defaults.bool(forKey: "voice.wakeWord")
         wakeWordThreshold = defaults.object(forKey: "voice.wakeWordThreshold") as? Double ?? 0.5
         mcpServerEnabled = defaults.bool(forKey: "mcp.server")
@@ -87,6 +90,7 @@ struct AppSettings: Equatable {
         defaults.set(prefersAccuracy, forKey: "routing.prefersAccuracy")
         defaults.set(voiceLocale, forKey: "voice.locale")
         defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
+        defaults.set(keepsListening, forKey: "voice.conversation")
         defaults.set(wakeWordEnabled, forKey: "voice.wakeWord")
         defaults.set(wakeWordThreshold, forKey: "voice.wakeWordThreshold")
         defaults.set(mcpServerEnabled, forKey: "mcp.server")

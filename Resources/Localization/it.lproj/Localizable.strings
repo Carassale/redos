@@ -168,6 +168,8 @@
 "Voice" = "Voce";
 "Language" = "Lingua";
 "Speak answers" = "Leggi le risposte ad alta voce";
+"Keep listening after answering" = "Continua ad ascoltare dopo la risposta";
+"After a spoken request, reply or interrupt RedOS without saying “Hey Red” again." = "Dopo una richiesta a voce, rispondi o interrompi RedOS senza ripetere “Hey Red”.";
 "Hold ⌃⌥Space and speak; release to send. Speech is recognized on this Mac." = "Tieni premuto ⌃⌥Spazio e parla; rilascia per inviare. Il parlato viene riconosciuto su questo Mac.";
 "Hold ⌃⌥Space to talk" = "Tieni premuto ⌃⌥Spazio per parlare";
 "Listening…" = "Ti ascolto…";

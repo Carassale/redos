@@ -6,35 +6,43 @@ import RedOSWakeWord
 struct VoiceSettings: Equatable {
     var locale: Locale
     var speaksAnswers: Bool
+    /// After a spoken request, the microphone stays open for a follow-up (and to talk over the answer).
+    var keepsListening: Bool
 }
 
 @MainActor
 final class CommandPanelController {
     private static let historyKey = "commandHistory"
 
-    private var engine: CommandEngine
-    private var voice = VoiceSettings(locale: Locale(identifier: "en_US"), speaksAnswers: true)
+    private(set) var engine: CommandEngine
+    private(set) var voice = VoiceSettings(
+        locale: Locale(identifier: "en_US"), speaksAnswers: true, keepsListening: true
+    )
     private let defaults: UserDefaults
     let model = CommandPanelModel()
-    private let listener = SpeechListener()
-    private let speaker = Speaker()
+    let listener = SpeechListener()
+    let speaker = Speaker()
     /// The wake word is not listened for while a command is being dictated.
-    private(set) var listening: Task<Void, Never>? {
+    var listening: Task<Void, Never>? {
         didSet {
             guard (listening == nil) != (oldValue == nil) else { return }
             if listening == nil { try? wakeWord?.start() } else { wakeWord?.stop() }
         }
     }
     var wakeWord: WakeWordListener?
-    private let endpoint = DictationEndpoint()
+    let endpoint = DictationEndpoint()
     /// The command being resolved or run: the kill switch cancels it.
     private var work: Task<Void, Never>?
     private lazy var hud = HUDController { [weak self] in self?.stop() }
     private let diagrams = DiagramWindowController()
     /// A confirmation that a spoken "sì" / "no" can answer.
-    private var pendingConfirmation: CommandPanelModel.State?
+    var pendingConfirmation: CommandPanelModel.State?
     /// The current command came from the microphone: feedback is also spoken.
-    private var isVoiceCommand = false
+    var isVoiceCommand = false
+    /// The request whose reply goes into the conversation once it is known.
+    var currentRequest: String?
+    /// What a silent action did, for the conversation ("app.open app=Safari").
+    var actionSummary: String?
     /// The panel is hidden on purpose while actions drive the Mac (keystrokes must not land in it).
     private var isDrivingMac = false
     /// A result (answer, error, confirmation) arrived while the panel was closed.
@@ -45,7 +53,7 @@ final class CommandPanelController {
     /// Actions that finished without output (the panel just closes): MCP callers need to tell them from a cancel.
     private(set) var completedSilently = 0
     private var history: CommandHistory
-    private lazy var panel: CommandPanel = {
+    lazy var panel: CommandPanel = {
         let panel = CommandPanel(
             rootView: CommandPanelView(
                 model: model,
@@ -93,7 +101,8 @@ final class CommandPanelController {
         model.focusRequest += 1
     }
 
-    private func hide() {
+    func hide() {
+        endFollowUp()
         panel.orderOut(nil)
     }
 
@@ -108,15 +117,21 @@ final class CommandPanelController {
         work = nil
     }
 
-    private func start(_ body: @escaping @MainActor () async -> Void) {
+    func start(_ body: @escaping @MainActor () async -> Void) {
         work?.cancel()
         work = Task { [weak self, model] in
             model.activity = nil
+            let silent = self?.completedSilently ?? 0
             await ActivityReporter.$handler.withValue({ activity in model.activity = activity }, operation: {
                 await body()
             })
             model.activity = nil
-            guard let self, !Task.isCancelled, !panel.isVisible else { return }
+            guard let self, !Task.isCancelled else { return }
+            await rememberTurn(silentBefore: silent)
+            guard !panel.isVisible else {
+                followUpIfUseful()
+                return
+            }
             switch model.state {
             case .answer, .message, .confirming, .confirmingPlan: hasUnseenResult = true
             case .idle, .listening, .working: break
@@ -125,6 +140,7 @@ final class CommandPanelController {
     }
 
     func submit() {
+        endFollowUp()
         switch model.state {
         case .working, .listening:
             return
@@ -140,7 +156,8 @@ final class CommandPanelController {
         }
     }
 
-    private func resolve(_ input: String) async {
+    func resolve(_ input: String) async {
+        actionSummary = nil
         let resolution = await engine.resolve(input)
         if Task.isCancelled {
             model.state = .idle
@@ -153,6 +170,8 @@ final class CommandPanelController {
     /// A scheduled or app-launch routine: skipped while the user is busy with RedOS.
     func runRoutine(named name: String) {
         guard listening == nil, model.state != .working, model.state != .listening else { return }
+        isVoiceCommand = false
+        currentRequest = nil
         start { [self] in
             let resolution = await engine.resolveRoutine(named: name, triggered: true)
             if case .plan(_, true) = resolution {
@@ -173,10 +192,12 @@ final class CommandPanelController {
         case .denied(let request):
             fail(String(localized: "Action disabled: \(request.actionID)"))
         case .ready(let command, let needsConfirmation):
+            actionSummary = CommandEngine.describe(command.request)
             await confirmOrRun(needsConfirmation ? .confirming(command) : nil, input) { [engine] _ in
                 await engine.execute(command)
             }
         case .plan(let plan, let needsConfirmation):
+            actionSummary = plan.steps.map(CommandEngine.describe).joined(separator: " → ")
             await confirmOrRun(needsConfirmation ? .confirmingPlan(plan) : nil, input) { [engine] in
                 await engine.execute(plan, onStep: $0)
             }
@@ -210,14 +231,20 @@ final class CommandPanelController {
         sayPhrase(spoken)
     }
 
-    private func cancel() {
+    func cancel() {
         speaker.stop()
+        endFollowUp()
         switch model.state {
         case .listening:
             endpoint.cancel()
+            let stopping = listening
             listening?.cancel()
             listening = nil
-            Task { [listener] in await listener.cancel() }
+            // The microphone may still be starting: stop it once it has.
+            Task { [listener] in
+                await stopping?.value
+                await listener.cancel()
+            }
             model.state = .idle
         case .confirming(let command):
             Task { [engine] in await engine.cancel(command) }
@@ -235,73 +262,6 @@ final class CommandPanelController {
 }
 
 extension CommandPanelController {
-    /// Push-to-talk pressed or wake word heard: listen and show the live transcript.
-    func startListening(handsFree: Bool = false) {
-        guard listening == nil, model.state != .working else { return }
-        guard SystemPermissionChecker().status(of: .microphone) == .granted else {
-            show()
-            model.state = .message(ActionError.permissionMissing(.microphone).localizedDescription, isError: true)
-            return
-        }
-        speaker.stop()
-        pendingConfirmation = switch model.state {
-        case .confirming, .confirmingPlan: model.state
-        default: nil
-        }
-        show()
-        model.text = ""
-        model.state = .listening
-        listener.onTranscript = { [weak self] text in self?.model.text = text }
-        listener.onDownload = { [weak self] in
-            self?.model.state = .message(String(localized: "Downloading the speech model…"), isError: false)
-        }
-        listening = Task { [listener, voice, model] in
-            do {
-                try await listener.start(locale: voice.locale)
-                if case .message = model.state { model.state = .listening }
-            } catch {
-                model.state = .message(error.localizedDescription, isError: true)
-            }
-        }
-        if handsFree {
-            NSSound(named: "Tink")?.play()
-            endpoint.start(transcript: { [model] in model.text }, onPause: { [weak self] in self?.stopListening() })
-        }
-    }
-
-    /// Push-to-talk released or pause after the wake word: the transcript is submitted like a typed command.
-    func stopListening() {
-        guard let listening else { return }
-        endpoint.cancel()
-        self.listening = nil
-        start { [self] in
-            await listening.value
-            guard model.state == .listening else { return }
-            // Dictation ends sentences with a period: "apri Safari." must still match the app name.
-            var text = await listener.stop()
-            if text.hasSuffix(".") { text.removeLast() }
-            model.text = text
-            guard !text.isEmpty else {
-                model.state = .message(String(localized: "I didn't hear anything."), isError: true)
-                return
-            }
-            isVoiceCommand = true
-            if let pending = pendingConfirmation, let confirmed = ConfirmationReply.parse(text) {
-                pendingConfirmation = nil
-                model.state = pending
-                if confirmed {
-                    submit()
-                } else {
-                    cancel()
-                }
-                return
-            }
-            pendingConfirmation = nil
-            model.state = .working
-            await resolve(text)
-        }
-    }
-
     /// Hides the panel and shows the HUD while the work drives the Mac; outputs (screen text, command
     /// results, the agent's summary) come back in the panel.
     private func run(
@@ -418,9 +378,11 @@ extension CommandPanelController {
                 .contains { $0.isSensitive && request.arguments[$0.name] != nil } ?? false
         }
         if isSensitive {
+            currentRequest = nil
             history.resetNavigation()
             return
         }
+        currentRequest = input
         history.record(input)
         defaults.set(history.entries, forKey: Self.historyKey)
     }

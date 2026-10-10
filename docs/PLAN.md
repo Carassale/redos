@@ -322,7 +322,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M9 | CI/CD GitHub Actions | ✅ |
 | M10 | Jev come nucleo decisionale: intento + azione in una chiamata (OpenJev su Codiv), fallback locale | ✅ |
 | M16 | Azioni mancanti: sistema (volume, luminosità, aspetto, media, blocco schermo), finestre, file, Calendario/Promemoria, Mail, Comandi rapidi | ✅ |
-| M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | |
+| M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming rimandato) |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | |
 | M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | |
@@ -387,3 +387,21 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M
 - Dal vivo (via MCP): Calcolatrice aperta, volume, luminosità su/giù, comando rapido inesistente →
   "Shortcut not found". Le azioni che finiscono senza testo rispondono "Fatto." ai client MCP.
 - Rimandati: Non disturbare (nessuna API pubblica; si può fare con un Comando rapido), Messaggi.
+
+### M11: conversazione (10/10/2026)
+
+- **Contesto**: `Conversation` (ultimi 6 scambi, dimenticati dopo 5 minuti di silenzio) entra nel prompt di
+  System Two, dell'agente, delle domande sullo schermo e della ricerca web (qui senza i fatti ricordati).
+  Dal vivo: "che tempo fa domani a Milano?" → "e a Roma?" dà il meteo di Roma; "chi ha scritto i Promessi
+  Sposi?" → "e in che anno è nato?" → "1785".
+- **Ascolto dopo la risposta**: dopo una richiesta a voce il microfono resta aperto (icona grigia) mentre
+  RedOS parla e per 6 s dopo; se l'utente parla diventa la richiesta successiva, "sì"/"no" rispondono a una
+  conferma, "grazie"/"basta così" chiudono. Impostazione: Generali > Continua ad ascoltare dopo la risposta.
+- **Interruzione**: in questo ascolto il microfono usa la cancellazione d'eco di macOS (voice processing, ducking
+  minimo). Misura: la voce di RedOS letta dal microfono passa da -38 dB a -66 dB (silenzio -61 dB); trascritta
+  senza cancellazione è la frase intera, con cancellazione è vuota. Quindi qualsiasi parola trascritta è
+  dell'utente: RedOS smette di parlare e ascolta.
+- **Rimandato**: voce in streaming mentre il modello scrive (serve lo streaming nei 5 provider e nel JSON del
+  planner); AVSpeechSynthesizer comincia già subito, il ritardo è tutto nel modello.
+- Nota sviluppo: ogni build locale cambia il cdhash e il Portachiavi (partition list) chiede di nuovo il
+  permesso; finché la finestra è aperta l'app è bloccata all'avvio (lettura della chiave Jev nel main thread).

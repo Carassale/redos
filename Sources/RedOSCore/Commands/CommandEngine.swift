@@ -43,6 +43,7 @@ public struct CommandEngine: Sendable {
     let observer: (any ScreenObserving)?
     let routines: RoutineStore?
     let memory: MemoryStore?
+    public let conversation: Conversation?
     let writer: (any ChatCompleting)?
     let web: (any WebResearching)?
     let researcher: ResearchAgent?
@@ -65,6 +66,7 @@ public struct CommandEngine: Sendable {
         observer: (any ScreenObserving)? = nil,
         routines: RoutineStore? = nil,
         memory: MemoryStore? = nil,
+        conversation: Conversation? = nil,
         writer: (any ChatCompleting)? = nil,
         web: (any WebResearching)? = nil,
         researcher: ResearchAgent? = nil,
@@ -82,6 +84,7 @@ public struct CommandEngine: Sendable {
         self.observer = observer
         self.routines = routines
         self.memory = memory
+        self.conversation = conversation
         self.writer = writer
         self.web = web
         self.researcher = researcher

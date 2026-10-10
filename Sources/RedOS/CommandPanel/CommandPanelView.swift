@@ -19,10 +19,10 @@ struct CommandPanelView: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                if model.state == .listening {
+                if model.state == .listening || model.isFollowingUp {
                     Image(systemName: "waveform.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(model.state == .listening ? .red : .secondary)
                         .symbolEffect(.variableColor.iterative, options: .repeating)
                 } else {
                     Image(systemName: "circle.hexagongrid.fill")

@@ -19,3 +19,20 @@ public enum ConfirmationReply {
         return nil
     }
 }
+
+/// Phrases that end a spoken conversation ("grazie", "basta così").
+public enum ClosingReply {
+    private static let replies: Set<String> = [
+        "grazie", "grazie mille", "ok grazie", "perfetto grazie", "basta", "basta così", "basta cosi",
+        "niente", "nient'altro", "niente altro", "no grazie", "a posto", "è tutto", "fine",
+        "thanks", "thank you", "thanks a lot", "ok thanks", "that's all", "that's it", "nothing", "no thanks",
+        "nothing else", "done",
+    ]
+
+    public static func matches(_ text: String) -> Bool {
+        let reply = text.lowercased()
+            .replacingOccurrences(of: ",", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return replies.contains(reply)
+    }
+}

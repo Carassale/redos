@@ -26,6 +26,8 @@ final class CommandPanelModel {
 
     var text = ""
     var state = State.idle
+    /// The microphone is open for a follow-up while the last reply stays on screen.
+    var isFollowingUp = false
     /// What a running request is doing (understanding, searching the web…).
     var activity: Activity?
     var focusRequest = 0

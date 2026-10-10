@@ -173,6 +173,8 @@ struct GeneralSettingsView: View {
                     }
                 }
                 Toggle("Speak answers", isOn: $settings.speaksAnswers)
+                Toggle("Keep listening after answering", isOn: $settings.keepsListening)
+                    .help("After a spoken request, reply or interrupt RedOS without saying “Hey Red” again.")
                 Toggle("Listen for “Hey Red”", isOn: $settings.wakeWordEnabled)
                 if settings.wakeWordEnabled {
                     LabeledContent("Sensitivity") {

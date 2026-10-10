@@ -138,6 +138,7 @@ Everything can be changed later in the other Settings panes.
 | Type a command | **⌥ Space** (or menu bar > Command…), then Return |
 | Speak (push-to-talk) | hold **⌃⌥ Space**, speak, release |
 | Speak (hands-free) | say **“Hey Red”**, wait for the tink, say the command; it is sent when you pause |
+| Go on talking | after a spoken reply the microphone stays open: ask a follow-up (“and in Rome?”), answer “yes”, or talk over RedOS to interrupt it; “thanks” / “that's all” closes the panel |
 | Confirm / cancel | Return / Esc, or say “yes” / “no” |
 | Stop everything (kill switch) | **⌃⌥ Esc** or **Stop** in the HUD |
 | History | ↑ / ↓ in the panel |
@@ -312,7 +313,7 @@ with many tools make the assistant's prompt longer: enable only the ones you nee
 | Pane | What is there |
 |---|---|
 | Setup | the first-run checklist (permissions, Ollama, assistant, voice) |
-| General | **Priority** (Accuracy / Speed), voice language, spoken answers, wake word and sensitivity, updates |
+| General | **Priority** (Accuracy / Speed), voice language, spoken answers, keep listening after answering, wake word and sensitivity, updates |
 | Models | assistant provider, API key or Copilot CLI, model (loaded from the provider), Test; **fast decisions** (on this Mac, [Codiv](https://codiv.ai) OpenJev, or a custom Jev server); Ollama status, model for commands and for parameters, downloads; minimum probability to act |
 | Privacy & Cloud | offline only, daily cloud request limit and usage, audit log |
 | Integrations | MCP server and MCP servers used by RedOS |
@@ -360,7 +361,8 @@ See [docs/PLAN.md](docs/PLAN.md) for the design notes and measurements.
 
 - Speech recognition, the wake word, System One and Ollama run **on the Mac**. Choose Ollama as assistant
   and **Offline only** to keep everything local.
-- With a cloud provider, the request, recent context (frontmost window title, remembered facts) and, for
+- With a cloud provider, the request, recent context (frontmost window title, remembered facts, the last
+  few exchanges of the conversation) and, for
   screen questions, the window text are sent to that provider. A **daily cloud limit** falls back to the
   local model.
 - API keys and the MCP token are stored in the **Keychain**.
@@ -460,6 +462,10 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M5 | screen agent, Accessibility, shell, HUD, kill switch | ✅ |
 | M6 | MCP client and server | ✅ |
 | M7–M9 | Sparkle updates, routines, memory, triggers, costs, CI/CD | ✅ |
+| M10 | Jev as the decision core (OpenJev on Codiv), local fallback | ✅ |
+| M16 | system, window, file, calendar, reminder, mail and Shortcuts actions | ✅ |
+| M11 | conversation: follow-ups with context, talking over RedOS | ✅ |
+| M12–M15 | corrections while working, real-time agent, behaviors, proactivity | planned |
 
 Ideas and backlog in [docs/PLAN.md](docs/PLAN.md): teach by demonstration, network triggers, terminal bridge.
 

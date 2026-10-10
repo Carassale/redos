@@ -53,7 +53,12 @@ public final class SpeechListener {
         (finalized + volatile).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    public func start(locale: Locale) async throws {
+    /// `cancelsEcho` removes what the Mac is playing (RedOS's own voice) from the microphone, so the user can
+    /// talk over it.
+    public func start(locale: Locale, cancelsEcho: Bool = false) async throws {
+        // Callers may poll `transcript` before the model is ready: never show the previous one.
+        finalized = ""
+        volatile = ""
         await cancel()
         guard let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
             throw VoiceError.unsupportedLocale(locale.identifier)
@@ -91,8 +96,22 @@ public final class SpeechListener {
             }
         }
         try await analyzer.start(inputSequence: stream)
+        try startMicrophone(format: format, continuation: continuation, cancelsEcho: cancelsEcho)
+    }
 
+    private func startMicrophone(
+        format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation, cancelsEcho: Bool
+    ) throws {
         let inputNode = engine.inputNode
+        if inputNode.isVoiceProcessingEnabled != cancelsEcho {
+            try inputNode.setVoiceProcessingEnabled(cancelsEcho)
+        }
+        if cancelsEcho {
+            // By default voice processing also turns down every other sound, RedOS's voice included.
+            inputNode.voiceProcessingOtherAudioDuckingConfiguration = .init(
+                enableAdvancedDucking: false, duckingLevel: .min
+            )
+        }
         let microphoneFormat = inputNode.outputFormat(forBus: 0)
         guard microphoneFormat.channelCount > 0,
               let converter = AVAudioConverter(from: microphoneFormat, to: format)

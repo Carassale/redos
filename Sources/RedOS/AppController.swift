@@ -12,6 +12,8 @@ final class AppController {
     let updater = Updater()
     let routines = RoutineStore()
     let memory = MemoryStore()
+    /// Survives engine rebuilds (settings changes) so a follow-up still has its context.
+    let conversation = Conversation()
     let usage = UsageStore()
     let ollama = OllamaSetup()
     @ObservationIgnored private lazy var triggers = TriggerCenter(routines: routines) { [weak self] routine in
@@ -68,7 +70,8 @@ final class AppController {
         let thinker: any ChatCompleting = settings.prefersAccuracy ? writer : ollama
         Task { await writer.preload() }
         let voice = VoiceSettings(
-            locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers
+            locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers,
+            keepsListening: settings.keepsListening
         )
         let web = WebTools(locale: settings.voiceLocale)
         let designer = diagramDesigner(settings, writer: writer, local: ollama)
@@ -78,7 +81,7 @@ final class AppController {
                 planner: ModelPlanner(client: thinker),
                 assistant: ModelPlanner(client: writer),
                 agent: ModelAgent(client: thinker), observer: AccessibilityObserver(),
-                routines: routines, memory: memory, writer: writer,
+                routines: routines, memory: memory, conversation: conversation, writer: writer,
                 web: web, researcher: ResearchAgent(client: writer, tools: web), designer: designer,
                 audit: FileAuditLog()
             ),

@@ -3,6 +3,7 @@ import RedOSCore
 extension CommandPanelController {
     /// A command from an MCP client, handled as if typed (same confirmations); returns how it ended.
     func runExternal(_ text: String) async -> MCPToolResult {
+        endFollowUp()
         guard listening == nil, model.state != .working, model.state != .listening else {
             return MCPToolResult(String(localized: "RedOS is busy with another request."), isError: true)
         }
