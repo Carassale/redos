@@ -3,6 +3,7 @@ import Carbon.HIToolbox
 import Observation
 import RedOSActions
 import RedOSCore
+import RedOSWakeWord
 
 @MainActor
 @Observable
@@ -19,6 +20,8 @@ final class AppController {
     private(set) var systemOneDescription = ""
     private(set) var systemTwoDescription = ""
     private(set) var hasUnseenResult = false
+    /// Why the wake word is not listening although enabled.
+    private(set) var wakeWordError: String?
     @ObservationIgnored let commandPanel: CommandPanelController
 
     init() {
@@ -27,8 +30,13 @@ final class AppController {
         reload()
     }
 
-    /// Rebuilds the command engine from the current settings.
+    /// Rebuilds the command engine and the wake word from the current settings.
     func reload(_ settings: AppSettings = AppSettings()) {
+        rebuildEngine(settings)
+        configureWakeWord(settings)
+    }
+
+    private func rebuildEngine(_ settings: AppSettings) {
         let ollama = OllamaClient(model: settings.systemOneModel)
         let extraction = OllamaClient(model: settings.extractionModel)
         let systemOne: any SystemOne
@@ -84,6 +92,37 @@ final class AppController {
             ),
             voice: voice
         )
+    }
+
+    private func configureWakeWord(_ settings: AppSettings) {
+        wakeWordError = nil
+        guard settings.wakeWordEnabled else {
+            commandPanel.wakeWord?.stop()
+            commandPanel.wakeWord = nil
+            return
+        }
+        if let wakeWord = commandPanel.wakeWord {
+            wakeWord.threshold = Float(settings.wakeWordThreshold)
+            return
+        }
+        guard SystemPermissionChecker().status(of: .microphone) == .granted else {
+            wakeWordError = ActionError.permissionMissing(.microphone).localizedDescription
+            return
+        }
+        do {
+            guard let models = Bundle.main.resourceURL?.appending(path: "WakeWord") else {
+                throw WakeWordError.modelNotFound
+            }
+            let wakeWord = try WakeWordListener(
+                model: models.appending(path: "hey_red.onnx"), featureModels: models,
+                threshold: Float(settings.wakeWordThreshold)
+            )
+            wakeWord.onDetect = { [weak self] in self?.commandPanel.startListening(handsFree: true) }
+            try wakeWord.start()
+            commandPanel.wakeWord = wakeWord
+        } catch {
+            wakeWordError = error.localizedDescription
+        }
     }
 
     /// Cloud providers are metered and fall back to the local model past the daily limit or when offline.

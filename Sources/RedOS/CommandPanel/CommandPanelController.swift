@@ -1,6 +1,7 @@
 import AppKit
 import RedOSCore
 import RedOSVoice
+import RedOSWakeWord
 
 struct VoiceSettings: Equatable {
     var locale: Locale
@@ -17,7 +18,15 @@ final class CommandPanelController {
     private let model = CommandPanelModel()
     private let listener = SpeechListener()
     private let speaker = Speaker()
-    private var listening: Task<Void, Never>?
+    /// The wake word is not listened for while a command is being dictated.
+    private var listening: Task<Void, Never>? {
+        didSet {
+            guard (listening == nil) != (oldValue == nil) else { return }
+            if listening == nil { try? wakeWord?.start() } else { wakeWord?.stop() }
+        }
+    }
+    var wakeWord: WakeWordListener?
+    private let endpoint = DictationEndpoint()
     /// The command being resolved or run: the kill switch cancels it.
     private var work: Task<Void, Never>?
     private lazy var hud = HUDController { [weak self] in self?.stop() }
@@ -84,68 +93,6 @@ final class CommandPanelController {
 
     private func hide() {
         panel.orderOut(nil)
-    }
-
-    /// Push-to-talk pressed: listen and show the live transcript.
-    func startListening() {
-        guard listening == nil, model.state != .working else { return }
-        guard SystemPermissionChecker().status(of: .microphone) == .granted else {
-            show()
-            model.state = .message(ActionError.permissionMissing(.microphone).localizedDescription, isError: true)
-            return
-        }
-        speaker.stop()
-        pendingConfirmation = switch model.state {
-        case .confirming, .confirmingPlan: model.state
-        default: nil
-        }
-        show()
-        model.text = ""
-        model.state = .listening
-        listener.onTranscript = { [weak self] text in self?.model.text = text }
-        listener.onDownload = { [weak self] in
-            self?.model.state = .message(String(localized: "Downloading the speech model…"), isError: false)
-        }
-        listening = Task { [listener, voice] in
-            do {
-                try await listener.start(locale: voice.locale)
-                if case .message = model.state { model.state = .listening }
-            } catch {
-                model.state = .message(error.localizedDescription, isError: true)
-            }
-        }
-    }
-
-    /// Push-to-talk released: the transcript is submitted like a typed command.
-    func stopListening() {
-        guard let listening else { return }
-        self.listening = nil
-        start { [self] in
-            await listening.value
-            guard model.state == .listening else { return }
-            // Dictation ends sentences with a period: "apri Safari." must still match the app name.
-            var text = await listener.stop()
-            if text.hasSuffix(".") { text.removeLast() }
-            model.text = text
-            guard !text.isEmpty else {
-                model.state = .message(String(localized: "I didn't hear anything."), isError: true)
-                return
-            }
-            isVoiceCommand = true
-            if let pending = pendingConfirmation, let confirmed = ConfirmationReply.parse(text) {
-                pendingConfirmation = nil
-                model.state = pending
-                if confirmed {
-                    submit()
-                } else {
-                    cancel()
-                }
-                return
-            }
-            pendingConfirmation = nil
-            model.state = .working
-            await resolve(text)
-        }
     }
 
     /// Kill switch: stops listening, speaking and whatever RedOS is doing.
@@ -265,6 +212,7 @@ final class CommandPanelController {
         speaker.stop()
         switch model.state {
         case .listening:
+            endpoint.cancel()
             listening?.cancel()
             listening = nil
             Task { [listener] in await listener.cancel() }
@@ -285,6 +233,73 @@ final class CommandPanelController {
 }
 
 extension CommandPanelController {
+    /// Push-to-talk pressed or wake word heard: listen and show the live transcript.
+    func startListening(handsFree: Bool = false) {
+        guard listening == nil, model.state != .working else { return }
+        guard SystemPermissionChecker().status(of: .microphone) == .granted else {
+            show()
+            model.state = .message(ActionError.permissionMissing(.microphone).localizedDescription, isError: true)
+            return
+        }
+        speaker.stop()
+        pendingConfirmation = switch model.state {
+        case .confirming, .confirmingPlan: model.state
+        default: nil
+        }
+        show()
+        model.text = ""
+        model.state = .listening
+        listener.onTranscript = { [weak self] text in self?.model.text = text }
+        listener.onDownload = { [weak self] in
+            self?.model.state = .message(String(localized: "Downloading the speech model…"), isError: false)
+        }
+        listening = Task { [listener, voice, model] in
+            do {
+                try await listener.start(locale: voice.locale)
+                if case .message = model.state { model.state = .listening }
+            } catch {
+                model.state = .message(error.localizedDescription, isError: true)
+            }
+        }
+        if handsFree {
+            NSSound(named: "Tink")?.play()
+            endpoint.start(transcript: { [model] in model.text }, onPause: { [weak self] in self?.stopListening() })
+        }
+    }
+
+    /// Push-to-talk released or pause after the wake word: the transcript is submitted like a typed command.
+    func stopListening() {
+        guard let listening else { return }
+        endpoint.cancel()
+        self.listening = nil
+        start { [self] in
+            await listening.value
+            guard model.state == .listening else { return }
+            // Dictation ends sentences with a period: "apri Safari." must still match the app name.
+            var text = await listener.stop()
+            if text.hasSuffix(".") { text.removeLast() }
+            model.text = text
+            guard !text.isEmpty else {
+                model.state = .message(String(localized: "I didn't hear anything."), isError: true)
+                return
+            }
+            isVoiceCommand = true
+            if let pending = pendingConfirmation, let confirmed = ConfirmationReply.parse(text) {
+                pendingConfirmation = nil
+                model.state = pending
+                if confirmed {
+                    submit()
+                } else {
+                    cancel()
+                }
+                return
+            }
+            pendingConfirmation = nil
+            model.state = .working
+            await resolve(text)
+        }
+    }
+
     /// Hides the panel and shows the HUD while the work drives the Mac; outputs (screen text, command
     /// results, the agent's summary) come back in the panel.
     private func run(

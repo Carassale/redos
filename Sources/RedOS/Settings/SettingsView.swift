@@ -158,10 +158,34 @@ struct GeneralSettingsView: View {
                     }
                 }
                 Toggle("Speak answers", isOn: $settings.speaksAnswers)
+                Toggle("Listen for “Hey Red”", isOn: $settings.wakeWordEnabled)
+                if settings.wakeWordEnabled {
+                    LabeledContent("Sensitivity") {
+                        // Higher sensitivity = lower score threshold.
+                        Slider(
+                            value: Binding(
+                                get: { 1 - settings.wakeWordThreshold },
+                                set: { settings.wakeWordThreshold = 1 - $0 }
+                            ),
+                            in: 0.1...0.8
+                        ) {
+                            EmptyView()
+                        } minimumValueLabel: {
+                            Image(systemName: "speaker.wave.1")
+                        } maximumValueLabel: {
+                            Image(systemName: "speaker.wave.3")
+                        }
+                    }
+                    if let error = controller.wakeWordError {
+                        Text(verbatim: error).foregroundStyle(.red)
+                    }
+                }
             } header: {
                 Text("Voice")
             } footer: {
-                Text("Hold ⌃⌥Space and speak; release to send. Speech is recognized on this Mac.")
+                Text(settings.wakeWordEnabled
+                    ? Self.wakeWordFooter
+                    : "Hold ⌃⌥Space and speak; release to send. Speech is recognized on this Mac.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
 
@@ -190,6 +214,11 @@ struct GeneralSettingsView: View {
             voiceLocales = Set(supported + [settings.voiceLocale]).sorted()
         }
     }
+
+    private static let wakeWordFooter: LocalizedStringKey = """
+        Say “Hey Red” and then the command: it is sent when you pause. \
+        The wake word is detected on this Mac; the microphone stays on.
+        """
 
     private var priorityFooter: LocalizedStringKey {
         guard settings.systemTwoProvider != .ollama else { return "Everything stays on this Mac." }

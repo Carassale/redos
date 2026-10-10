@@ -41,6 +41,7 @@ app: build
 	plutil -replace CFBundleVersion -string "$(BUILD)" "$(PLIST)"
 	cp -R Resources/Localization/*.lproj "$(CONTENTS)/Resources/"
 	cp -R Resources/DiagramDesign "$(CONTENTS)/Resources/"
+	cp -R Resources/WakeWord "$(CONTENTS)/Resources/"
 	@$(MAKE) --no-print-directory sign
 
 # A stable identity keeps macOS privacy permissions across rebuilds; ad-hoc resets them.

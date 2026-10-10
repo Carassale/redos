@@ -88,6 +88,13 @@
 "Beyond the limit the assistant uses the local model." = "Oltre il limite l'assistente usa il modello locale.";
 "Activity log" = "Registro attività";
 
+/* Wake word */
+"Listen for “Hey Red”" = "Ascolta “Hey Red”";
+"Sensitivity" = "Sensibilità";
+"Say “Hey Red” and then the command: it is sent when you pause. The wake word is detected on this Mac; the microphone stays on." = "Di' “Hey Red” e poi il comando: parte quando fai una pausa. La wake word è riconosciuta su questo Mac; il microfono resta attivo.";
+"The wake word model %@ is not valid." = "Il modello della wake word %@ non è valido.";
+"The wake word model was not found." = "Il modello della wake word non è stato trovato.";
+
 /* Voice */
 "Voice" = "Voce";
 "Language" = "Lingua";

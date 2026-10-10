@@ -222,6 +222,20 @@ flowchart LR
 - **Diagrammi**: restano 60–90 s (~5k token di HTML + ragionamento; `--reasoning-effort low` ~15% più
   veloce, `none` non risponde), ma il pannello mostra "Scrivo… N caratteri" mentre arrivano.
 
+### M4.1: wake word "Hey Red" (10/10/2026)
+
+- Modello dedicato `hey_red.onnx` (openWakeWord, classificatore 16×96 → punteggio) + modelli di feature di
+  openWakeWord v0.5.1 (`melspectrogram.onnx`, `embedding_model.onnx`) in `Resources/WakeWord` (2.6 MB).
+- Target `RedOSWakeWord` con ONNX Runtime 1.24.2 (SwiftPM, statico: l'app passa a ~40 MB).
+  `WakeWordDetector` replica lo streaming di openWakeWord: blocchi da 1280 campioni (80 ms) + 480 di
+  contesto → mel (/10 + 2) → ultimi 76 frame → embedding → ultimi 16 embedding → punteggio.
+- `WakeWordListener`: microfono a 16 kHz, soglia regolabile (Sensibilità), pausa di 2 s dopo un rilevamento;
+  si ferma mentre si detta il comando. Dopo "Hey Red" il comando parte alla pausa (1.5 s senza parole nuove,
+  6 s senza parole, 20 s al massimo).
+- Verifica: `say "Hey Red"` 0.90, "Hey red, apri Safari" 0.72, frasi diverse < 0.01 (test automatici);
+  prova reale dagli altoparlanti al microfono: rilevata e comando trascritto. La pronuncia italiana
+  (voce Alice) non supera la soglia: il modello è addestrato su "Hey Red" in inglese.
+
 ## Architettura
 
 ```mermaid
@@ -285,7 +299,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M2.5 | Eval su comandi reali it/en, scelta modello, soglie | ✅ |
 | M3 | System Two: provider cloud + locale, Portachiavi | ✅ |
 | M4 | Voce: push-to-talk (⌃⌥Spazio), SpeechAnalyzer on-device it/en, risposte vocali (TTS) | ✅ |
-| M4.1 | Wake word "Hey RedOS" (openWakeWord: addestramento modello dedicato) | |
+| M4.1 | Wake word "Hey Red" (openWakeWord su ONNX Runtime, modello dedicato) | ✅ |
 | M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell, HUD, kill switch | ✅ |
 | M6 | MCP client e server | |
 | M7 | Sparkle, pacchetti release | ✅ |

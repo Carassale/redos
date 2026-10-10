@@ -18,6 +18,9 @@ struct AppSettings: Equatable {
     var prefersAccuracy: Bool
     var voiceLocale: String
     var speaksAnswers: Bool
+    var wakeWordEnabled: Bool
+    /// Minimum wake word score: lower hears more, but also triggers by mistake more often.
+    var wakeWordThreshold: Double
 
     static let defaultSystemOneModel = "gemma4:e4b-it-qat"
     // Smaller model: argument extraction is generation-bound (eval: 0.44 s vs 0.79 s, same accuracy).
@@ -36,6 +39,8 @@ struct AppSettings: Equatable {
         prefersAccuracy = defaults.object(forKey: "routing.prefersAccuracy") as? Bool ?? true
         voiceLocale = defaults.string(forKey: "voice.locale") ?? Self.defaultVoiceLocale
         speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
+        wakeWordEnabled = defaults.bool(forKey: "voice.wakeWord")
+        wakeWordThreshold = defaults.object(forKey: "voice.wakeWordThreshold") as? Double ?? 0.5
     }
 
     /// The Mac's language when it is Italian or English, otherwise US English.
@@ -56,6 +61,8 @@ struct AppSettings: Equatable {
         defaults.set(prefersAccuracy, forKey: "routing.prefersAccuracy")
         defaults.set(voiceLocale, forKey: "voice.locale")
         defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
+        defaults.set(wakeWordEnabled, forKey: "voice.wakeWord")
+        defaults.set(wakeWordThreshold, forKey: "voice.wakeWordThreshold")
     }
 
     func systemTwo(apiKey: String? = nil) -> SystemTwoConfiguration {

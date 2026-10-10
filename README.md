@@ -27,7 +27,9 @@ Version is read from `VERSION`; build number is the git commit count.
 
 Press **⌥ Space** (or menu bar > Command…) and type a command, in English or Italian.
 Or **hold ⌃⌥ Space and speak**: release to send. Speech is recognized on this Mac (SpeechAnalyzer) and
-answers can be read aloud (Settings > Voice).
+answers can be read aloud (Settings > General > Voice). With **Listen for “Hey Red”** on, say “Hey Red”
+and then the command: it is sent when you pause. The wake word runs on this Mac too ([openWakeWord](https://github.com/dscripka/openWakeWord)
+models on ONNX Runtime).
 
 | Example | Action |
 |---|---|
@@ -136,3 +138,5 @@ Privacy & Security > Open Anyway). Updates through Sparkle do not ask again.
 
 [MIT](LICENSE). Diagrams follow [diagram-design](https://github.com/cathrynlavery/diagram-design) by Cathryn
 Lavery (MIT), bundled in `Resources/DiagramDesign` with its [license](Resources/DiagramDesign/LICENSE).
+The wake word uses openWakeWord's feature models (Apache 2.0, `Resources/WakeWord`) and
+[ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT).
