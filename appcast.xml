@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.9.1</title>
+      <pubDate>Sat, 10 Oct 2026 11:48:21 +0000</pubDate>
+      <sparkle:version>41</sparkle:version>
+      <sparkle:shortVersionString>0.9.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>test: wake word test uses the Samantha voice, skipped where it is missing</li><li>fix: CLI timeout watchdog independent of the Swift task pool (flaky on CI)</li><li>docs: complete README; fix MCP tool description (v0.9.1)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.9.1/RedOS-0.9.1.zip" type="application/octet-stream" sparkle:edSignature="IAVdOM20rJHRoIzLpbsMPL1JJtLPIl3E7P9rIQHyRNhlcjLzLHDIO7mhkAlM9hGH8Atdg1hamVnImdQdMMZ+Dw==" length="12873290"/>
+    </item>
+    <item>
       <title>RedOS 0.9.0</title>
       <pubDate>Sat, 10 Oct 2026 11:19:34 +0000</pubDate>
       <sparkle:version>37</sparkle:version>
