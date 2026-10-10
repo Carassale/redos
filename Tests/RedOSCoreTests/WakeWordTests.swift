@@ -3,9 +3,28 @@ import Foundation
 import Testing
 @testable import RedOSWakeWord
 
-/// The bundled "Hey Red" model against speech synthesized with `say`.
-@Suite(.enabled(if: FileManager.default.isExecutableFile(atPath: "/usr/bin/say")))
+enum SpeechVoice {
+    static let name = "Samantha"
+
+    static var isAvailable: Bool {
+        let say = Process()
+        say.executableURL = URL(filePath: "/usr/bin/say")
+        say.arguments = ["-v", "?"]
+        let output = Pipe()
+        say.standardOutput = output
+        guard (try? say.run()) != nil else { return false }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        say.waitUntilExit()
+        let voices = String(bytes: data, encoding: .utf8)?.split(separator: "\n") ?? []
+        return voices.contains { $0.hasPrefix(name + " ") }
+    }
+}
+
+/// The bundled "Hey Red" model against speech synthesized with `say` and the Samantha voice (the default
+/// voice differs between machines, e.g. CI runners).
+@Suite(.enabled(if: SpeechVoice.isAvailable))
 struct WakeWordTests {
+    private static let voice = SpeechVoice.name
     private static let models = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().appending(path: "Resources/WakeWord")
 
@@ -37,7 +56,7 @@ struct WakeWordTests {
         defer { try? FileManager.default.removeItem(at: url) }
         let say = Process()
         say.executableURL = URL(filePath: "/usr/bin/say")
-        say.arguments = ["-o", url.path, "--data-format=LEI16@16000", phrase]
+        say.arguments = ["-v", voice, "-o", url.path, "--data-format=LEI16@16000", phrase]
         try say.run()
         say.waitUntilExit()
         let file = try AVAudioFile(forReading: url, commonFormat: .pcmFormatFloat32, interleaved: false)
