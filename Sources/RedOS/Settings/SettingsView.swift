@@ -80,6 +80,8 @@ struct SettingsView: View {
             ModelsSettingsView(controller: controller, settings: $settings, apiKey: $apiKey)
         case .privacy:
             CloudSettingsView(controller: controller, settings: $settings)
+        case .integrations:
+            IntegrationsSettingsView(controller: controller, settings: $settings)
         case .routines:
             Form {
                 RoutinesSection(store: controller.routines) { controller.commandPanel.runRoutine(named: $0) }
@@ -102,7 +104,7 @@ struct SettingsView: View {
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case setup, general, models, privacy, routines, memory
+    case setup, general, models, privacy, integrations, routines, memory
 
     var id: String { rawValue }
 
@@ -112,6 +114,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "General"
         case .models: "Models"
         case .privacy: "Privacy & Cloud"
+        case .integrations: "Integrations"
         case .routines: "Routines"
         case .memory: "Memory"
         }
@@ -123,6 +126,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "gearshape.fill"
         case .models: "cpu.fill"
         case .privacy: "lock.shield.fill"
+        case .integrations: "puzzlepiece.extension.fill"
         case .routines: "repeat"
         case .memory: "brain.fill"
         }
@@ -134,6 +138,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: .gray
         case .models: .purple
         case .privacy: .blue
+        case .integrations: .indigo
         case .routines: .orange
         case .memory: .pink
         }

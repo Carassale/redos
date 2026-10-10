@@ -23,21 +23,33 @@ final class AppController {
     private(set) var hasUnseenResult = false
     /// Why the wake word is not listening although enabled.
     private(set) var wakeWordError: String?
+    let mcpHub = MCPHub()
+    var mcpStatuses: [MCPHub.Status] = []
+    var mcpServerError: String?
+    @ObservationIgnored var mcpServer: LocalHTTPServer?
+    /// The running server's settings, so it restarts only when they change.
+    @ObservationIgnored var mcpServerKey = ""
+    /// Tools of external MCP servers, offered to System Two next to the built-in actions.
+    @ObservationIgnored var mcpActions: [any Action] = []
+    @ObservationIgnored var settings = AppSettings()
     @ObservationIgnored let commandPanel: CommandPanelController
 
     init() {
         commandPanel = CommandPanelController(engine: CommandEngine(registry: registry, audit: FileAuditLog()))
         commandPanel.onUnseenResultChange = { [weak self] in self?.hasUnseenResult = $0 }
         reload()
+        reloadMCPServers()
     }
 
-    /// Rebuilds the command engine and the wake word from the current settings.
+    /// Rebuilds the command engine, the wake word and the MCP server from the current settings.
     func reload(_ settings: AppSettings = AppSettings()) {
+        self.settings = settings
         rebuildEngine(settings)
         configureWakeWord(settings)
+        configureMCPServer(settings)
     }
 
-    private func rebuildEngine(_ settings: AppSettings) {
+    func rebuildEngine(_ settings: AppSettings) {
         let ollama = OllamaClient(model: settings.systemOneModel)
         let extraction = OllamaClient(model: settings.extractionModel)
         let systemOne: any SystemOne
@@ -75,16 +87,11 @@ final class AppController {
             locale: Locale(identifier: settings.voiceLocale), speaksAnswers: settings.speaksAnswers
         )
         let web = WebTools(locale: settings.voiceLocale)
-        // Speed: diagrams think less (about 15% faster with Copilot); accuracy keeps the default effort.
-        let drawer = settings.prefersAccuracy
-            ? writer
-            : (try? systemTwoClient(settings, local: ollama, reasoningEffort: "low")) ?? writer
-        let designer = Bundle.main.resourceURL
-            .flatMap { DiagramLibrary(directory: $0.appending(path: "DiagramDesign")) }
-            .map { DiagramDesigner(client: drawer, library: $0) }
+        let designer = diagramDesigner(settings, writer: writer, local: ollama)
         commandPanel.update(
             engine: CommandEngine(
-                registry: registry, router: router, planner: ModelPlanner(client: thinker),
+                registry: ActionRegistry(SystemActions.all + mcpActions), router: router,
+                planner: ModelPlanner(client: thinker),
                 assistant: ModelPlanner(client: writer),
                 agent: ModelAgent(client: thinker), observer: AccessibilityObserver(),
                 routines: routines, memory: memory, writer: writer,
@@ -93,6 +100,18 @@ final class AppController {
             ),
             voice: voice
         )
+    }
+
+    private func diagramDesigner(
+        _ settings: AppSettings, writer: any ChatCompleting, local: OllamaClient
+    ) -> DiagramDesigner? {
+        // Speed: diagrams think less (about 15% faster with Copilot); accuracy keeps the default effort.
+        let drawer = settings.prefersAccuracy
+            ? writer
+            : (try? systemTwoClient(settings, local: local, reasoningEffort: "low")) ?? writer
+        return Bundle.main.resourceURL
+            .flatMap { DiagramLibrary(directory: $0.appending(path: "DiagramDesign")) }
+            .map { DiagramDesigner(client: drawer, library: $0) }
     }
 
     private func configureWakeWord(_ settings: AppSettings) {

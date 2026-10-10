@@ -236,6 +236,21 @@ flowchart LR
   prova reale dagli altoparlanti al microfono: rilevata e comando trascritto. La pronuncia italiana
   (voce Alice) non supera la soglia: il modello è addestrato su "Hey Red" in inglese.
 
+### M6: MCP client e server (10/10/2026)
+
+- **Server** (`MCPServer`, `MCPHTTPEndpoint`, `LocalHTTPServer` su Network.framework): Streamable HTTP
+  solo JSON su `127.0.0.1:47821/mcp`, interfaccia loopback, token bearer nel Portachiavi (confronto a tempo
+  costante), rifiuto di richieste con `Origin` (browser, DNS rebinding) e di Host diversi. Tool
+  `run_command` (il comando passa dal pannello come se fosse digitato: stesse conferme, risposta restituita al
+  client) e `read_screen` (opzionale). Spento di default; "Copia per VS Code / Claude Code".
+- **Client** (`MCPStdioClient`, `MCPHub`): server stdio da `mcp.json` (formato `mcpServers` di Claude
+  Desktop), PATH della shell di login per `npx`/`uvx`. I tool diventano azioni `mcp.<server>.<tool>` solo per
+  System Two (System One resta sul catalogo base): `readOnlyHint` → safe, `destructiveHint: false` →
+  moderate, altrimenti dangerous (conferma). Argomenti convertiti ai tipi dello schema.
+- Verifica: 8 test (protocollo, sicurezza HTTP, server Python stdio reale); prova live: curl → `run_command`
+  "quanto fa 17 per 23" in 0.3 s; "usa lo strumento MCP add per sommare 1234 e 4321" via MCP → planner Copilot
+  → `mcp.calc.add` → "5555" (10 s).
+
 ## Architettura
 
 ```mermaid
@@ -301,7 +316,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M4 | Voce: push-to-talk (⌃⌥Spazio), SpeechAnalyzer on-device it/en, risposte vocali (TTS) | ✅ |
 | M4.1 | Wake word "Hey Red" (openWakeWord su ONNX Runtime, modello dedicato) | ✅ |
 | M5 | Agente multi-step: osserva/agisci, Accessibility tree, Shell, HUD, kill switch | ✅ |
-| M6 | MCP client e server | |
+| M6 | MCP client e server | ✅ |
 | M7 | Sparkle, pacchetti release | ✅ |
 | M8 | Extra (routine, memoria, trigger, costi) | ✅ |
 | M9 | CI/CD GitHub Actions | ✅ |

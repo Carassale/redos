@@ -227,12 +227,12 @@ actor ACPConnection {
 }
 
 extension JSONValue {
-    subscript(key: String) -> JSONValue? {
+    public subscript(key: String) -> JSONValue? {
         if case .object(let object) = self { return object[key] }
         return nil
     }
 
-    var string: String? {
+    public var string: String? {
         if case .string(let value) = self { return value }
         return nil
     }

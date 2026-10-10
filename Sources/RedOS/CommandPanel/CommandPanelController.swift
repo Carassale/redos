@@ -15,11 +15,11 @@ final class CommandPanelController {
     private var engine: CommandEngine
     private var voice = VoiceSettings(locale: Locale(identifier: "en_US"), speaksAnswers: true)
     private let defaults: UserDefaults
-    private let model = CommandPanelModel()
+    let model = CommandPanelModel()
     private let listener = SpeechListener()
     private let speaker = Speaker()
     /// The wake word is not listened for while a command is being dictated.
-    private var listening: Task<Void, Never>? {
+    private(set) var listening: Task<Void, Never>? {
         didSet {
             guard (listening == nil) != (oldValue == nil) else { return }
             if listening == nil { try? wakeWord?.start() } else { wakeWord?.stop() }
@@ -122,7 +122,7 @@ final class CommandPanelController {
         }
     }
 
-    private func submit() {
+    func submit() {
         switch model.state {
         case .working, .listening:
             return

@@ -101,6 +101,31 @@
 "Start" = "Avvia";
 "Download Ollama" = "Scarica Ollama";
 "Download All Models" = "Scarica tutti i modelli";
+
+/* MCP */
+"Integrations" = "Integrazioni";
+"RedOS as MCP server" = "RedOS come server MCP";
+"Let other apps control RedOS" = "Consenti ad altre app di comandare RedOS";
+"Address" = "Indirizzo";
+"Allow reading the screen" = "Consenti la lettura dello schermo";
+"Copy for VS Code" = "Copia per VS Code";
+"Copy for Claude Code" = "Copia per Claude Code";
+"New Token" = "Nuovo token";
+"MCP servers used by RedOS" = "Server MCP usati da RedOS";
+"Name" = "Nome";
+"Command, e.g. npx -y @modelcontextprotocol/server-memory" = "Comando, es. npx -y @modelcontextprotocol/server-memory";
+"Add" = "Aggiungi";
+"Open mcp.json" = "Apri mcp.json";
+"Reconnect" = "Riconnetti";
+"Off" = "Spento";
+"%lld tools" = "%lld strumenti";
+"Enabled" = "Attivo";
+"Remove" = "Rimuovi";
+"VS Code, Claude and other MCP clients on this Mac can send commands to RedOS (tool run_command). Only local connections with the token are accepted; actions that change things still ask you to confirm." = "VS Code, Claude e altri client MCP su questo Mac possono inviare comandi a RedOS (strumento run_command). Sono accettate solo connessioni locali con il token; le azioni che cambiano qualcosa chiedono comunque conferma.";
+"Tools of these servers are available to the assistant in multi-step requests. Read-only tools run directly; the others ask for confirmation. Same format as Claude Desktop's mcpServers." = "Gli strumenti di questi server sono disponibili all'assistente nelle richieste in più passi. Quelli di sola lettura partono subito, gli altri chiedono conferma. Stesso formato di mcpServers di Claude Desktop.";
+"RedOS is busy with another request." = "RedOS è occupato con un'altra richiesta.";
+"Cancelled by the user." = "Annullato dall'utente.";
+"No answer from RedOS in time." = "Nessuna risposta da RedOS in tempo.";
 "Ollama did not start. Open it from Applications." = "Ollama non si è avviato. Aprilo dalle Applicazioni.";
 "Get an API key" = "Ottieni una chiave API";
 "Copy" = "Copia";

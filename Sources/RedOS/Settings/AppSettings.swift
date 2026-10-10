@@ -21,6 +21,10 @@ struct AppSettings: Equatable {
     var wakeWordEnabled: Bool
     /// Minimum wake word score: lower hears more, but also triggers by mistake more often.
     var wakeWordThreshold: Double
+    /// Other apps (VS Code, Claude…) can send commands to RedOS over MCP.
+    var mcpServerEnabled: Bool
+    var mcpServerPort: Int
+    var mcpAllowsScreenReading: Bool
 
     static let defaultSystemOneModel = "gemma4:e4b-it-qat"
     // Smaller model: argument extraction is generation-bound (eval: 0.44 s vs 0.79 s, same accuracy).
@@ -41,6 +45,9 @@ struct AppSettings: Equatable {
         speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
         wakeWordEnabled = defaults.bool(forKey: "voice.wakeWord")
         wakeWordThreshold = defaults.object(forKey: "voice.wakeWordThreshold") as? Double ?? 0.5
+        mcpServerEnabled = defaults.bool(forKey: "mcp.server")
+        mcpServerPort = defaults.object(forKey: "mcp.serverPort") as? Int ?? 47821
+        mcpAllowsScreenReading = defaults.bool(forKey: "mcp.screenReading")
     }
 
     /// The Mac's language when it is Italian or English, otherwise US English.
@@ -63,6 +70,9 @@ struct AppSettings: Equatable {
         defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
         defaults.set(wakeWordEnabled, forKey: "voice.wakeWord")
         defaults.set(wakeWordThreshold, forKey: "voice.wakeWordThreshold")
+        defaults.set(mcpServerEnabled, forKey: "mcp.server")
+        defaults.set(mcpServerPort, forKey: "mcp.serverPort")
+        defaults.set(mcpAllowsScreenReading, forKey: "mcp.screenReading")
     }
 
     func systemTwo(apiKey: String? = nil) -> SystemTwoConfiguration {

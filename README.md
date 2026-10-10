@@ -111,6 +111,22 @@ agent to this provider; **Speed** keeps plans and the agent on the local model.
 make test-live-copilot COPILOT_MODEL=claude-haiku-5.5   # check Copilot as System Two
 ```
 
+## MCP
+
+**RedOS as MCP server** (Settings > Integrations, off by default): VS Code, Claude Code, Copilot CLI and
+other MCP clients on this Mac can drive RedOS with the `run_command` tool (a command in natural language,
+handled exactly as if typed: same confirmations) and, if allowed, `read_screen`. Streamable HTTP on
+`http://127.0.0.1:47821/mcp`, loopback only, bearer token in the Keychain, requests with an `Origin`
+header (browsers) refused. **Copy for VS Code** puts the server entry for `mcp.json` on the clipboard:
+
+```json
+"redos": { "type": "http", "url": "http://127.0.0.1:47821/mcp", "headers": { "Authorization": "Bearer …" } }
+```
+
+**MCP servers used by RedOS**: stdio servers in `~/Library/Application Support/RedOS/mcp.json` (Claude
+Desktop's `mcpServers` format, editable in Settings). Their tools become System Two actions
+(`mcp.<server>.<tool>`): read-only tools run directly, the others ask for confirmation.
+
 ## Updates and releases
 
 RedOS updates itself with [Sparkle](https://sparkle-project.org) from `appcast.xml` in this repo
