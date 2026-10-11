@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.12.1</title>
+      <pubDate>Sun, 11 Oct 2026 09:49:59 +0000</pubDate>
+      <sparkle:version>49</sparkle:version>
+      <sparkle:shortVersionString>0.12.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>fix: speech model reported as downloading on every dictation (v0.12.1)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.12.1/RedOS-0.12.1.zip" type="application/octet-stream" sparkle:edSignature="oltrssRWYIRURRhks9Y/vsJHH7yVRkSZjswl2AlO6QwOzzlupAAGLjKSn+S2iXlF7tsodoxI/t6PG9BX+Ov4Cg==" length="12989790"/>
+    </item>
+    <item>
       <title>RedOS 0.12.0</title>
       <pubDate>Sat, 10 Oct 2026 18:43:07 +0000</pubDate>
       <sparkle:version>47</sparkle:version>
