@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.13.0</title>
+      <pubDate>Sun, 11 Oct 2026 10:10:53 +0000</pubDate>
+      <sparkle:version>51</sparkle:version>
+      <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>feat: report problems and send requests to the developer (v0.13.0)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.13.0/RedOS-0.13.0.zip" type="application/octet-stream" sparkle:edSignature="j6tEkf8tDi2C5E/b4HxmQmV6Pzr6odlYxeD3VJbyj61zUfvx7e5/l7CWnIY4lrR1pPF4zEbXwVUJv4QcmCTlBg==" length="12998222"/>
+    </item>
+    <item>
       <title>RedOS 0.12.1</title>
       <pubDate>Sun, 11 Oct 2026 09:49:59 +0000</pubDate>
       <sparkle:version>49</sparkle:version>
