@@ -209,6 +209,12 @@
 
 /* Updates */
 "Check for Updates…" = "Controlla aggiornamenti…";
+"Report a Problem…" = "Segnala un problema…";
+"Send a Request to the Developer…" = "Invia una richiesta allo sviluppatore…";
+"Report…" = "Segnala…";
+"Send this error to the developer as a GitHub issue you can review first." = "Invia questo errore allo sviluppatore come issue GitHub, che puoi rivedere prima.";
+"Opened in the browser: review the report and send it (needs a GitHub account)." = "Aperto nel browser: rivedi la segnalazione e inviala (serve un account GitHub).";
+"I opened the report in the browser." = "Ho aperto la segnalazione nel browser.";
 "Updates" = "Aggiornamenti";
 "Check for updates automatically" = "Controlla automaticamente gli aggiornamenti";
 "Include beta versions" = "Includi versioni beta";

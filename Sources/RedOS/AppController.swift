@@ -39,6 +39,11 @@ final class AppController {
     init() {
         commandPanel = CommandPanelController(engine: CommandEngine(registry: registry, audit: FileAuditLog()))
         commandPanel.onUnseenResultChange = { [weak self] in self?.hasUnseenResult = $0 }
+        commandPanel.describeSetup = { [weak self] in
+            let system = ProcessInfo.processInfo.operatingSystemVersionString
+            return "RedOS \(AppInfo.version) · macOS \(system) · System One: \(self?.systemOneDescription ?? "")"
+                + " · System Two: \(self?.systemTwoDescription ?? "")"
+        }
         reload()
         reloadMCPServers()
     }

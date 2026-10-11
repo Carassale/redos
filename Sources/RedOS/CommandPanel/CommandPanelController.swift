@@ -43,6 +43,10 @@ final class CommandPanelController {
     var currentRequest: String?
     /// What a silent action did, for the conversation ("app.open app=Safari").
     var actionSummary: String?
+    /// The last command, for a problem report; nil when it carried sensitive text.
+    private var reportableRequest: String?
+    /// Version and models, appended to feedback.
+    var describeSetup: () -> String = { "" }
     /// The panel is hidden on purpose while actions drive the Mac (keystrokes must not land in it).
     private var isDrivingMac = false
     /// A result (answer, error, confirmation) arrived while the panel was closed.
@@ -59,7 +63,8 @@ final class CommandPanelController {
                 model: model,
                 onSubmit: { [weak self] in self?.submit() },
                 onCancel: { [weak self] in self?.cancel() },
-                onOpenDiagram: { [weak self] in self?.openDiagram($0) }
+                onOpenDiagram: { [weak self] in self?.openDiagram($0) },
+                onReport: { [weak self] in self?.reportProblem() }
             )
         )
         panel.onKeyDown = { [weak self] event in self?.handleKey(event) ?? false }
@@ -185,12 +190,8 @@ final class CommandPanelController {
         switch resolution {
         case .unrecognized:
             fail(String(localized: "I don't know how to do that yet."), spoken: "I don't know how to do that yet.")
-        case .unavailable(let reason):
-            fail(reason)
-        case .invalid(_, let error):
-            fail(error.localizedDescription)
-        case .denied(let request):
-            fail(String(localized: "Action disabled: \(request.actionID)"))
+        case .unavailable, .invalid, .denied:
+            fail(Self.reason(resolution))
         case .ready(let command, let needsConfirmation):
             actionSummary = CommandEngine.describe(command.request)
             await confirmOrRun(needsConfirmation ? .confirming(command) : nil, input) { [engine] _ in
@@ -210,6 +211,17 @@ final class CommandPanelController {
         case .answer(let text):
             model.state = .answer(.init(text: text))
             say(text)
+        case .feedback(let feedback):
+            openFeedback(feedback)
+        }
+    }
+
+    private static func reason(_ resolution: Resolution) -> String {
+        switch resolution {
+        case .unavailable(let reason): reason
+        case .invalid(_, let error): error.localizedDescription
+        case .denied(let request): String(localized: "Action disabled: \(request.actionID)")
+        default: ""
         }
     }
 
@@ -334,6 +346,23 @@ extension CommandPanelController {
         diagrams.show(diagram)
     }
 
+    /// The Report button next to an error: the failed command and the error go into the report.
+    private func reportProblem() {
+        guard case .message(let error, true) = model.state else { return }
+        openFeedback(Feedback(kind: .problem, command: reportableRequest, reply: error))
+    }
+
+    /// Opens the pre-filled GitHub issue in the browser; the user reviews and submits it there.
+    func openFeedback(_ feedback: Feedback) {
+        guard let url = feedback.url(setup: describeSetup()) else { return }
+        NSWorkspace.shared.open(url)
+        model.state = .message(
+            String(localized: "Opened in the browser: review the report and send it (needs a GitHub account)."),
+            isError: false
+        )
+        sayPhrase("I opened the report in the browser.")
+    }
+
     /// Model answers, spoken as they are.
     private func say(_ text: String) {
         guard isVoiceCommand, voice.speaksAnswers else { return }
@@ -371,12 +400,13 @@ extension CommandPanelController {
         case .ready(let command, _): [command.request]
         case .plan(let plan, _): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
-        case .unrecognized, .unavailable, .answer, .agent, .research, .diagram: []
+        case .unrecognized, .unavailable, .answer, .agent, .research, .diagram, .feedback: []
         }
         let isSensitive = requests.contains { request in
             engine.registry.action(for: request.actionID)?.parameters
                 .contains { $0.isSensitive && request.arguments[$0.name] != nil } ?? false
         }
+        reportableRequest = isSensitive ? nil : input
         if isSensitive {
             currentRequest = nil
             history.resetNavigation()

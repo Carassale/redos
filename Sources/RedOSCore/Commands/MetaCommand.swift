@@ -11,7 +11,8 @@ public enum MetaCommand: Sendable, Equatable {
     case remember(String)
     case forget(String)
     case recall
-
+    /// "segnala un problema: …", "richiesta allo sviluppatore: …"; the text may be empty.
+    case feedback(Feedback.Kind, String)
     private typealias Builder = @Sendable ([String]) -> MetaCommand?
 
     private static let quote = "[\"'“”«»]?"
@@ -59,6 +60,28 @@ public enum MetaCommand: Sendable, Equatable {
             "^(?:(?:che\\s+)?cosa\\s+(?:ricordi|sai\\s+di\\s+me)"
                 + "|what\\s+do\\s+you\\s+(?:remember|know\\s+about\\s+me))\\??$",
             { _ in .recall }
+        ),
+        (
+            "^(?:segnala|riporta|invia|manda)\\s+(?:un\\s+|il\\s+|questo\\s+|lo\\s+)?"
+                + "(?:problema|errore|bug|feedback)(?:\\s+allo\\s+sviluppatore)?\\s*[:,.-]?\\s*(.*)$",
+            { .feedback(.problem, $0[0]) }
+        ),
+        (
+            "^(?:report|send)\\s+(?:a\\s+|the\\s+|this\\s+)?(?:problem|bug|issue|error|feedback)"
+                + "(?:\\s+to\\s+the\\s+developer)?\\s*[:,.-]?\\s*(.*)$",
+            { .feedback(.problem, $0[0]) }
+        ),
+        (
+            "^(?:(?:invia|manda|fai|scrivi)\\s+(?:una\\s+|un\\s+)?)?(?:richiesta|proposta|suggerimento|idea)"
+                + "\\s+(?:allo|al|per\\s+lo)\\s+sviluppatore\\s*[:,.-]?\\s*(.*)$",
+            { .feedback(.request, $0[0]) }
+        ),
+        ("^chiedi\\s+allo\\s+sviluppatore\\s+(?:di\\s+)?(.+)$", { .feedback(.request, $0[0]) }),
+        (
+            "^(?:feature\\s+request|request\\s+a\\s+feature|suggest\\s+a\\s+feature"
+                + "|send\\s+a\\s+request\\s+to\\s+the\\s+developer|ask\\s+the\\s+developer(?:\\s+to)?)"
+                + "\\s*[:,.-]?\\s*(.*)$",
+            { .feedback(.request, $0[0]) }
         ),
     ]
 

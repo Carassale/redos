@@ -9,6 +9,7 @@ struct CommandPanelView: View {
     let onSubmit: () -> Void
     let onCancel: () -> Void
     let onOpenDiagram: (Diagram) -> Void
+    let onReport: () -> Void
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -89,8 +90,16 @@ struct CommandPanelView: View {
                 }
             }
         case .message(let text, let isError):
-            Label(text, systemImage: isError ? "xmark.octagon" : "checkmark.circle")
-                .foregroundStyle(isError ? .red : .secondary)
+            HStack(alignment: .firstTextBaseline) {
+                Label(text, systemImage: isError ? "xmark.octagon" : "checkmark.circle")
+                    .foregroundStyle(isError ? .red : .secondary)
+                if isError {
+                    Spacer()
+                    Button("Report…", action: onReport)
+                        .controlSize(.small)
+                        .help("Send this error to the developer as a GitHub issue you can review first.")
+                }
+            }
         case .answer(let answer):
             Label {
                 // Long answers scroll inside the fixed-size panel.

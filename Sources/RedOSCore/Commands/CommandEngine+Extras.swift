@@ -60,7 +60,18 @@ extension CommandEngine {
             let answer = await handleMemory(command, store: memory)
             await record(input, nil, .answered, route: .fastPath)
             return .answer(answer)
+        case .feedback(let kind, let text):
+            await record(input, nil, .answered, route: .fastPath)
+            return .feedback(await feedback(kind, text: text))
         }
+    }
+
+    /// A problem report includes the last exchange, usually the one that went wrong.
+    private func feedback(_ kind: Feedback.Kind, text: String) async -> Feedback {
+        guard kind == .problem, let last = await conversation?.recent().last else {
+            return Feedback(kind: kind, text: text)
+        }
+        return Feedback(kind: kind, text: text, command: last.request, reply: last.reply)
     }
 
     private func handleRoutine(_ command: MetaCommand, input: String, store: RoutineStore) async -> Resolution {
@@ -77,7 +88,7 @@ extension CommandEngine {
                 return .answer(Self.describe(await store.all()))
             case .scheduleRoutine, .runRoutineOnLaunch:
                 return try await addTrigger(command, store: store)
-            case .remember, .forget, .recall:
+            case .remember, .forget, .recall, .feedback:
                 return .unrecognized
             }
         } catch {

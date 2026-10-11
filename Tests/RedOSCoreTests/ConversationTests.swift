@@ -54,4 +54,39 @@ struct ConversationTests {
     func leavesRequestsAlone(_ text: String) {
         #expect(!ClosingReply.matches(text))
     }
+
+    @Test(arguments: [
+        ("segnala un problema", MetaCommand.feedback(.problem, "")),
+        ("segnala un errore: non apre Safari", .feedback(.problem, "non apre Safari")),
+        ("report a bug the panel freezes", .feedback(.problem, "the panel freezes")),
+        ("richiesta allo sviluppatore: aggiungi Spotify", .feedback(.request, "aggiungi Spotify")),
+        ("invia una richiesta allo sviluppatore", .feedback(.request, "")),
+        ("chiedi allo sviluppatore di supportare Teams", .feedback(.request, "supportare Teams")),
+        ("feature request: dark theme", .feedback(.request, "dark theme")),
+    ])
+    func parsesFeedbackCommands(_ input: String, _ expected: MetaCommand) {
+        #expect(MetaCommand.parse(input) == expected)
+    }
+
+    @Test func problemReportsCarryTheLastExchange() async throws {
+        let conversation = Conversation()
+        await conversation.record("apri Calcolatrice", reply: "App not found: Calcolatrice")
+        let engine = CommandEngine(registry: ActionRegistry([]), conversation: conversation, audit: MemoryAuditLog())
+        guard case .feedback(let feedback) = await engine.resolve("segnala un problema") else {
+            Issue.record("Expected feedback")
+            return
+        }
+        let expected = Feedback(kind: .problem, command: "apri Calcolatrice", reply: "App not found: Calcolatrice")
+        #expect(feedback == expected)
+
+        let url = try #require(feedback.url(setup: "RedOS 1.0 · macOS 26"))
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        #expect(url.absoluteString.hasPrefix("https://github.com/Carassale/redos/issues/new?"))
+        #expect(items.first { $0.name == "title" }?.value == "Problem: apri Calcolatrice")
+        #expect(items.first { $0.name == "labels" }?.value == "bug")
+        let body = try #require(items.first { $0.name == "body" }?.value)
+        #expect(body.contains("> apri Calcolatrice"))
+        #expect(body.contains("App not found: Calcolatrice"))
+        #expect(body.hasSuffix("---\nRedOS 1.0 · macOS 26"))
+    }
 }

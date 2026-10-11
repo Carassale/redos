@@ -389,6 +389,11 @@ Preferences are in the `dev.redos.RedOS` defaults domain; secrets in the Keychai
 
 ## Troubleshooting
 
+To report a problem or ask for a feature: **Report…** next to an error in the panel, menu bar > **Report a
+Problem…** / **Send a Request to the Developer…**, or say “segnala un problema” / “richiesta allo
+sviluppatore: …” (“report a bug”, “feature request: …”). RedOS opens a pre-filled GitHub issue with the
+command, the error, the version and the models (never API keys): review it and send it from the browser.
+
 | Problem | Fix |
 |---|---|
 | “Ollama is not reachable” | Settings > Setup > *Start* (or `brew services start ollama`) |

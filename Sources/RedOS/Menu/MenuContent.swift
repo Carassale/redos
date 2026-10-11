@@ -34,6 +34,14 @@ struct MenuContent: View {
         }
         .disabled(!controller.updater.canCheckForUpdates)
 
+        Button("Report a Problem…") {
+            controller.commandPanel.openFeedback(Feedback(kind: .problem))
+        }
+
+        Button("Send a Request to the Developer…") {
+            controller.commandPanel.openFeedback(Feedback(kind: .request))
+        }
+
         Divider()
 
         Button {
