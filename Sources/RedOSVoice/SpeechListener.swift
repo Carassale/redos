@@ -46,6 +46,7 @@ public final class SpeechListener {
             throw VoiceError.unsupportedLocale(locale.identifier)
         }
         let transcriber = SpeechTranscriber(locale: supported, preset: .progressiveTranscription)
+        guard await AssetInventory.status(forModules: [transcriber]) != .installed else { return }
         try await AssetInventory.assetInstallationRequest(supporting: [transcriber])?.downloadAndInstall()
     }
 
@@ -64,7 +65,9 @@ public final class SpeechListener {
             throw VoiceError.unsupportedLocale(locale.identifier)
         }
         let transcriber = SpeechTranscriber(locale: supported, preset: .progressiveTranscription)
-        if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+        // The installation request is not nil even when the model is already installed.
+        if await AssetInventory.status(forModules: [transcriber]) != .installed,
+           let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
             onDownload?()
             try await request.downloadAndInstall()
         }

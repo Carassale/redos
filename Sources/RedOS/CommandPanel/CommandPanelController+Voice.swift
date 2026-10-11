@@ -31,7 +31,8 @@ extension CommandPanelController {
         }
         listener.onTranscript = { [weak self] text in self?.heard(text) }
         listener.onDownload = { [weak self] in
-            self?.model.state = .message(String(localized: "Downloading the speech model…"), isError: false)
+            guard let self, !model.isFollowingUp else { return }
+            model.state = .message(String(localized: "Downloading the speech model…"), isError: false)
         }
         openMicrophone(followUp: followUp)
         guard handsFree || followUp else { return }
