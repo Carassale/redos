@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.14.1</title>
+      <pubDate>Mon, 12 Oct 2026 08:23:08 +0000</pubDate>
+      <sparkle:version>56</sparkle:version>
+      <sparkle:shortVersionString>0.14.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>fix: local System One supports up to 52 options (v0.14.1)</li><li>docs: how System One, System Two, Ollama and Codiv share the work</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.14.1/RedOS-0.14.1.zip" type="application/octet-stream" sparkle:edSignature="RoxEPXpCZjcCmfvrXCn+3M6tP3rNSsKqDSAMeECp/GLsOwDxuCWvcd49TqrNawHwBTKhpMbpEQ1BZppKcazOCA==" length="13005816"/>
+    </item>
+    <item>
       <title>RedOS 0.14.0</title>
       <pubDate>Mon, 12 Oct 2026 06:38:23 +0000</pubDate>
       <sparkle:version>53</sparkle:version>
