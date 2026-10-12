@@ -115,6 +115,7 @@ public struct JevIntentRouter: CommandRouting {
         guard let extractor, let arguments = try? await extractor.arguments(for: action, input: input) else {
             return .uncertain(actionID: choice, confidence: answer.probability)
         }
-        return .action(ActionRequest(action.id, arguments), confidence: answer.probability)
+        let request = ActionRequest(action.id, arguments)
+        return SystemOneRouter.refine(request, registry: registry, confidence: answer.probability)
     }
 }

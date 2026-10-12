@@ -123,6 +123,28 @@ public struct SystemOneRouter: CommandRouting {
         }
         let context = chainsExtraction ? systemOne.transcript(for: question, state: input, answer: answer) : []
         let arguments = try await extractor.arguments(for: action, input: input, context: context)
-        return .action(ActionRequest(action.id, arguments), confidence: answer.probability)
+        return Self.refine(ActionRequest(action.id, arguments), registry: registry, confidence: answer.probability)
+    }
+
+    private static let genericFields: Set<String> = [
+        "text", "text field", "field", "box", "text box", "testo", "campo", "campo di testo", "di testo", "casella",
+    ]
+
+    /// Fixes what the small models get wrong with arguments: a field that is not named means the focused one, an
+    /// element described by position needs the screen, and missing arguments need System Two.
+    public static func refine(_ request: ActionRequest, registry: ActionRegistry, confidence: Double) -> RouteDecision {
+        var request = request
+        if request.actionID == "ui.fill", let target = request.arguments["target"],
+           let text = request.arguments["text"],
+           genericFields.contains(target.lowercased()) || text.lowercased().hasPrefix(target.lowercased()) {
+            request = ActionRequest("text.type", ["text": text])
+        }
+        if request.actionID == "ui.press", let target = request.arguments["target"], UITarget.clean(target) == nil {
+            return .uncertain(actionID: request.actionID, confidence: confidence)
+        }
+        guard (try? registry.validate(request)) != nil else {
+            return .uncertain(actionID: request.actionID, confidence: confidence)
+        }
+        return .action(request, confidence: confidence)
     }
 }

@@ -128,7 +128,7 @@ struct ModelsSettingsView: View {
         let provider = settings.systemTwoProvider
         guard provider != .ollama else { return }
         if provider == .copilot, settings.copilotPath.isEmpty {
-            if let url = await CopilotCLIClient.locate() { settings.copilotPath = url.path }
+            if let url = await CopilotCLI.locate() { settings.copilotPath = url.path }
             return
         }
         if provider.needsAPIKey, apiKey.isEmpty { return }

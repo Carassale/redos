@@ -36,5 +36,26 @@ struct SystemActionTests {
         #expect(actions["mail.draft"] == .moderate)
         #expect(actions["shell.run"] == .dangerous)
         #expect(AppleScript.quoted(#"say "hi" \ bye"#) == #""say \"hi\" \\ bye""#)
+        #expect(Spotlight.words(of: "il mio documento preventivo") == ["preventivo"])
+        #expect(Spotlight.words(of: "fattura di settembre") == ["fattura", "settembre"])
+        #expect(Spotlight.words(of: "the file") == ["the", "file"])
+    }
+
+    @Test func routerFixesWeakArguments() {
+        let registry = ActionRegistry(SystemActions.all)
+        let refine = { (request: ActionRequest) in
+            SystemOneRouter.refine(request, registry: registry, confidence: 0.9)
+        }
+        // A field that is not named is the focused one.
+        #expect(refine(ActionRequest("ui.fill", ["target": "text field", "text": "hello world"]))
+            == .action(ActionRequest("text.type", ["text": "hello world"]), confidence: 0.9))
+        #expect(refine(ActionRequest("ui.fill", ["target": "ci vediamo", "text": "ci vediamo domani"]))
+            == .action(ActionRequest("text.type", ["text": "ci vediamo domani"]), confidence: 0.9))
+        #expect(refine(ActionRequest("ui.fill", ["target": "Email", "text": "a@b.it"]))
+            == .action(ActionRequest("ui.fill", ["target": "Email", "text": "a@b.it"]), confidence: 0.9))
+        // Described elements and missing arguments go to System Two.
+        #expect(refine(ActionRequest("ui.press", ["target": "second menu"]))
+            == .uncertain(actionID: "ui.press", confidence: 0.9))
+        #expect(refine(ActionRequest("mouse.move")) == .uncertain(actionID: "mouse.move", confidence: 0.9))
     }
 }

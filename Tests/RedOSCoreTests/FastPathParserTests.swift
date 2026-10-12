@@ -57,10 +57,27 @@ struct FastPathParserTests {
         "", "   ", "apri", "apriti sesamo", "what's the weather?", "clicca col tasto destro", "scroll the page",
         "apri il progetto, fai pull e lancia i test", "open the repo and run the tests", "apri Mail poi scrivi",
         "apri chrom e naviga su google.com", "apri il primo menu", "premi invio", "press the mouse button",
-        "clicca qui",
+        "torna indietro", "torna su Safari", "page Marco", "apri l'ultimo risultato", "open the first result",
     ])
     func ignores(_ input: String) {
         #expect(parser.parse(input) == nil)
+    }
+
+    @Test(arguments: [
+        ("clicca qui", ActionRequest("mouse.click")),
+        ("fai clic qui", ActionRequest("mouse.click")),
+        ("click here", ActionRequest("mouse.click")),
+        ("torna su", ActionRequest("scroll", ["direction": "up"])),
+        ("torna in cima", ActionRequest("scroll", ["direction": "up"])),
+        ("page down 20 lines", ActionRequest("scroll", ["direction": "down", "amount": "20"])),
+        ("show me apple.com in Safari", ActionRequest("url.open", ["url": "apple.com", "app": "Safari"])),
+        ("apri github.com con Chrome", ActionRequest("url.open", ["url": "github.com", "app": "Chrome"])),
+        ("avvia il comando rapido Lavoro", ActionRequest("shortcut.run", ["name": "Lavoro"])),
+        ("open my resume document", ActionRequest("file.open", ["query": "my resume document"])),
+        ("apri il file budget", ActionRequest("file.open", ["query": "il file budget"])),
+    ])
+    func parsesDeicticClicksScrollsAndBrowsers(_ input: String, _ expected: ActionRequest) {
+        #expect(parser.parse(input) == expected)
     }
 }
 

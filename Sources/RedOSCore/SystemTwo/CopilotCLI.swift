@@ -1,40 +1,10 @@
 import Foundation
 
-/// GitHub Copilot through the official Copilot CLI in prompt mode, with every tool and MCP server disabled
-/// so it can only answer with text.
-public struct CopilotCLIClient: ChatCompleting, ModelListing {
-    public let executable: URL
-    /// nil lets Copilot pick ("auto").
-    public let model: String?
-    private let timeout: Duration
-
-    public init(executable: URL, model: String?, timeout: Duration = .seconds(90)) {
-        self.executable = executable
-        self.model = model
-        self.timeout = timeout
-    }
-
-    public func chat(
-        _ messages: [ChatMessage], format: JSONValue?, maxTokens: Int?, topLogprobs: Int?
-    ) async throws -> ChatResponse {
-        var prompt = messages.map { "\($0.role.uppercased()):\n\($0.content)" }.joined(separator: "\n\n")
-        if format != nil {
-            prompt += "\n\nReply with a single JSON object only."
-        }
-        var arguments = ["-p", prompt, "-s", "--available-tools=", "--disable-builtin-mcps", "--no-color"]
-        if let model, !model.isEmpty {
-            arguments += ["--model", model]
-        }
-        let output = try await Self.run(executable, arguments, timeout: timeout)
-        guard !output.isEmpty else { throw ProviderError.emptyResponse }
-        return ChatResponse(message: .init(content: output), logprobs: nil)
-    }
-
-    public func preload() async {}
-
+/// The Copilot CLI outside of requests (those go through `CopilotACPClient`): finding it and listing models.
+public enum CopilotCLI {
     /// Model ids documented by `copilot help config`.
-    public func listModels() async throws -> [String] {
-        let help = try await Self.run(executable, ["help", "config"], timeout: .seconds(20))
+    public static func listModels(executable: URL) async throws -> [String] {
+        let help = try await run(executable, ["help", "config"], timeout: .seconds(20))
         var models: [String] = []
         var inModelSection = false
         for line in help.split(separator: "\n", omittingEmptySubsequences: false) {

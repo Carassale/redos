@@ -44,8 +44,13 @@ final class AppController {
             return "RedOS \(AppInfo.version) · macOS \(system) · System One: \(self?.systemOneDescription ?? "")"
                 + " · System Two: \(self?.systemTwoDescription ?? "")"
         }
-        reload()
-        reloadMCPServers()
+        systemOneDescription = String(localized: "Waiting for the Keychain…")
+        systemTwoDescription = systemOneDescription
+        Task { [weak self] in
+            await Keychain.preload()
+            self?.reload()
+            self?.reloadMCPServers()
+        }
     }
 
     /// Rebuilds the command engine, the wake word and the MCP server from the current settings.

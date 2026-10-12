@@ -209,6 +209,8 @@
 
 /* Updates */
 "Check for Updates…" = "Controlla aggiornamenti…";
+"Waiting for the Keychain…" = "In attesa del Portachiavi…";
+"RedOS can't read its Keychain item." = "RedOS non riesce a leggere la sua voce nel Portachiavi.";
 "Report a Problem…" = "Segnala un problema…";
 "Send a Request to the Developer…" = "Invia una richiesta allo sviluppatore…";
 "Report…" = "Segnala…";

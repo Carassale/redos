@@ -33,7 +33,7 @@ public struct CopilotACPClient: ChatCompleting, ModelListing {
     }
 
     public func listModels() async throws -> [String] {
-        try await CopilotCLIClient(executable: executable, model: nil).listModels()
+        try await CopilotCLI.listModels(executable: executable)
     }
 }
 

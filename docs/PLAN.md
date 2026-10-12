@@ -344,9 +344,9 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M
   decisione via logprob su Ollama e al planner locale.
 - **Privacy**: lo stato inviato a Jev contiene il comando e, dove serve, il contesto della finestra.
 - **Voce**: per ora voci di sistema locali.
-- **Rimosso** (M10): LocalJev (probabilità auto-dichiarate, 4–5 s). **Da togliere**: il client Copilot a riga
-  di comando per
-  le richieste (resta solo per trovare la CLI ed elencare i modelli); meno regex dove Jev classifica meglio.
+- **Rimosso** (M10): LocalJev (probabilità auto-dichiarate, 4–5 s); (11/10) il client Copilot a riga di comando
+  per le richieste (resta `CopilotCLI` per trovare la CLI ed elencare i modelli). **Da fare**: meno regex dove
+  Jev classifica meglio.
 
 ### M10: Jev come nucleo decisionale (10/10/2026)
 
@@ -405,3 +405,27 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M
   planner); AVSpeechSynthesizer comincia già subito, il ritardo è tutto nel modello.
 - Nota sviluppo: ogni build locale cambia il cdhash e il Portachiavi (partition list) chiede di nuovo il
   permesso; finché la finestra è aperta l'app è bloccata all'avvio (lettura della chiave Jev nel main thread).
+  Risolto in 0.14 (sotto).
+
+### Debito tecnico (11/10/2026)
+
+- **Portachiavi**: le release sono firmate con il certificato self-signed, quindi la partition list delle voci
+  contiene il cdhash della build: dopo ogni aggiornamento macOS chiedeva il permesso per **ogni** chiave, con
+  l'app bloccata (lettura sincrona nel main thread all'avvio). Ora tutte le chiavi stanno in una sola voce
+  (`secrets`, JSON), letta una volta in background (`Keychain.preload`) e tenuta in memoria: al massimo una
+  richiesta per aggiornamento, app usabile nel frattempo (menu: "In attesa del Portachiavi…"). Migrazione
+  automatica dalle vecchie voci; se l'accesso è negato non si sovrascrive nulla. L'eval legge il Portachiavi
+  solo con Jev. Soluzione definitiva: firma Developer ID (partition `teamid:`, nessuna richiesta).
+- **Copilot**: rimosso il client `copilot -p`; tutte le richieste passano da ACP.
+- **Eval**: nuova riga "app" = decisione come la prende l'app (fast path, domande sullo schermo, correzioni
+  degli argomenti, soglia). `eval/commands.jsonl`: modello 86.7% → app **94.3%**; holdout 85.7% → 85.7%.
+  - Fast path: "clicca qui" / "fai clic qui" / "click here" (clic dove si trova il puntatore), "torna su",
+    "torna in cima", "page down 20 lines", "show me apple.com in Safari" e "apri github.com con Chrome" (con
+    browser), "avvia il comando rapido X" (prima apriva un'app "il comando rapido X"), "apri il documento X"
+    / "open my resume document" (file), "apri l'ultimo risultato" ai modelli (prima apriva un'app).
+  - `SystemOneRouter.refine` (anche per Jev): `ui.fill` su un campo non nominato ("text field", "campo di
+    testo") o con il nome uguale all'inizio del testo diventa `text.type`; `ui.press` su un elemento descritto
+    ("secondo menu") e argomenti mancanti ("porta il mouse al centro") vanno a System Two invece di fallire.
+  - Spotlight cerca ogni parola nel nome ("il mio documento preventivo" → "preventivo").
+  - Restano: 3 richieste in più passi scambiate per un'azione (con Jev online le riconosce il tipo "steps";
+    in locale chiedono conferma), "enter my username X" / "metti nel campo di testo X" (ambigui).

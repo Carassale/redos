@@ -406,6 +406,7 @@ command, the error, the version and the models (never API keys): review it and s
 | The app does not open after download | right click > Open, or System Settings > Privacy & Security > Open Anyway |
 | An MCP server shows an error | check its command in Terminal; *Reconnect* in Settings > Integrations |
 | Agenda, reminders, dark mode or email do nothing | allow RedOS in System Settings > Privacy & Security > Calendars / Reminders / Automation |
+| A Keychain prompt after an update | click **Always Allow**: all keys share one item, so it is asked once per update; RedOS keeps working meanwhile |
 
 ## Development
 

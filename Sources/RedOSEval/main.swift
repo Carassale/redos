@@ -62,6 +62,8 @@ struct Outcome: Encodable {
     let decisionSeconds: Double
     let extractionSeconds: Double?
     let error: String?
+    /// What the app does: fast path and screen questions first, then the model's choice refined.
+    var appCorrect = false
 
     var decisionCorrect: Bool { predicted == expected }
     var shouldAct: Bool { ![SystemOneRouter.noneLabel, SystemOneRouter.multiStepLabel].contains(expected) }
@@ -98,6 +100,32 @@ func pct(_ part: Int, _ total: Int) -> String {
     total == 0 ? "-" : String(format: "%5.1f%% (%d/%d)", Double(part) * 100 / Double(total), part, total)
 }
 
+/// The request the app would act on; "none" when it goes to System Two (which also handles multi-step
+/// requests), "screen_question" when it reads the window and answers.
+func appDecision(
+    _ input: String, label: String, arguments: [String: String]?, probability: Double, registry: ActionRegistry
+) -> (label: String, arguments: [String: String]?) {
+    let parser = FastPathParser()
+    if let request = parser.parse(input) { return (request.actionID, request.arguments) }
+    if parser.parsePlan(input) != nil { return (SystemOneRouter.multiStepLabel, nil) }
+    if ScreenQuestion.matches(input) { return ("screen_question", nil) }
+    guard probability >= 0.5, registry.action(for: label) != nil, let arguments else {
+        return registry.action(for: label) == nil ? (label, arguments) : (SystemOneRouter.noneLabel, nil)
+    }
+    let decision = SystemOneRouter.refine(ActionRequest(label, arguments), registry: registry, confidence: probability)
+    guard case .action(let request, _) = decision else { return (SystemOneRouter.noneLabel, nil) }
+    return (request.actionID, request.arguments)
+}
+
+func appMatches(_ label: String, expected: String) -> Bool {
+    let systemTwo: Set = [SystemOneRouter.noneLabel, SystemOneRouter.multiStepLabel]
+    switch label {
+    case "screen_question": return [SystemOneRouter.noneLabel, "ui.read"].contains(expected)
+    case _ where systemTwo.contains(label): return systemTwo.contains(expected)
+    default: return label == expected
+    }
+}
+
 let model = option("--model") ?? "gemma4:e4b-it-qat"
 let datasetPath = option("--dataset") ?? "eval/commands.jsonl"
 let chains = !CommandLine.arguments.contains("--no-chain")
@@ -106,9 +134,10 @@ let registry = ActionRegistry(SystemActions.all)
 let parser = FastPathParser()
 let policy = Policy()
 let extractor = ArgumentExtractor(client: OllamaClient(model: option("--extract-model") ?? model))
-let jevKey = ProcessInfo.processInfo.environment["JEV_API_KEY"] ?? Keychain.secret(for: "jev")
 let jev = option("--jev-url").flatMap(URL.init(string:)).map {
-    JevHTTPSystemOne(baseURL: $0, model: option("--jev-model") ?? "jev-latest", apiKey: jevKey)
+    // Only Jev runs read the Keychain: every new build of this tool needs the user's permission.
+    let key = ProcessInfo.processInfo.environment["JEV_API_KEY"] ?? Keychain.secret(for: "jev")
+    return JevHTTPSystemOne(baseURL: $0, model: option("--jev-model") ?? "jev-latest", apiKey: key)
 }
 let systemOne: any SystemOne = jev ?? OllamaSystemOne(client: ollama)
 let intents = CommandLine.arguments.contains("--jev-intents")
@@ -217,13 +246,20 @@ for sample in samples {
         }
         let request = ActionRequest(answer.label, arguments ?? [:])
         let validated = arguments == nil ? nil : try? registry.validate(request)
-        outcomes.append(Outcome(
+        var outcome = Outcome(
             lang: sample.lang, input: sample.input, expected: sample.action, predicted: answer.label,
             probability: answer.probability, fastPath: parser.parse(sample.input)?.actionID,
             arguments: arguments, argumentsCorrect: argumentsCorrect, argumentsValid: validated != nil,
             policy: validated.map { "\(policy.decide(for: $0, confidence: answer.probability))" },
             decisionSeconds: decisionSeconds, extractionSeconds: extractionSeconds, error: nil
-        ))
+        )
+        let app = appDecision(
+            sample.input, label: answer.label, arguments: arguments, probability: answer.probability,
+            registry: registry
+        )
+        outcome.appCorrect = appMatches(app.label, expected: sample.action)
+            && (sample.arguments.map { matches(app.arguments ?? [:], expected: $0) } ?? true)
+        outcomes.append(outcome)
     } catch {
         outcomes.append(Outcome(
             lang: sample.lang, input: sample.input, expected: sample.action, predicted: "error", probability: 0,
@@ -246,6 +282,10 @@ for lang in Set(outcomes.map(\.lang)).sorted() {
 }
 let argumentChecks = outcomes.compactMap(\.argumentsCorrect)
 print("arguments       ", pct(argumentChecks.filter { $0 }.count, argumentChecks.count))
+print("app (decision + arguments, with fast path and fixes)", pct(outcomes.filter(\.appCorrect).count, outcomes.count))
+for outcome in outcomes where !outcome.appCorrect {
+    print("  app ✗ \(outcome.input)")
+}
 let fastPathHits = outcomes.filter { $0.fastPath != nil }
 print("fast path hits  ", pct(fastPathHits.filter { $0.fastPath == $0.expected }.count, fastPathHits.count),
       "correct of matched")

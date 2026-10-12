@@ -164,14 +164,27 @@ struct MailDraftAction: Action {
 
 /// Spotlight through `mdfind`: names first, then content matches, in the user's home.
 enum Spotlight {
+    private static let fillers: Set<String> = [
+        "il", "lo", "la", "i", "gli", "le", "l'", "un", "una", "di", "del", "della", "dei", "delle", "mio", "mia",
+        "miei", "mie", "the", "a", "an", "my", "of", "documento", "document", "file",
+    ]
+
+    /// "il mio documento preventivo" -> ["preventivo"].
+    static func words(of query: String) -> [String] {
+        let words = query.replacingOccurrences(of: "\"", with: "").split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+        let meaningful = words.filter { !fillers.contains($0.lowercased()) }
+        return meaningful.isEmpty ? words : meaningful
+    }
+
     static func search(_ query: String) async throws -> [URL] {
         let home = URL.homeDirectory.path
-        let escaped = query.replacingOccurrences(of: "\"", with: "")
-        let byName = try await CommandLineTool.run(
-            "/usr/bin/mdfind", ["-onlyin", home, "kMDItemDisplayName == \"*\(escaped)*\"cd"]
-        )
+        let words = words(of: query)
+        // Every word somewhere in the name: "fattura settembre" finds "Settembre - fattura 12.pdf".
+        let names = words.map { "kMDItemDisplayName == \"*\($0)*\"cd" }.joined(separator: " && ")
+        let byName = try await CommandLineTool.run("/usr/bin/mdfind", ["-onlyin", home, names])
         let lines = byName.isEmpty
-            ? try await CommandLineTool.run("/usr/bin/mdfind", ["-onlyin", home, escaped])
+            ? try await CommandLineTool.run("/usr/bin/mdfind", ["-onlyin", home, words.joined(separator: " ")])
             : byName
         return lines.split(separator: "\n")
             .filter { !$0.contains("/Library/") && !$0.contains("/.") }

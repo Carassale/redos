@@ -75,7 +75,7 @@ struct ProviderHelp: View {
                     Button("Detect") {
                         Task {
                             isDetecting = true
-                            if let url = await CopilotCLIClient.locate() { copilotPath = url.path }
+                            if let url = await CopilotCLI.locate() { copilotPath = url.path }
                             isDetecting = false
                         }
                     }

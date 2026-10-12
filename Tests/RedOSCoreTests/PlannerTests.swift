@@ -133,21 +133,9 @@ struct PlannerTests {
         }
     }
 
-    @Test func copilotClientRunsTheCLIWithToolsDisabled() async throws {
-        // /bin/echo stands in for `copilot`: the reply is the argument list it received.
-        let client = CopilotCLIClient(executable: URL(filePath: "/bin/echo"), model: "claude-haiku-5.5")
-        let reply = try await client.chat(
-            [.system("S"), .user("U")], format: .string("json"), maxTokens: nil, topLogprobs: nil
-        )
-
-        #expect(reply.message.content.contains("--available-tools="))
-        #expect(reply.message.content.contains("--disable-builtin-mcps"))
-        #expect(reply.message.content.hasSuffix("--model claude-haiku-5.5"))
-    }
-
     @Test func cliTimeoutStopsTheProcess() async {
         await #expect(throws: ProviderError.self) {
-            try await CopilotCLIClient.run(URL(filePath: "/bin/sleep"), ["5"], timeout: .milliseconds(200))
+            try await CopilotCLI.run(URL(filePath: "/bin/sleep"), ["5"], timeout: .milliseconds(200))
         }
     }
 

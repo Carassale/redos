@@ -95,8 +95,8 @@ public struct FastPathParser: Sendable {
         if let rest = remainder(of: text, after: vocabulary.typeText) {
             return fillRequest(rest, vocabulary) ?? ActionRequest("text.type", ["text": unquoted(rest)])
         }
-        if let rest = remainder(of: text, after: vocabulary.openURL), WebAddress.url(from: rest) != nil {
-            return ActionRequest("url.open", ["url": rest])
+        if let rest = remainder(of: text, after: vocabulary.openURL), let request = urlRequest(rest) {
+            return request
         }
         if let rest = remainder(of: text, after: vocabulary.openApp) {
             return openRequest(rest, vocabulary)
@@ -108,7 +108,7 @@ public struct FastPathParser: Sendable {
             return coordinates(in: rest).map { ActionRequest("mouse.move", ["x": String($0), "y": String($1)]) }
         }
         if let rest = remainder(of: text, after: vocabulary.click, allowEmpty: true) {
-            if rest.isEmpty { return ActionRequest("mouse.click") }
+            if rest.isEmpty || Self.hereWords.contains(rest.lowercased()) { return ActionRequest("mouse.click") }
             return coordinates(in: rest).map { ActionRequest("mouse.click", ["x": String($0), "y": String($1)]) }
         }
         if let rest = remainder(of: text, after: vocabulary.scroll, allowEmpty: true) {
@@ -150,17 +150,43 @@ public struct FastPathParser: Sendable {
     }
 
     private static let menuWords: Set<String> = ["menu", "scheda", "voce", "tab"]
+    private static let documentWords: Set<String> = ["documento", "document", "file"]
+    /// "apri l'ultimo risultato" points at something on screen: the models decide.
+    private static let ordinalWords: Set<String> = [
+        "primo", "prima", "secondo", "seconda", "terzo", "terza", "ultimo", "ultima",
+        "first", "second", "third", "last",
+    ]
+    private static let shortcutPrefixes = ["il comando rapido ", "comando rapido ", "the shortcut ", "my shortcut "]
+    /// "clicca qui": a click where the pointer is.
+    private static let hereWords: Set<String> = ["qui", "qua", "lì", "là", "here", "there"]
+    private static let browserWords: Set<String> = ["in", "on", "with", "con", "su"]
 
-    /// "apri Safari" opens the app, "apri google.com" the website, "apri il menu File" the menu.
+    /// "apple.com", or "apple.com in Safari" with the browser.
+    private func urlRequest(_ rest: String) -> ActionRequest? {
+        if WebAddress.url(from: rest) != nil { return ActionRequest("url.open", ["url": rest]) }
+        let parts = rest.split(separator: " ", maxSplits: 2).map(String.init)
+        guard parts.count == 3, Self.browserWords.contains(parts[1].lowercased()),
+              WebAddress.url(from: parts[0]) != nil
+        else { return nil }
+        return ActionRequest("url.open", ["url": parts[0], "app": parts[2]])
+    }
+
+    /// "apri Safari" opens the app, "apri google.com" the website, "apri il menu File" the menu, "apri il
+    /// documento preventivo" the file, "avvia il comando rapido Casa" the Shortcut.
     private func openRequest(_ rest: String, _ vocabulary: Vocabulary) -> ActionRequest? {
         guard let name = appName(rest, vocabulary) else { return nil }
-        let words = Set(name.lowercased().split(whereSeparator: \.isWhitespace).map(String.init))
+        if let prefix = Self.shortcutPrefixes.first(where: { name.lowercased().hasPrefix($0) }) {
+            return ActionRequest("shortcut.run", ["name": String(name.dropFirst(prefix.count))])
+        }
+        let words = Set(name.lowercased().split { $0.isWhitespace || $0 == "'" || $0 == "’" }.map(String.init))
+        guard words.isDisjoint(with: Self.ordinalWords) else { return nil }
         if !words.isDisjoint(with: Self.menuWords) {
             return UITarget.clean(name).map { ActionRequest("ui.press", ["target": $0]) }
         }
-        return WebAddress.url(from: name) == nil
-            ? ActionRequest("app.open", ["name": name])
-            : ActionRequest("url.open", ["url": name])
+        if !words.isDisjoint(with: Self.documentWords) {
+            return ActionRequest("file.open", ["query": name])
+        }
+        return urlRequest(name) ?? ActionRequest("app.open", ["name": name])
     }
 
     private func scrollRequest(_ rest: String, directions: [String: String]) -> ActionRequest? {
@@ -233,11 +259,13 @@ extension FastPathParser.Vocabulary {
         openApp: ["open", "launch", "start"],
         quitApp: ["quit", "close"],
         typeText: ["type", "write"],
-        scroll: ["scroll"],
+        scroll: ["scroll", "page"],
         directions: ["up": "up", "down": "down", "left": "left", "right": "right"],
         click: ["click", "click at"],
         moveMouse: ["move mouse to", "move the mouse to", "move mouse", "move the mouse"],
-        openURL: ["go to", "browse to", "navigate to", "open website", "open the website", "open the site"],
+        openURL: [
+            "go to", "browse to", "navigate to", "open website", "open the website", "open the site", "show me",
+        ],
         connectors: ["and then", "and", "then"],
         courtesies: ["please", "for me"],
         press: ["click on", "click the", "press the", "press", "tap on", "hit the"],
@@ -254,16 +282,16 @@ extension FastPathParser.Vocabulary {
         openApp: ["apri", "avvia", "lancia"],
         quitApp: ["chiudi", "esci da"],
         typeText: ["scrivi", "digita"],
-        scroll: ["scrolla", "scorri"],
+        scroll: ["scrolla", "scorri", "torna"],
         directions: [
-            "su": "up", "in alto": "up", "giù": "down", "in basso": "down",
+            "su": "up", "in alto": "up", "in cima": "up", "giù": "down", "in basso": "down", "in fondo": "down",
             "a sinistra": "left", "sinistra": "left", "a destra": "right", "destra": "right",
         ],
-        click: ["clicca", "clic", "click", "clicca a", "clicca in"],
+        click: ["clicca", "clic", "click", "clicca a", "clicca in", "fai clic", "fai click"],
         moveMouse: ["muovi il mouse a", "muovi il mouse su", "muovi il mouse", "sposta il mouse a", "sposta il mouse"],
         openURL: [
             "vai su", "vai a", "vai sul sito", "vai al sito", "naviga su", "naviga a", "naviga sul sito",
-            "apri il sito",
+            "apri il sito", "mostrami",
         ],
         connectors: ["e poi", "e", "poi", "quindi"],
         courtesies: ["per favore", "per piacere", "grazie"],
