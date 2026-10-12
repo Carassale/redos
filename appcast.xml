@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.14.0</title>
+      <pubDate>Mon, 12 Oct 2026 06:38:23 +0000</pubDate>
+      <sparkle:version>53</sparkle:version>
+      <sparkle:shortVersionString>0.14.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>fix: one Keychain item read off the main thread, ACP-only Copilot, routing fixes (v0.14.0)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.14.0/RedOS-0.14.0.zip" type="application/octet-stream" sparkle:edSignature="T02G8X6KP2TJkLt+OeJ7RFNrKVVLm/NDiSX8kJ3PpTjh+un6LJiD5Z9Wi7fx/yxotKjgdRuZfk+4rw4c/X0wBQ==" length="13005812"/>
+    </item>
+    <item>
       <title>RedOS 0.13.0</title>
       <pubDate>Sun, 11 Oct 2026 10:10:53 +0000</pubDate>
       <sparkle:version>51</sparkle:version>
