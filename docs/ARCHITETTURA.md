@@ -62,7 +62,8 @@ In ordine (`CommandEngine.resolve`):
 ### Locale (Ollama), sempre attivo
 
 1. **Scelta dell'azione**: al modello `gemma4:e4b-it-qat` arriva il catalogo come menu a lettere
-   (`A) app.open: …`, `B) app.quit: …`, …, più "più passi" e "nessuna"), con una cinquantina di esempi
+   (`A) app.open: …`, `B) app.quit: …`, …, oltre la Z si prosegue con a–z, più "più passi" e "nessuna"), con una
+   cinquantina di esempi
    it/en. Il modello genera **un solo token** e RedOS legge le **probabilità vere** delle lettere dai logprob
    di Ollama (`OllamaSystemOne`): non si chiede al modello quanto è sicuro, lo si misura.
    Il prompt di sistema non cambia tra un comando e l'altro, quindi Ollama lo tiene in cache: circa 0.25 s.
@@ -189,9 +190,9 @@ app, bozza mail), *dangerous* (comandi di shell).
 
 ## Limiti noti
 
-- **Catalogo locale**: le opzioni del System One locale sono lettere A–Z, quindi al massimo 26. Oggi sono 25
-  (23 azioni + "più passi" + "nessuna"): con la prossima azione bisogna passare a etichette a due caratteri o
-  dividere il catalogo. Le azioni dei server MCP vanno solo a Jev e a System Two.
+- **Catalogo locale**: ogni opzione del System One locale è un solo carattere (A–Z, poi a–z), quindi al
+  massimo 52. Oggi sono 25 (23 azioni + "più passi" + "nessuna"). Le azioni dei server MCP vanno solo a Jev e
+  a System Two.
 - **Più passi in locale**: senza Jev, alcune richieste in più passi vengono scambiate per una singola azione;
   in quel caso RedOS chiede comunque conferma.
 - **Jev**: ~0.7 s dall'Italia, quasi tutto rete; per questo il locale resta in prima linea sulle singole azioni.

@@ -3,7 +3,8 @@ import Foundation
 /// Jev-style decision read from the model's next-token log-probabilities: one generated token, real
 /// probabilities (not self-reported), ~1 s on an M3 with a 4B model.
 public struct OllamaSystemOne: SystemOne {
-    private static let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".map(String.init)
+    /// One token per option. Upper case first: digits scored worse (they clash with numbers in commands).
+    private static let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".map(String.init)
     private let client: any ChatCompleting
 
     public init(client: any ChatCompleting) {

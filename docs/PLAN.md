@@ -429,3 +429,7 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M
   - Spotlight cerca ogni parola nel nome ("il mio documento preventivo" → "preventivo").
   - Restano: 3 richieste in più passi scambiate per un'azione (con Jev online le riconosce il tipo "steps";
     in locale chiedono conferma), "enter my username X" / "metti nel campo di testo X" (ambigui).
+- **Limite del catalogo locale** (12/10): le opzioni erano le lettere A–Z (max 26, ne usavamo 25). Ora A–Z
+  poi a–z (52). Prove con `make eval`: tutte con cifre in testa 81.9% (le cifre si confondono con i numeri dei
+  comandi), tutte minuscole 82.9%, maiuscole 86.7% (attuale); con 29 opzioni (4 azioni fittizie, "più passi"
+  e "nessuna" su lettere minuscole) 91.4%, app 95.2%: oltre la Z funziona.

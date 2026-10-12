@@ -50,6 +50,17 @@ struct SystemOneTests {
         #expect(abs((answer.probabilities["scroll"] ?? 0) - 0.2 / 0.85) < 1e-9)
     }
 
+    @Test func ollamaSystemOneLabelsMoreThan26Options() async throws {
+        let options = (1...30).map { JevOption(label: "action\($0)", description: "Action \($0)") }
+        let large = JevChoiceQuestion(instructions: "Pick one.", options: options)
+        // Option 28 is the second lower-case letter; "B" (option 2) is a different option.
+        let chat = FakeChat(alternatives: [("b", 0.7), ("B", 0.3)])
+        let answer = try await OllamaSystemOne(client: chat).choose(large, state: "x")
+
+        #expect(answer.choice == "action28")
+        #expect(abs((answer.probabilities["action2"] ?? 0) - 0.3) < 1e-9)
+    }
+
     @Test func extractorConvertsJSONToValidatedArguments() async throws {
         let action = FakeAction(
             id: "scroll",
