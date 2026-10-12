@@ -355,7 +355,8 @@ flowchart LR
   the screen, research the web, draw a diagram or use the screen agent.
 - **Policy**: every action has a risk level; dangerous actions, plans and uncertain commands are confirmed.
 
-See [docs/PLAN.md](docs/PLAN.md) for the design notes and measurements.
+See [docs/ARCHITETTURA.md](docs/ARCHITETTURA.md) (Italian) for how System One, System Two, Ollama and Codiv
+share the work, and [docs/PLAN.md](docs/PLAN.md) for the design notes and measurements.
 
 ## Privacy and safety
 
