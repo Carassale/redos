@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.20.0</title>
+      <pubDate>Wed, 14 Oct 2026 13:17:36 +0000</pubDate>
+      <sparkle:version>68</sparkle:version>
+      <sparkle:shortVersionString>0.20.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>M17 fase 3: minuta via Mail, promemoria delle azioni, domande sulle call passate; MCP non conferma più una conferma in sospeso</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.20.0/RedOS-0.20.0.zip" type="application/octet-stream" sparkle:edSignature="2tUEIDMkjPNuZPiDDRHOb1KPY/7s0Fige/kmYX/eiYJ67ELRnFv2ticAW2TXdUMLdOqwWPX7iWxc3E6fNQ6vCw==" length="13268653"/>
+    </item>
+    <item>
       <title>RedOS 0.19.0</title>
       <pubDate>Wed, 14 Oct 2026 12:07:18 +0000</pubDate>
       <sparkle:version>66</sparkle:version>
