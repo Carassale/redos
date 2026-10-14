@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.18.0</title>
+      <pubDate>Wed, 14 Oct 2026 11:05:41 +0000</pubDate>
+      <sparkle:version>64</sparkle:version>
+      <sparkle:shortVersionString>0.18.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>feat: rules said by voice, per-app rules and persona (M14, v0.18.0)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.18.0/RedOS-0.18.0.zip" type="application/octet-stream" sparkle:edSignature="7NkvZWGjpvFHxXDKlK3d4+4wNlHvw991gz9uylY6H0Rleka56FQCsRKu284mPbiytGjdyM72QZIraTE91o7xBg==" length="13190501"/>
+    </item>
+    <item>
       <title>RedOS 0.17.0</title>
       <pubDate>Wed, 14 Oct 2026 09:57:58 +0000</pubDate>
       <sparkle:version>62</sparkle:version>
