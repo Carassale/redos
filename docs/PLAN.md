@@ -454,7 +454,8 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   doppione, 1 aggiornamento live + minuta in 8 s, titolo "Riunione progetto Atlante".
 - Limiti: SpeechTranscriber chiude le frasi alle pause; un monologo senza pause resta "in corso" e gli appunti
   live arrivano dopo. Chi parla tra "Altri" non si distingue.
-- Fase 3: fatta (sotto). Integrazioni esterne (Notion, Confluence…) restano fuori: le minute stanno nello
+- Fase 3: fatta (sotto). La proposta di prendere appunti quando si apre un'app di call è in M15. Integrazioni
+  esterne (Notion, Confluence…) restano fuori per scelta: le minute stanno nello
   storico di RedOS.
 
 #### Fase 3: dopo la call (14/10/2026)
