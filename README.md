@@ -264,6 +264,16 @@ Say `smetti di prendere appunti` / `stop taking notes`, press **Stop** or close 
 
 Remembered facts are given to the assistant as context (including cloud providers).
 
+### Rules and persona
+
+- `d'ora in poi rispondimi con una sola frase` / `from now on call me Boss`: a rule for every answer.
+- `quando uso Slack, scrivi in inglese` / `when I'm in Mail, sign as Gabriele`: only while that app is in front.
+- `quali regole hai?` / `list your rules`, `dimentica la regola su Slack`, `dimentica tutte le regole`; the rules
+  are also in **Settings > Memory**.
+- **Settings > General > Persona**: Neutral, Butler (Jarvis), Friendly, Concise or your own description.
+
+Rules and persona go to the assistant with every request (answers, plans, screen agent, research).
+
 ## MCP integrations
 
 RedOS speaks the [Model Context Protocol](https://modelcontextprotocol.io) in both directions
@@ -399,6 +409,7 @@ All in `~/Library/Application Support/RedOS/`:
 | `audit.jsonl` | one line per command: input, route, action, outcome |
 | `routines.json` | routines and their triggers |
 | `memory.json` | remembered facts |
+| `behaviors.json` | rules said by voice |
 | `Notes/` | minutes and transcripts of calls (no audio) |
 | `usage.json` | cloud requests and tokens per day |
 | `mcp.json` | MCP servers used by RedOS |
@@ -493,7 +504,8 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M17 | notes of calls: live notes, minutes, history | ✅ |
 | M12 | corrections while working: stop, change, add | ✅ |
 | M13 | real-time screen agent: Jev picks the first click and when to stop | ✅ partial |
-| M14–M15 | behaviors, proactivity | planned |
+| M14 | behaviors: rules said by voice, per-app rules, persona | ✅ |
+| M15 | proactivity | planned |
 
 Ideas and backlog in [docs/PLAN.md](docs/PLAN.md): teach by demonstration, network triggers, terminal bridge.
 

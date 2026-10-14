@@ -197,7 +197,8 @@ app, bozza mail), *dangerous* (comandi di shell).
 ## Dati inviati
 
 - **Codiv**: il testo del comando e le opzioni del catalogo.
-- **Provider di System Two**: la richiesta, il titolo della finestra in primo piano, i fatti ricordati, gli
+- **Provider di System Two**: la persona e le regole dette a voce, la richiesta, il titolo della finestra in
+  primo piano, i fatti ricordati, gli
   ultimi scambi della conversazione e, per le domande sullo schermo o sul testo selezionato, quel contenuto.
   Durante gli appunti, la trascrizione della call (non l'audio).
   Alla ricerca web non vengono passati i fatti ricordati.

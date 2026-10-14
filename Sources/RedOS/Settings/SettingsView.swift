@@ -88,7 +88,11 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
         case .memory:
-            Form { MemorySection(store: controller.memory) }.formStyle(.grouped)
+            Form {
+                BehaviorsSection(store: controller.behaviors)
+                MemorySection(store: controller.memory)
+            }
+            .formStyle(.grouped)
         case .notes:
             NotesHistoryView(store: controller.notes.store)
         }
@@ -170,6 +174,8 @@ struct GeneralSettingsView: View {
             } footer: {
                 Text(priorityFooter).font(.footnote).foregroundStyle(.secondary)
             }
+
+            PersonaSection(settings: $settings)
 
             Section {
                 Picker("Language", selection: $settings.voiceLocale) {

@@ -53,6 +53,9 @@ public struct CommandEngine: Sendable {
     let researcher: ResearchAgent?
     let designer: DiagramDesigner?
     let corrector: CorrectionClassifier?
+    let behaviors: BehaviorStore?
+    /// How to talk (see `Persona`), before the rules.
+    let persona: String?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
@@ -77,6 +80,8 @@ public struct CommandEngine: Sendable {
         researcher: ResearchAgent? = nil,
         designer: DiagramDesigner? = nil,
         corrector: CorrectionClassifier? = nil,
+        behaviors: BehaviorStore? = nil,
+        persona: String? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -96,6 +101,8 @@ public struct CommandEngine: Sendable {
         self.researcher = researcher
         self.designer = designer
         self.corrector = corrector
+        self.behaviors = behaviors
+        self.persona = persona
         self.permissions = permissions
         self.audit = audit
     }
@@ -214,16 +221,6 @@ public struct CommandEngine: Sendable {
         }
     }
 
-    public func cancel(_ command: ResolvedCommand) async {
-        await record(command, .cancelled)
-    }
-
-    public func cancel(_ plan: ResolvedPlan) async {
-        for command in commands(of: plan) {
-            await record(command, .cancelled)
-        }
-    }
-
     /// Runs the steps in order and stops at the first failure or when the task is cancelled.
     /// Returns the outputs of reporting actions, if any.
     public func execute(_ plan: ResolvedPlan, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
@@ -310,6 +307,16 @@ public struct CommandEngine: Sendable {
 // MARK: - Screen agent
 
 extension CommandEngine {
+    public func cancel(_ command: ResolvedCommand) async {
+        await record(command, .cancelled)
+    }
+
+    public func cancel(_ plan: ResolvedPlan) async {
+        for command in commands(of: plan) {
+            await record(command, .cancelled)
+        }
+    }
+
     /// Observe-act loop: every step is validated, policy-checked and audited; dangerous actions are refused.
     /// Returns the agent's closing summary.
     public func runAgent(_ task: String, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {

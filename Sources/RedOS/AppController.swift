@@ -12,6 +12,7 @@ final class AppController {
     let updater = Updater()
     let routines = RoutineStore()
     let memory = MemoryStore()
+    let behaviors = BehaviorStore()
     /// Survives engine rebuilds (settings changes) so a follow-up still has its context.
     let conversation = Conversation()
     let notes = NoteTaker()
@@ -101,6 +102,7 @@ final class AppController {
                 routines: routines, memory: memory, conversation: conversation, writer: writer,
                 web: web, researcher: ResearchAgent(client: writer, tools: web), designer: designer,
                 corrector: correctionClassifier(settings, local: ollama),
+                behaviors: behaviors, persona: settings.persona.instructions(custom: settings.customPersona),
                 audit: FileAuditLog()
             ),
             voice: voice

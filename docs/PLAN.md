@@ -326,7 +326,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico | ✅ (fasi 1–2) |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | ✅ |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | ✅ parziale (primo passo e "finito" a Jev) |
-| M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | |
+| M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | ✅ |
 | M15 | Proattività: calendario, batteria, riunioni, notifiche; Jev decide se interrompere; briefing | |
 
 ### Verso un "maggiordomo" (piano del 10/10/2026)
@@ -490,3 +490,18 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   (`ui.press target=#2 (menu "File")`), perché i numeri cambiano da una schermata all'altra.
 - Corretto: "apri il Finder" falliva (il Finder sta in `/System/Library/CoreServices`, fuori dal catalogo).
 - Da fare: screenshot opzionali; Jev anche per i passi successivi quando saprà riconoscere il "finito".
+
+### M14: comportamenti (14/10/2026)
+
+- Regole a voce (`BehaviorStore`, `behaviors.json`, max 30): "d'ora in poi …" / "from now on …"; per app:
+  "quando uso Slack, scrivi in inglese" (vale solo con quell'app in primo piano); "quali regole hai?",
+  "dimentica la regola su …", "dimentica tutte le regole". Riconosciute senza modello (`MetaCommand`), prima
+  di "dimentica …" della memoria.
+- Persona (Impostazioni > Generali): neutra, maggiordomo (Jarvis, dà del Lei), amichevole, essenziale o
+  testo libero.
+- Persona e regole aprono ogni prompt di System Two: assistente, planner, agente, domande sullo schermo,
+  testo selezionato, ricerca web (qui senza i fatti ricordati).
+- Prova dal vivo: "chi ha scritto i Promessi Sposi?" → "Alessandro Manzoni."; dopo "d'ora in poi rispondimi
+  con una sola frase e chiamami Capo" → "Capo, i Promessi Sposi sono stati scritti da Alessandro Manzoni."
+- Limite: le regole guidano System Two; i comandi eseguiti dal fast path o da System One (es. "scrivi ciao")
+  restano letterali.

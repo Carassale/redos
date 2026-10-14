@@ -15,14 +15,21 @@ public enum MetaCommand: Sendable, Equatable {
     case feedback(Feedback.Kind, String)
     /// "prendi appunti" (true) / "smetti di prendere appunti" (false).
     case takeNotes(Bool)
+    /// "d'ora in poi rispondimi breve", "quando uso Slack, scrivi in inglese".
+    case addBehavior(rule: String, app: String?)
+    case listBehaviors
+    /// "dimentica la regola sulle risposte brevi"; "" removes them all.
+    case removeBehaviors(String)
     private typealias Builder = @Sendable ([String]) -> MetaCommand?
 
     private static let quote = "[\"'“”«»]?"
     private static let weekdays = "(\\s+(?:nei\\s+)?giorni\\s+(?:feriali|lavorativi)|\\s+on\\s+weekdays)?"
     private static let time = "(\\d{1,2})(?:[:.](\\d{2}))?\\s*(am|pm)?"
 
-    /// Order matters: the trigger and schedule forms must win over a plain "run routine X".
-    private static let patterns: [(String, Builder)] = [
+    /// Order matters: the trigger and schedule forms must win over a plain "run routine X", rules over "forget X".
+    private static let patterns: [(String, Builder)] = behaviorPatterns + corePatterns
+
+    private static let corePatterns: [(String, Builder)] = [
         (
             "^(?:crea|salva|registra|create|save|make|record)\\s+(?:la\\s+|una\\s+|a\\s+|the\\s+|new\\s+)?routine\\s+"
                 + "\(quote)(.+?)\(quote)\\s*(?::|\\s+che\\s+|\\s+con\\s+|\\s+that\\s+|\\s+to\\s+)\\s*(.+)$",

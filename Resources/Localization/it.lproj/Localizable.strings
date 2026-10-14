@@ -314,3 +314,22 @@
 
 /* Corrections (M12) */
 "Then: %@" = "Poi: %@";
+
+/* Behaviors (M14) */
+"OK, in %@ from now on: %@" = "OK, in %1$@ d'ora in poi: %2$@";
+"OK, from now on: %@" = "OK, d'ora in poi: %@";
+"No rules yet. Say “d'ora in poi…” or “from now on…”." = "Nessuna regola. Di' “d'ora in poi…”.";
+"No rule about “%@”." = "Nessuna regola su “%@”.";
+"Removed: %@" = "Rimossa: %@";
+"Persona" = "Personalità";
+"Neutral" = "Neutra";
+"Butler (Jarvis)" = "Maggiordomo (Jarvis)";
+"Friendly" = "Amichevole";
+"Concise" = "Essenziale";
+"Custom" = "Personalizzata";
+"Describe how RedOS should talk" = "Descrivi come deve parlare RedOS";
+"Used by the assistant in answers and plans. Rules said by voice (“d'ora in poi…”) are in Memory." = "Usata dall'assistente in risposte e piani. Le regole dette a voce (“d'ora in poi…”) sono in Memoria.";
+"Say “d'ora in poi rispondimi in breve” or “quando uso Slack, scrivi in inglese”." = "Di' “d'ora in poi rispondimi in breve” o “quando uso Slack, scrivi in inglese”.";
+"Only in %@" = "Solo in %@";
+"Rules" = "Regole";
+"Sent to the assistant with every request. Say “quali regole hai?” to hear them." = "Inviate all'assistente con ogni richiesta. Di' “quali regole hai?” per sentirle.";

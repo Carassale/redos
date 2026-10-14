@@ -30,6 +30,9 @@ struct AppSettings: Equatable {
     var dailyCloudLimit: Int
     /// Plans and the screen agent use System Two, and System One acts only when very sure.
     var prefersAccuracy: Bool
+    var persona: Persona
+    /// The user's own persona description, for `Persona.custom`.
+    var customPersona: String
     var voiceLocale: String
     var speaksAnswers: Bool
     /// After a spoken request the microphone stays open for a follow-up.
@@ -60,6 +63,8 @@ struct AppSettings: Equatable {
         offlineOnly = defaults.bool(forKey: "systemTwo.offlineOnly")
         dailyCloudLimit = defaults.integer(forKey: "systemTwo.dailyLimit")
         prefersAccuracy = defaults.object(forKey: "routing.prefersAccuracy") as? Bool ?? true
+        persona = defaults.string(forKey: "behavior.persona").flatMap(Persona.init) ?? .neutral
+        customPersona = defaults.string(forKey: "behavior.customPersona") ?? ""
         voiceLocale = defaults.string(forKey: "voice.locale") ?? Self.defaultVoiceLocale
         speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
         keepsListening = defaults.object(forKey: "voice.conversation") as? Bool ?? true
@@ -88,6 +93,8 @@ struct AppSettings: Equatable {
         defaults.set(offlineOnly, forKey: "systemTwo.offlineOnly")
         defaults.set(dailyCloudLimit, forKey: "systemTwo.dailyLimit")
         defaults.set(prefersAccuracy, forKey: "routing.prefersAccuracy")
+        defaults.set(persona.rawValue, forKey: "behavior.persona")
+        defaults.set(customPersona, forKey: "behavior.customPersona")
         defaults.set(voiceLocale, forKey: "voice.locale")
         defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
         defaults.set(keepsListening, forKey: "voice.conversation")
