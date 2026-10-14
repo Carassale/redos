@@ -20,6 +20,8 @@ public enum MetaCommand: Sendable, Equatable {
     case listBehaviors
     /// "dimentica la regola sulle risposte brevi"; "" removes them all.
     case removeBehaviors(String)
+    /// "fammi il briefing", "com'è la mia giornata?".
+    case briefing
     private typealias Builder = @Sendable ([String]) -> MetaCommand?
 
     private static let quote = "[\"'“”«»]?"

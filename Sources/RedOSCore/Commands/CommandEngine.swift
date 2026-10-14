@@ -28,6 +28,8 @@ public enum Resolution: Sendable, Equatable {
     case feedback(Feedback)
     /// Start (true) or stop taking notes of a call.
     case takeNotes(Bool)
+    /// A briefing about the day, put together by the app (calendar, reminders, battery).
+    case briefing
 }
 
 /// Progress callback for the HUD: 1-based step number and the action about to run.

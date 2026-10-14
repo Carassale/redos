@@ -333,3 +333,15 @@
 "Only in %@" = "Solo in %@";
 "Rules" = "Regole";
 "Sent to the assistant with every request. Say “quali regole hai?” to hear them." = "Inviate all'assistente con ogni richiesta. Di' “quali regole hai?” per sentirle.";
+
+/* Proactivity (M15) */
+"In %lld minutes: %@." = "Tra %1$lld minuti: %2$@.";
+"Shall I open the call link?" = "Apro il link della call?";
+"a meeting" = "una riunione";
+"Battery at %lld%%: plug in the charger." = "Batteria al %lld%%: collega il caricatore.";
+"%@ is open: shall I take notes? Say “prendi appunti”." = "%@ è aperto: prendo appunti? Di' “prendi appunti”.";
+"Nothing on the calendar today." = "Oggi non hai nulla in calendario.";
+"Speak up on its own" = "Parla di sua iniziativa";
+"Morning briefing" = "Briefing del mattino";
+"Proactivity" = "Proattività";
+"Meetings, low battery, call apps, a morning briefing. Jev decides: speak, notify or stay quiet." = "Riunioni, batteria scarica, app di call, briefing del mattino. Jev decide se parlare, notificare o tacere.";

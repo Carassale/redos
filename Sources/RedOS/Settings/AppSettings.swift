@@ -33,6 +33,9 @@ struct AppSettings: Equatable {
     var persona: Persona
     /// The user's own persona description, for `Persona.custom`.
     var customPersona: String
+    /// RedOS speaks first: meetings, battery, call apps.
+    var isProactive: Bool
+    var morningBriefing: Bool
     var voiceLocale: String
     var speaksAnswers: Bool
     /// After a spoken request the microphone stays open for a follow-up.
@@ -65,6 +68,8 @@ struct AppSettings: Equatable {
         prefersAccuracy = defaults.object(forKey: "routing.prefersAccuracy") as? Bool ?? true
         persona = defaults.string(forKey: "behavior.persona").flatMap(Persona.init) ?? .neutral
         customPersona = defaults.string(forKey: "behavior.customPersona") ?? ""
+        isProactive = defaults.object(forKey: "proactive.enabled") as? Bool ?? true
+        morningBriefing = defaults.object(forKey: "proactive.briefing") as? Bool ?? true
         voiceLocale = defaults.string(forKey: "voice.locale") ?? Self.defaultVoiceLocale
         speaksAnswers = defaults.object(forKey: "voice.speaksAnswers") as? Bool ?? true
         keepsListening = defaults.object(forKey: "voice.conversation") as? Bool ?? true
@@ -95,6 +100,8 @@ struct AppSettings: Equatable {
         defaults.set(prefersAccuracy, forKey: "routing.prefersAccuracy")
         defaults.set(persona.rawValue, forKey: "behavior.persona")
         defaults.set(customPersona, forKey: "behavior.customPersona")
+        defaults.set(isProactive, forKey: "proactive.enabled")
+        defaults.set(morningBriefing, forKey: "proactive.briefing")
         defaults.set(voiceLocale, forKey: "voice.locale")
         defaults.set(speaksAnswers, forKey: "voice.speaksAnswers")
         defaults.set(keepsListening, forKey: "voice.conversation")

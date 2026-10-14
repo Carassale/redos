@@ -36,6 +36,25 @@ struct PersonaSection: View {
     }
 }
 
+/// RedOS speaking first.
+struct ProactivitySection: View {
+    @Binding var settings: AppSettings
+
+    var body: some View {
+        Section {
+            Toggle("Speak up on its own", isOn: $settings.isProactive)
+            Toggle("Morning briefing", isOn: $settings.morningBriefing)
+                .disabled(!settings.isProactive)
+        } header: {
+            Text("Proactivity")
+        } footer: {
+            Text("Meetings, low battery, call apps, a morning briefing. Jev decides: speak, notify or stay quiet.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
 /// Standing rules said by voice.
 struct BehaviorsSection: View {
     let store: BehaviorStore

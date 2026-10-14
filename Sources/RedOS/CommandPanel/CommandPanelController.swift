@@ -60,6 +60,8 @@ final class CommandPanelController {
     var isQuiet = false
     /// Starts (true) or stops the notes; returns a message, or nil when the notes window shows what happened.
     var onTakeNotes: ((Bool) async -> String?)?
+    /// Puts together the day's briefing.
+    var onBriefing: (() async -> String)?
     /// The panel is hidden on purpose while actions drive the Mac (keystrokes must not land in it).
     var isDrivingMac = false
     /// A result (answer, error, confirmation) arrived while the panel was closed.
@@ -232,7 +234,7 @@ final class CommandPanelController {
         case .answer(let text):
             model.state = .answer(.init(text: text))
             say(text)
-        case .feedback, .takeNotes:
+        case .feedback, .takeNotes, .briefing:
             await handleRedOSCommand(resolution)
         }
     }
@@ -249,6 +251,10 @@ final class CommandPanelController {
                 model.state = .idle
                 hide()
             }
+        case .briefing:
+            let text = await onBriefing?() ?? ""
+            model.state = .answer(.init(text: text))
+            say(text)
         default:
             break
         }
@@ -374,7 +380,7 @@ extension CommandPanelController {
         case .ready(let command, _): [command.request]
         case .plan(let plan, _): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
-        case .unrecognized, .unavailable, .answer, .agent, .research, .diagram, .feedback, .takeNotes: []
+        case .unrecognized, .unavailable, .answer, .agent, .research, .diagram, .feedback, .takeNotes, .briefing: []
         }
         let isSensitive = requests.contains { request in
             engine.registry.action(for: request.actionID)?.parameters

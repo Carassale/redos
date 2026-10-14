@@ -30,6 +30,14 @@ extension MetaCommand {
             { .removeBehaviors($0[0]) }
         ),
         ("^(?:forget|remove|delete)\\s+the\\s+rule\\s+(?:about\\s+|for\\s+|on\\s+)?(.+)$", { .removeBehaviors($0[0]) }),
+        (
+            "^(?:(?:fammi|dammi|fai)\\s+(?:il\\s+|un\\s+)?briefing|briefing(?:\\s+(?:del\\s+mattino|di\\s+oggi))?"
+                + "|com['’]è\\s+(?:la\\s+)?(?:mia\\s+)?giornata(?:\\s+di\\s+oggi)?"
+                + "|come\\s+si\\s+presenta\\s+(?:la\\s+)?giornata"
+                + "|(?:give\\s+me\\s+)?(?:my\\s+|the\\s+)?(?:daily|morning)\\s+briefing"
+                + "|what(?:'s|\\s+is)\\s+my\\s+day\\s+(?:like|looking\\s+like))\\??$",
+            { _ in .briefing }
+        ),
     ]
 
     /// "Slack, scrivi in inglese" -> app "Slack"; without a comma the app is the first word.

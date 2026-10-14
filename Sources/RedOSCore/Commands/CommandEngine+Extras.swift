@@ -66,6 +66,8 @@ extension CommandEngine {
         case .takeNotes(let start):
             await record(input, nil, .answered, route: .fastPath)
             return .takeNotes(start)
+        case .briefing:
+            return .briefing
         case .addBehavior, .listBehaviors, .removeBehaviors:
             guard let behaviors else { return nil }
             let answer = await handleBehavior(command, store: behaviors)
@@ -96,7 +98,8 @@ extension CommandEngine {
                 return .answer(Self.describe(await store.all()))
             case .scheduleRoutine, .runRoutineOnLaunch:
                 return try await addTrigger(command, store: store)
-            case .remember, .forget, .recall, .feedback, .takeNotes, .addBehavior, .listBehaviors, .removeBehaviors:
+            case .remember, .forget, .recall, .feedback, .takeNotes, .addBehavior, .listBehaviors, .removeBehaviors,
+                 .briefing:
                 return .unrecognized
             }
         } catch {

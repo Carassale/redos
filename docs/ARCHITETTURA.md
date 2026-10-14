@@ -149,6 +149,13 @@ altrimenti il modello locale) con quattro opzioni:
 | aggiunta | "e poi apri Slack" | eseguita da System Two quando il lavoro finisce |
 | non per RedOS | "Marco, ti richiamo dopo" | ignorato, il lavoro continua |
 
+## Quando parla per primo
+
+Ogni minuto RedOS controlla riunioni imminenti, batteria e il primo uso del mattino; reagisce anche all'apertura
+di un'app di call. Per ogni evento Jev (se configurato) sceglie tra **parlare**, **notifica silenziosa** o
+**niente**, sapendo cosa stai facendo; senza Jev valgono regole fisse. Durante gli appunti di una call non parla
+mai. Il briefing lo scrive System Two con la persona e le regole.
+
 ## Ollama: cosa ci gira
 
 | Modello | Uso | Sempre |

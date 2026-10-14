@@ -327,7 +327,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | ✅ |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | ✅ parziale (primo passo e "finito" a Jev) |
 | M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | ✅ |
-| M15 | Proattività: calendario, batteria, riunioni, notifiche; Jev decide se interrompere; briefing | |
+| M15 | Proattività: calendario, batteria, riunioni, notifiche; Jev decide se interrompere; briefing | ✅ (senza notifiche delle altre app) |
 
 ### Verso un "maggiordomo" (piano del 10/10/2026)
 
@@ -505,3 +505,19 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   con una sola frase e chiamami Capo" → "Capo, i Promessi Sposi sono stati scritti da Alessandro Manzoni."
 - Limite: le regole guidano System Two; i comandi eseguiti dal fast path o da System One (es. "scrivi ciao")
   restano letterali.
+
+### M15: proattività (14/10/2026)
+
+- `ProactiveCenter` (ogni minuto + avvio delle app): riunione tra ≤ 5 minuti (EventKit, link Zoom / Meet /
+  Teams / Webex da URL, luogo o note), batteria al 20% e al 10% (IOKit), app di call aperta (propone gli
+  appunti), briefing del mattino al primo uso dopo le 6 (una volta al giorno). Senza permessi del Calendario non
+  chiede nulla da solo.
+- Consegna (`InterruptionPolicy`): Jev sceglie tra parlare (pannello + voce, poi ascolto della risposta),
+  notifica silenziosa (UserNotifications) o niente, sapendo ora, app in primo piano, inattività e se c'è una
+  call; sotto 0.6 di probabilità o senza Jev valgono regole fisse. Mai a voce durante gli appunti di una call.
+- L'annuncio entra nella conversazione: dopo "Tra 5 minuti: Standup. Apro il link della call?" basta "sì".
+- Briefing (`CommandEngine.briefing`): fatti del giorno (impegni, promemoria in scadenza, batteria) scritti da
+  System Two con persona e regole; su richiesta "fammi il briefing" / "com'è la mia giornata?" chiede
+  l'accesso al Calendario se non deciso. Prova dal vivo (senza accesso al Calendario): risposta corretta con
+  la sola batteria al 44%.
+- Non fatto: leggere le notifiche delle altre app (macOS non lo permette alle app normali).

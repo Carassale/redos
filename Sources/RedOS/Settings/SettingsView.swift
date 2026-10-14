@@ -176,6 +176,7 @@ struct GeneralSettingsView: View {
             }
 
             PersonaSection(settings: $settings)
+            ProactivitySection(settings: $settings)
 
             Section {
                 Picker("Language", selection: $settings.voiceLocale) {

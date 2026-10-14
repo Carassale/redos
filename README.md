@@ -274,6 +274,20 @@ Remembered facts are given to the assistant as context (including cloud provider
 
 Rules and persona go to the assistant with every request (answers, plans, screen agent, research).
 
+### RedOS speaks first
+
+With **Settings > General > Proactivity** on (default), RedOS tells you about:
+
+- a meeting starting in 5 minutes (with the Zoom, Meet, Teams or Webex link: say “sì” / “apri il link”);
+- a low battery (20% and 10%);
+- a call app just opened (Zoom, Teams, Webex, FaceTime): it offers to take notes;
+- a **morning briefing** at your first activity of the day (appointments, reminders due, battery); ask for it
+  any time with `fammi il briefing` / `what's my day like?`.
+
+Jev (when configured) decides whether to speak, show a quiet notification or stay silent, from what you are
+doing; without Jev, fixed rules. RedOS never speaks during a call it is taking notes of. Calendar and reminders
+need the macOS permission (asked the first time you request a briefing).
+
 ## MCP integrations
 
 RedOS speaks the [Model Context Protocol](https://modelcontextprotocol.io) in both directions
@@ -505,7 +519,7 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M12 | corrections while working: stop, change, add | ✅ |
 | M13 | real-time screen agent: Jev picks the first click and when to stop | ✅ partial |
 | M14 | behaviors: rules said by voice, per-app rules, persona | ✅ |
-| M15 | proactivity | planned |
+| M15 | proactivity: meetings, battery, call apps, morning briefing; Jev decides when to interrupt | ✅ |
 
 Ideas and backlog in [docs/PLAN.md](docs/PLAN.md): teach by demonstration, network triggers, terminal bridge.
 

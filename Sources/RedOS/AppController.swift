@@ -19,6 +19,7 @@ final class AppController {
     @ObservationIgnored lazy var notesWindow = NotesWindowController(taker: notes) { [weak self] in
         Task { @MainActor in await self?.setTakingNotes(false) }
     }
+    @ObservationIgnored lazy var proactive = ProactiveCenter(panel: commandPanel, notes: notes)
     let usage = UsageStore()
     let ollama = OllamaSetup()
     @ObservationIgnored private lazy var triggers = TriggerCenter(routines: routines) { [weak self] routine in
@@ -45,6 +46,7 @@ final class AppController {
         commandPanel = CommandPanelController(engine: CommandEngine(registry: registry, audit: FileAuditLog()))
         commandPanel.onUnseenResultChange = { [weak self] in self?.hasUnseenResult = $0 }
         commandPanel.onTakeNotes = { [weak self] start in await self?.setTakingNotes(start) }
+        commandPanel.onBriefing = { [weak self] in await self?.proactive.briefing() ?? "" }
         commandPanel.describeSetup = { [weak self] in
             let system = ProcessInfo.processInfo.operatingSystemVersionString
             return "RedOS \(AppInfo.version) · macOS \(system) · System One: \(self?.systemOneDescription ?? "")"
@@ -65,6 +67,15 @@ final class AppController {
         rebuildEngine(settings)
         configureWakeWord(settings)
         configureMCPServer(settings)
+        configureProactivity(settings)
+    }
+
+    private func configureProactivity(_ settings: AppSettings) {
+        proactive.isEnabled = settings.isProactive
+        proactive.briefsInTheMorning = settings.isProactive && settings.morningBriefing
+        proactive.policy = InterruptionPolicy(jev: settings.offlineOnly ? nil : jevClient(settings))
+        let language = Locale(identifier: settings.voiceLocale).language.languageCode?.identifier ?? "en"
+        proactive.language = Locale(identifier: "en").localizedString(forLanguageCode: language) ?? language
     }
 
     func rebuildEngine(_ settings: AppSettings) {
@@ -226,6 +237,7 @@ final class AppController {
             self?.commandPanel.stop()
         }
         triggers.start()
+        proactive.start()
     }
 
     func revealAuditLog() {
