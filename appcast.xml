@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.19.0</title>
+      <pubDate>Wed, 14 Oct 2026 12:07:18 +0000</pubDate>
+      <sparkle:version>66</sparkle:version>
+      <sparkle:shortVersionString>0.19.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>feat: proactivity with meetings, battery, call apps and morning briefing (M15, v0.19.0)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.19.0/RedOS-0.19.0.zip" type="application/octet-stream" sparkle:edSignature="Z3GWcpmVmzoHkoXkSrCr7rDNFLt+M9YG4kkgG7rfw8Qq8qgK+k0wrFEN7gEr6o71QB+sfF1eZygkv66HKCPEBg==" length="13237340"/>
+    </item>
+    <item>
       <title>RedOS 0.18.0</title>
       <pubDate>Wed, 14 Oct 2026 11:05:41 +0000</pubDate>
       <sparkle:version>64</sparkle:version>
