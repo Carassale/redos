@@ -11,6 +11,7 @@ import RedOSCore
 //   [--extract-model M]             Ollama model for argument extraction (default: --model)
 //   [--system-two M]                evaluate the System Two planner with Ollama model M instead
 //   [--screen]                      print what the agent sees in the frontmost app (Accessibility needed)
+//   [--agent]                       with --jev-url: the screen agent's Jev steps on eval/agent.jsonl
 
 if CommandLine.arguments.contains("--screen") {
     try await Task.sleep(for: .seconds(Double(CommandLine.arguments.last ?? "") ?? 0))
@@ -138,6 +139,10 @@ let jev = option("--jev-url").flatMap(URL.init(string:)).map {
     // Only Jev runs read the Keychain: every new build of this tool needs the user's permission.
     let key = ProcessInfo.processInfo.environment["JEV_API_KEY"] ?? Keychain.secret(for: "jev")
     return JevHTTPSystemOne(baseURL: $0, model: option("--jev-model") ?? "jev-latest", apiKey: key)
+}
+if CommandLine.arguments.contains("--agent"), let jev {
+    try await evaluateAgent(path: option("--dataset") ?? "eval/agent.jsonl", jev: jev)
+    exit(0)
 }
 let systemOne: any SystemOne = jev ?? OllamaSystemOne(client: ollama)
 let intents = CommandLine.arguments.contains("--jev-intents")

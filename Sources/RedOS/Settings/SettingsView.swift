@@ -271,6 +271,15 @@ struct CloudSettingsView: View {
                     : "Commands, questions, screen content and remembered facts go to the assistant's provider.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
+            Section {
+                Toggle("Let the assistant see the screen", isOn: $settings.seesScreen)
+            } footer: {
+                Text("""
+                    When Accessibility shows little (images, charts, some apps), screen tasks and questions also \
+                    get an image of the frontmost window. Needs Screen Recording.
+                    """)
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
             if settings.systemTwoProvider != .ollama, !settings.offlineOnly {
                 Section {
                     Stepper(value: $settings.dailyCloudLimit, in: 0...1000, step: 10) {

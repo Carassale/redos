@@ -325,7 +325,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming rimandato) |
 | M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico, minuta via Mail, promemoria delle azioni, domande sulle call passate | ✅ |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | ✅ |
-| M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | ✅ parziale (primo passo e "finito" a Jev) |
+| M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | ✅ |
 | M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | ✅ |
 | M15 | Proattività: calendario, batteria, riunioni, notifiche; Jev decide se interrompere; briefing | ✅ (senza notifiche delle altre app) |
 
@@ -510,7 +510,29 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   riassunti restano a System Two. La cronologia dell'agente ora nomina l'elemento premuto
   (`ui.press target=#2 (menu "File")`), perché i numeri cambiano da una schermata all'altra.
 - Corretto: "apri il Finder" falliva (il Finder sta in `/System/Library/CoreServices`, fuori dal catalogo).
-- Da fare: screenshot opzionali; Jev anche per i passi successivi quando saprà riconoscere il "finito".
+
+#### Completamento (14/10/2026)
+
+- **Jev nei passi successivi**: una sola richiesta con "finito / continua" + prossimo passo + elemento. Finito
+  ≥ 0.5 → fine; continua ≥ 0.8 (andare avanti è più rischioso che fermarsi) + clic ≥ 0.7 + elemento ≥ 0.6 →
+  Jev preme; altrimenti System Two. Con ordinali nel compito ("la seconda email") dopo il primo passo decide
+  solo il "finito": l'unico errore misurato era Jev che ricontava sulla nuova schermata.
+- Eval `eval/agent.jsonl` (24 momenti realistici: menu, Impostazioni, login, Mail, Finder, link dopo lo
+  scroll; `make eval-jev` o `RedOSEval --jev-url … --agent`). Tre giri (Jev non è deterministico): giusti
+  71–88%, a System Two 13–21%, fermati presto 0–8%, **clic sbagliati 0**; ~0.75 s a decisione contro 3–5 s di
+  System Two.
+- **Screenshot facoltativi** (Impostazioni > Cloud: "L'assistente può vedere lo schermo", spento di default):
+  immagine JPEG della finestra in primo piano (ScreenCaptureKit, lato lungo ≤ 1280 px, serve Registrazione
+  schermo) quando l'Accessibilità elenca meno di 12 elementi o l'ultimo passo è fallito, e per le domande
+  sullo schermo. Immagini nei messaggi per Ollama (gemma4 vede), OpenAI/Gemini, Anthropic e Copilot ACP
+  (`promptCapabilities.image`). Con lo screenshot l'agente può cliccare per posizione (`mouse.click` in pixel
+  dell'immagine → punto sullo schermo, solo dentro la finestra); senza screenshot il clic per posizione è
+  rifiutato. Le coordinate del modello non passano dal filtro "solo numeri detti dall'utente".
+- Prove dal vivo: PNG con "Codice segreto: 4827" e un cerchio verde in Anteprima (invisibili
+  all'Accessibilità) → "Il codice è 4827, il cerchio è verde" (Copilot). "apri … Generali e poi Info" in
+  Impostazioni di Sistema: arrivato su About in ~10 s.
+- "nell'immagine aperta", "il documento aperto", "the open chart" ora sono domande sullo schermo (prima
+  `ui.read` restituiva il testo grezzo).
 
 ### M14: comportamenti (14/10/2026)
 

@@ -108,7 +108,7 @@ itself at first launch and whenever a permission is missing.
    |---|---|
    | Accessibility | control mouse, keyboard and app interfaces; read windows |
    | Microphone | push-to-talk and the wake word |
-   | Screen Recording | read the screen when an action needs visual context, hear the call when taking notes (restart RedOS after granting) |
+   | Screen Recording | read the screen when an action needs visual context, screenshots for the assistant (if enabled), hear the call when taking notes (restart RedOS after granting) |
    | Calendars, Reminders | asked the first time you use the agenda or a reminder |
    | Automation | asked the first time RedOS controls Mail, System Events or Music |
 2. **Local models (Ollama)** — *Download Ollama* (or `brew install ollama`), *Start*, then *Download All
@@ -204,16 +204,23 @@ without clicking or typing anything:
 
 The assistant also knows the frontmost app and window title, so “this” refers to it.
 
+With **Settings > Cloud > Let the assistant see the screen** (off by default, needs Screen Recording) the
+assistant also gets an image of the frontmost window, so it can read images, charts and apps that expose
+little to Accessibility: `what does the open chart show?`.
+
 ### Multi-step tasks and the screen agent
 
 Requests with several steps become a **plan** that you confirm once:
 `open Safari and go to apple.com`, `open Notes and type the shopping list`.
 
 Requests that need to look at the screen go to the **screen agent**, which reads the window, acts, and
-repeats: `open the first menu`, `open the second result`. While it works the
+repeats: `open the first menu`, `open the second result`. With Jev configured, Jev decides the quick steps
+(which element to click, whether the task is done) in under a second; anything else goes to the assistant.
+While it works the
 panel hides and a **HUD** shows each step; **Stop** or **⌃⌥ Esc** halts it immediately. The agent can only
 press, fill, read, scroll and open apps or links: it never types into the focused app, never runs shell
-commands and ignores instructions written on screen.
+commands and ignores instructions written on screen. When it may see the screen (setting above) it can also
+click what it sees in the image, inside the frontmost window only.
 
 ### Diagrams and charts
 
@@ -526,7 +533,7 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M11 | conversation: follow-ups with context, talking over RedOS | ✅ |
 | M17 | notes of calls: live notes, minutes, history, minutes by email, reminders, questions | ✅ |
 | M12 | corrections while working: stop, change, add | ✅ |
-| M13 | real-time screen agent: Jev picks the first click and when to stop | ✅ partial |
+| M13 | real-time screen agent: Jev picks clicks and when to stop, optional screenshots | ✅ |
 | M14 | behaviors: rules said by voice, per-app rules, persona | ✅ |
 | M15 | proactivity: meetings, battery, call apps, morning briefing; Jev decides when to interrupt | ✅ |
 

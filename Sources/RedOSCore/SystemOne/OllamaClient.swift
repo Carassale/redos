@@ -3,9 +3,13 @@ import Foundation
 public struct ChatMessage: Codable, Sendable, Equatable {
     public let role: String
     public let content: String
+    /// JPEG images for models that can see (Ollama reads them as base64 strings).
+    public var images: [Data]?
 
     public static func system(_ content: String) -> Self { Self(role: "system", content: content) }
-    public static func user(_ content: String) -> Self { Self(role: "user", content: content) }
+    public static func user(_ content: String, images: [Data]? = nil) -> Self {
+        Self(role: "user", content: content, images: images?.isEmpty == true ? nil : images)
+    }
     public static func assistant(_ content: String) -> Self { Self(role: "assistant", content: content) }
 }
 

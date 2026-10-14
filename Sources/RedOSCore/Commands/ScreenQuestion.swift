@@ -21,7 +21,11 @@ public enum ScreenQuestion {
             #"\bquest[aoei]\s+(?!settiman|mes|ann|sera|mattin|weekend|giorn|volt|notte)\w|"#
                 + #"\b(?:this|these)\s+(?!week|month|year|weekend|morning|evening|afternoon|time|night)\w|"#
                 + #"\b(?:sullo schermo|on (?:the |my )?screen|pagina (?:visualizzata|aperta|corrente|attuale)|"#
-                + #"current page|finestra (?:aperta|corrente|attuale))\b"#
+                + #"current page|finestra (?:aperta|corrente|attuale)|"#
+                + #"(?:open|current) (?:image|picture|photo|chart|document|file))\b|"#
+                // "nell'immagine" is one word for \b: the apostrophe is matched instead.
+                + #"(?:^|[\s'’])(?:immagine|foto|grafico|documento|file) "#
+                + #"(?:apert[ao]|visualizzat[ao]|corrente|attuale)\b"#
         ).ignoresCase()
     }
 

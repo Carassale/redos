@@ -48,6 +48,7 @@ struct ScreenQuestionTests {
         "a chi è assegnata questa MR?", "riassumi questa pagina", "cosa dice questa email?",
         "what is this page about?", "dimmi cosa c'è sullo schermo", "quanto costa questo prodotto?",
         "who wrote this article?", "dammi info sulla pagina visualizzata",
+        "che codice c'è nell'immagine aperta?", "what does the open chart show?",
     ])
     func recognizesScreenQuestions(_ input: String) {
         #expect(ScreenQuestion.matches(input))

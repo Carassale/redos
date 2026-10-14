@@ -152,7 +152,7 @@ public struct FastPathParser: Sendable {
     private static let menuWords: Set<String> = ["menu", "scheda", "voce", "tab"]
     private static let documentWords: Set<String> = ["documento", "document", "file"]
     /// "apri l'ultimo risultato" points at something on screen: the models decide.
-    private static let ordinalWords: Set<String> = [
+    static let ordinalWords: Set<String> = [
         "primo", "prima", "secondo", "seconda", "terzo", "terza", "ultimo", "ultima",
         "first", "second", "third", "last",
     ]

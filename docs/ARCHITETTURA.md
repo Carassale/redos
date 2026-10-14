@@ -113,7 +113,7 @@ Un unico provider, scelto in Impostazioni > Modelli, svolge più ruoli:
 |---|---|---|
 | **Assistente** | domande, richieste che System One non capisce o non è sicuro | provider |
 | **Planner** | richieste in più passi ("apri il progetto, fai pull e lancia i test") → piano di azioni validate | provider con *Precisione*, Ollama con *Velocità* |
-| **Agente sullo schermo** | compiti che richiedono di guardare lo schermo a ogni passo ("compila il modulo"); con Jev il primo clic e il "finito" li decide Jev (~0.8 s invece di 3–5 s) | come il planner |
+| **Agente sullo schermo** | compiti che richiedono di guardare lo schermo a ogni passo ("compila il modulo"); con Jev i clic sicuri e il "finito" li decide Jev (~0.75 s invece di 3–5 s), il resto System Two | come il planner |
 | **Lettore** | testo selezionato, domande sullo schermo | provider |
 | **Ricerca web** | informazioni attuali (meteo, notizie, cambi, "chi ha diretto…") | provider + strumenti web |
 | **Diagrammi** | "disegna l'architettura…" | provider (con *Velocità* ragiona meno) |
@@ -210,6 +210,8 @@ app, bozza mail), *dangerous* (comandi di shell).
   Durante gli appunti, la trascrizione della call (non l'audio); per le domande sulle call passate, le minute
   e le trascrizioni pertinenti salvate sul Mac.
   Alla ricerca web non vengono passati i fatti ricordati.
+  Solo con "L'assistente può vedere lo schermo" attivo: un'immagine della finestra in primo piano (domande
+  sullo schermo, e per l'agente quando l'Accessibilità mostra poco).
 - **Mai**: chiavi API, audio (riconoscimento vocale e wake word sono sul Mac).
 
 ## Limiti noti

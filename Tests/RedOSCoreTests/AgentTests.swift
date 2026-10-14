@@ -2,10 +2,18 @@ import Foundation
 import Testing
 @testable import RedOSCore
 
+extension Acting {
+    func next(task: String, history: [String], screen: String, registry: ActionRegistry) async throws -> AgentStep {
+        try await next(task: task, history: history, screen: screen, screenshot: nil, registry: registry)
+    }
+}
+
 private struct ScriptedAgent: Acting {
     let steps: [AgentStep]
 
-    func next(task: String, history: [String], screen: String, registry: ActionRegistry) async throws -> AgentStep {
+    func next(
+        task: String, history: [String], screen: String, screenshot: Screenshot?, registry: ActionRegistry
+    ) async throws -> AgentStep {
         history.count < steps.count ? steps[history.count] : .done("fine")
     }
 }

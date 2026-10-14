@@ -64,9 +64,19 @@ struct ReadScreenAction: ReportingAction {
     }
 }
 
-/// The agent's eyes: the frontmost app's numbered elements and text.
+/// The agent's eyes: the frontmost app's numbered elements and text, and its window as an image if allowed.
 public struct AccessibilityObserver: ScreenObserving {
-    public init() {}
+    private let seesScreen: Bool
+
+    /// `seesScreen`: models may get screenshots of the frontmost window.
+    public init(seesScreen: Bool = false) {
+        self.seesScreen = seesScreen
+    }
+
+    @MainActor
+    public func screenshot() async -> Screenshot? {
+        seesScreen ? await WindowCapture.frontmost() : nil
+    }
 
     @MainActor
     public func observe() throws -> String {

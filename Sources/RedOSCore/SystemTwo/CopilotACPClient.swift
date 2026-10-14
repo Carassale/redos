@@ -22,7 +22,10 @@ public struct CopilotACPClient: ChatCompleting, ModelListing {
         if format != nil {
             prompt += "\n\nReply with a single JSON object only."
         }
-        let text = try await connection.prompt(prompt, timeout: timeout, progress: ActivityReporter.handler)
+        let images = messages.flatMap { $0.images ?? [] }
+        let text = try await connection.prompt(
+            prompt, images: images, timeout: timeout, progress: ActivityReporter.handler
+        )
         guard !text.isEmpty else { throw ProviderError.emptyResponse }
         return ChatResponse(message: .init(content: text), logprobs: nil)
     }
@@ -110,7 +113,9 @@ actor ACPConnection {
         _ = try await request("initialize", ["protocolVersion": .number(1), "clientCapabilities": .object([:])])
     }
 
-    func prompt(_ text: String, timeout: Duration, progress: ActivityHandler? = nil) async throws -> String {
+    func prompt(
+        _ text: String, images: [Data] = [], timeout: Duration, progress: ActivityHandler? = nil
+    ) async throws -> String {
         try await start()
         let session = try await request(
             "session/new", ["cwd": .string(workDirectory.path), "mcpServers": .array([])]
@@ -127,11 +132,12 @@ actor ACPConnection {
             await self?.cancel(sessionID)
         }
         defer { watchdog.cancel() }
+        let pictures: [JSONValue] = images.map { image in
+            .object(["type": "image", "mimeType": "image/jpeg", "data": .string(image.base64EncodedString())])
+        }
+        let blocks: [JSONValue] = pictures + [.object(["type": "text", "text": .string(text)])]
         let result = try await withTaskCancellationHandler {
-            try await request(
-                "session/prompt",
-                ["sessionId": .string(sessionID), "prompt": .array([.object(["type": "text", "text": .string(text)])])]
-            )
+            try await request("session/prompt", ["sessionId": .string(sessionID), "prompt": .array(blocks)])
         } onCancel: {
             Task { await self.cancel(sessionID) }
         }

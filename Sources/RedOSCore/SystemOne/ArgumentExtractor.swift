@@ -35,7 +35,10 @@ public struct ArgumentExtractor: Sendable {
     }
 
     /// Model JSON to string arguments, dropping integers the user never said.
-    static func arguments(from values: [String: JSONValue], for action: any Action, input: String) -> ActionArguments {
+    /// `trustsNumbers`: the numbers come from the model's own reading (screenshot pixels), not the request.
+    static func arguments(
+        from values: [String: JSONValue], for action: any Action, input: String, trustsNumbers: Bool = false
+    ) -> ActionArguments {
         let arguments = values.reduce(into: ActionArguments()) { result, pair in
             switch pair.value {
             case .string(let text) where !text.isEmpty: result[pair.key] = text
@@ -46,6 +49,7 @@ public struct ArgumentExtractor: Sendable {
             }
         }
         // Small models invent coordinates ("center of the screen" -> 0, 0): keep only numbers the user said.
+        guard !trustsNumbers else { return arguments }
         let spokenNumbers = Set(input.split { !$0.isNumber }.map(String.init))
         return arguments.filter { name, value in
             action.parameters.first { $0.name == name }?.kind != .integer || spokenNumbers.contains(value)

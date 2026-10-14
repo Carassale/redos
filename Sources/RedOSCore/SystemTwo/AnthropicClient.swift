@@ -47,7 +47,7 @@ public struct AnthropicClient: ChatCompleting, ModelListing {
             "model": .string(model),
             "max_tokens": .number(Double(maxTokens ?? 1024)),
             "system": .string(system),
-            "messages": .array(messages.filter { $0.role != "system" }.map(\.jsonValue)),
+            "messages": .array(messages.filter { $0.role != "system" }.map(\.anthropicJSON)),
         ])
         let request = try HTTP.request(
             baseURL.appending(path: "messages"), method: "POST", headers: headers, body: body

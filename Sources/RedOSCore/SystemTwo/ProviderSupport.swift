@@ -69,7 +69,37 @@ enum JSONText {
 }
 
 extension ChatMessage {
+    /// OpenAI chat format: images as data URLs next to the text.
     var jsonValue: JSONValue {
-        .object(["role": .string(role), "content": .string(content)])
+        guard let images, !images.isEmpty else {
+            return .object(["role": .string(role), "content": .string(content)])
+        }
+        let pictures: [JSONValue] = images.map { image in
+            .object([
+                "type": "image_url",
+                "image_url": .object(["url": .string("data:image/jpeg;base64," + image.base64EncodedString())]),
+            ])
+        }
+        return .object([
+            "role": .string(role),
+            "content": .array([.object(["type": "text", "text": .string(content)])] + pictures),
+        ])
+    }
+
+    /// Anthropic Messages format.
+    var anthropicJSON: JSONValue {
+        guard let images, !images.isEmpty else { return jsonValue }
+        let pictures: [JSONValue] = images.map { image in
+            .object([
+                "type": "image",
+                "source": .object([
+                    "type": "base64", "media_type": "image/jpeg", "data": .string(image.base64EncodedString()),
+                ]),
+            ])
+        }
+        return .object([
+            "role": .string(role),
+            "content": .array(pictures + [.object(["type": "text", "text": .string(content)])]),
+        ])
     }
 }

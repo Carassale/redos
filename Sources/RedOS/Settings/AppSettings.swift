@@ -30,6 +30,8 @@ struct AppSettings: Equatable {
     var dailyCloudLimit: Int
     /// Plans and the screen agent use System Two, and System One acts only when very sure.
     var prefersAccuracy: Bool
+    /// The screen agent and screen questions may send an image of the frontmost window to System Two.
+    var seesScreen: Bool
     var persona: Persona
     /// The user's own persona description, for `Persona.custom`.
     var customPersona: String
@@ -66,6 +68,7 @@ struct AppSettings: Equatable {
         offlineOnly = defaults.bool(forKey: "systemTwo.offlineOnly")
         dailyCloudLimit = defaults.integer(forKey: "systemTwo.dailyLimit")
         prefersAccuracy = defaults.object(forKey: "routing.prefersAccuracy") as? Bool ?? true
+        seesScreen = defaults.bool(forKey: "agent.screenshots")
         persona = defaults.string(forKey: "behavior.persona").flatMap(Persona.init) ?? .neutral
         customPersona = defaults.string(forKey: "behavior.customPersona") ?? ""
         isProactive = defaults.object(forKey: "proactive.enabled") as? Bool ?? true
@@ -98,6 +101,7 @@ struct AppSettings: Equatable {
         defaults.set(offlineOnly, forKey: "systemTwo.offlineOnly")
         defaults.set(dailyCloudLimit, forKey: "systemTwo.dailyLimit")
         defaults.set(prefersAccuracy, forKey: "routing.prefersAccuracy")
+        defaults.set(seesScreen, forKey: "agent.screenshots")
         defaults.set(persona.rawValue, forKey: "behavior.persona")
         defaults.set(customPersona, forKey: "behavior.customPersona")
         defaults.set(isProactive, forKey: "proactive.enabled")

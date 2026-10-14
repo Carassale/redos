@@ -123,6 +123,7 @@ eval-jev:
 		--dataset eval/intents.jsonl
 	swift run -c release RedOSEval --jev-url $(JEV_URL) --jev-model $(JEV_MODEL) --jev-intents \
 		--extract-model $(EXTRACTION_MODEL) --out eval/runs/$$(date +%Y%m%d-%H%M%S)-jev.jsonl $(EVAL_FLAGS)
+	swift run -c release RedOSEval --jev-url $(JEV_URL) --jev-model $(JEV_MODEL) --agent
 
 lint:
 	TOOLCHAIN_DIR=$(TOOLCHAIN_DIR) swiftlint --strict

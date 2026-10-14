@@ -9,12 +9,15 @@ public protocol ScreenObserving: Sendable {
     @MainActor func screenContent() -> ScreenContent?
     /// The frontmost app and window title, as context for understanding requests.
     @MainActor func frontmost() -> String?
+    /// The frontmost window as an image; nil when not allowed (setting, Screen Recording) or not possible.
+    @MainActor func screenshot() async -> Screenshot?
 }
 
 extension ScreenObserving {
     @MainActor public func selectedText() -> String? { nil }
     @MainActor public func screenContent() -> ScreenContent? { nil }
     @MainActor public func frontmost() -> String? { nil }
+    @MainActor public func screenshot() async -> Screenshot? { nil }
 }
 
 public struct ScreenContent: Sendable, Equatable {
@@ -37,9 +40,11 @@ public enum AgentStep: Sendable, Equatable {
     case done(String?)
 }
 
-/// Picks the next action from the task, the steps so far and the current screen.
+/// Picks the next action from the task, the steps so far and the current screen (and its image, if any).
 public protocol Acting: Sendable {
-    func next(task: String, history: [String], screen: String, registry: ActionRegistry) async throws -> AgentStep
+    func next(
+        task: String, history: [String], screen: String, screenshot: Screenshot?, registry: ActionRegistry
+    ) async throws -> AgentStep
 }
 
 /// Observe-act loop driven by a chat model (local by default: one call per step).
@@ -104,14 +109,15 @@ public struct ModelAgent: Acting {
     }
 
     public func next(
-        task: String, history: [String], screen: String, registry: ActionRegistry
+        task: String, history: [String], screen: String, screenshot: Screenshot?, registry: ActionRegistry
     ) async throws -> AgentStep {
         let steps = history.isEmpty
             ? "none"
             : history.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
-        let message = "Task: \(task)\nSteps done:\n\(steps)\nScreen:\n\(screen)"
+        var message = "Task: \(task)\nSteps done:\n\(steps)\nScreen:\n\(screen)"
+        if let screenshot { message += "\n\(screenshot.note)" }
         let response = try await client.chat(
-            [.system(Self.systemPrompt(for: registry)), .user(message)],
+            [.system(Self.systemPrompt(for: registry)), .user(message, images: screenshot.map { [$0.jpeg] })],
             format: .string("json"),
             maxTokens: 256,
             topLogprobs: nil
@@ -123,8 +129,11 @@ public struct ModelAgent: Acting {
             let summary = reply.done?.trimmingCharacters(in: .whitespacesAndNewlines)
             return .done(summary?.isEmpty == false ? summary : nil)
         }
+        let clicksOnScreenshot = screenshot != nil && id == "mouse.click"
         let arguments = registry.action(for: id).map {
-            ArgumentExtractor.arguments(from: reply.arguments ?? [:], for: $0, input: task)
+            ArgumentExtractor.arguments(
+                from: reply.arguments ?? [:], for: $0, input: task, trustsNumbers: clicksOnScreenshot
+            )
         }
         return .act(ActionRequest(id, arguments ?? [:]))
     }

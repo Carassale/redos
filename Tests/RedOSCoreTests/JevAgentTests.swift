@@ -18,7 +18,9 @@ private struct FailingJev: JevDeciding {
 
 /// Stands in for System Two: always types "fallback".
 private struct FallbackAgent: Acting {
-    func next(task: String, history: [String], screen: String, registry: ActionRegistry) async throws -> AgentStep {
+    func next(
+        task: String, history: [String], screen: String, screenshot: Screenshot?, registry: ActionRegistry
+    ) async throws -> AgentStep {
         .act(ActionRequest("ui.fill", ["target": "#2", "text": "fallback"]))
     }
 }
@@ -69,12 +71,17 @@ struct JevAgentTests {
 
     @Test func laterStepsTypingDoubtsAndOutagesGoToSystemTwo() async throws {
         let history = ["ui.press target=#1 -> ok"]
-        let going = JevAgent(
-            jev: FixedJev(answers: ["status": answer("continue", 0.9), "next": answer("press", 0.99),
-                                    "element": answer("#3", 0.99)]),
-            fallback: FallbackAgent()
-        )
-        #expect(try await going.next(task: "x", history: history, screen: screen, registry: registry) == .act(fallback))
+        let sure = ["status": answer("continue", 0.9), "next": answer("press", 0.99), "element": answer("#3", 0.99)]
+        let going = JevAgent(jev: FixedJev(answers: sure), fallback: FallbackAgent())
+        #expect(try await going.next(task: "x", history: history, screen: screen, registry: registry)
+            == .act(ActionRequest("ui.press", ["target": "#3"])))
+        let ordinal = "apri la seconda email"
+        #expect(try await going.next(task: ordinal, history: history, screen: screen, registry: registry)
+            == .act(fallback))
+        var unsure = sure
+        unsure["status"] = answer("continue", 0.7)
+        #expect(try await JevAgent(jev: FixedJev(answers: unsure), fallback: FallbackAgent())
+            .next(task: "x", history: history, screen: screen, registry: registry) == .act(fallback))
 
         let cases: [any JevDeciding] = [
             FixedJev(answers: ["next": answer("type", 0.95), "element": answer("#2", 0.9)]),

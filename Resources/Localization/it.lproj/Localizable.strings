@@ -240,6 +240,8 @@
 "No routines yet. Example: “crea la routine buongiorno: apri Mail e Calendario”." = "Nessuna routine. Esempio: “crea la routine buongiorno: apri Mail e Calendario”.";
 "Offline · %@" = "Offline · %@";
 "Offline only (use the local model)" = "Solo offline (usa il modello locale)";
+"Let the assistant see the screen" = "L'assistente può vedere lo schermo";
+"When Accessibility shows little (images, charts, some apps), screen tasks and questions also get an image of the frontmost window. Needs Screen Recording." = "Quando l'Accessibilità mostra poco (immagini, grafici, alcune app), i compiti e le domande sullo schermo ricevono anche un'immagine della finestra in primo piano. Serve Registrazione schermo.";
 "Daily cloud limit: none" = "Limite cloud giornaliero: nessuno";
 "Daily cloud limit: %lld requests" = "Limite cloud giornaliero: %lld richieste";
 "Cloud usage" = "Uso cloud";
