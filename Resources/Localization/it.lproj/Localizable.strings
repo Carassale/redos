@@ -311,3 +311,6 @@
 "Say “prendi appunti” during a call: the minutes appear here." = "Di' “prendi appunti” durante una call: qui trovi le minute.";
 "Transcripts stay on this Mac; the audio is never saved." = "Le trascrizioni restano su questo Mac; l'audio non viene mai salvato.";
 "%lld lines" = "%lld righe";
+
+/* Corrections (M12) */
+"Then: %@" = "Poi: %@";

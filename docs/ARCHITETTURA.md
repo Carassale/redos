@@ -136,6 +136,19 @@ Protezioni per i provider cloud:
 - **Limite giornaliero** (Privacy & Cloud): oltre il numero di richieste impostato si passa al modello locale.
 - **Solo offline**: System Two usa Ollama qualunque sia il provider, e Jev viene escluso.
 
+## Correzioni mentre lavora
+
+Mentre RedOS esegue una richiesta fatta a voce, il microfono resta aperto (con cancellazione d'eco). Quello che
+dici viene classificato: prima da regole ("fermati", "no, …", "e poi …"), poi da System One (Jev se c'è,
+altrimenti il modello locale) con quattro opzioni:
+
+| Tipo | Esempio | Cosa succede |
+|---|---|---|
+| stop | "fermati", "lascia stare" | il lavoro si interrompe |
+| modifica | "no, a Luca", "usa Chrome" | il lavoro si interrompe e System Two ripianifica sapendo cosa era già partito |
+| aggiunta | "e poi apri Slack" | eseguita da System Two quando il lavoro finisce |
+| non per RedOS | "Marco, ti richiamo dopo" | ignorato, il lavoro continua |
+
 ## Ollama: cosa ci gira
 
 | Modello | Uso | Sempre |

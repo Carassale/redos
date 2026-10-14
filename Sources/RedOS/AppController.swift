@@ -100,10 +100,19 @@ final class AppController {
                 agent: ModelAgent(client: thinker), observer: AccessibilityObserver(),
                 routines: routines, memory: memory, conversation: conversation, writer: writer,
                 web: web, researcher: ResearchAgent(client: writer, tools: web), designer: designer,
+                corrector: correctionClassifier(settings, local: ollama),
                 audit: FileAuditLog()
             ),
             voice: voice
         )
+    }
+
+    /// Jev understands corrections best; the local model answers when Jev is off or unreachable.
+    private func correctionClassifier(_ settings: AppSettings, local: OllamaClient) -> CorrectionClassifier {
+        var deciders: [any SystemOne] = []
+        if !settings.offlineOnly, let jev = jevClient(settings) { deciders.append(jev) }
+        deciders.append(OllamaSystemOne(client: local))
+        return CorrectionClassifier(deciders: deciders)
     }
 
     private func diagramDesigner(

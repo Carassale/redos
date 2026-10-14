@@ -32,9 +32,18 @@ final class CommandPanelController {
     var wakeWord: WakeWordListener?
     let endpoint = DictationEndpoint()
     /// The command being resolved or run: the kill switch cancels it.
-    private var work: Task<Void, Never>?
-    private lazy var hud = HUDController { [weak self] in self?.stop() }
+    var work: Task<Void, Never>?
+    private var workGeneration = 0
+    lazy var hud = HUDController { [weak self] in self?.stop() }
     private let diagrams = DiagramWindowController()
+    /// What is running and what was started, for corrections said meanwhile.
+    var runningTask: String?
+    var progress: [String] = []
+    /// Requests added while working ("e poi apri Slack"), run once the current one is done.
+    var pendingAdditions: [String] = []
+    var isCorrecting = false
+    /// The running work is cancelled to be replaced by a corrected one: no "Stopped".
+    var isReplacingWork = false
     /// A confirmation that a spoken "sì" / "no" can answer.
     var pendingConfirmation: CommandPanelModel.State?
     /// The current command came from the microphone: feedback is also spoken.
@@ -52,14 +61,14 @@ final class CommandPanelController {
     /// Starts (true) or stops the notes; returns a message, or nil when the notes window shows what happened.
     var onTakeNotes: ((Bool) async -> String?)?
     /// The panel is hidden on purpose while actions drive the Mac (keystrokes must not land in it).
-    private var isDrivingMac = false
+    var isDrivingMac = false
     /// A result (answer, error, confirmation) arrived while the panel was closed.
     private var hasUnseenResult = false {
         didSet { if hasUnseenResult != oldValue { onUnseenResultChange?(hasUnseenResult) } }
     }
     var onUnseenResultChange: (@MainActor (Bool) -> Void)?
     /// Actions that finished without output (the panel just closes): MCP callers need to tell them from a cancel.
-    private(set) var completedSilently = 0
+    var completedSilently = 0
     private var history: CommandHistory
     lazy var panel: CommandPanel = {
         let panel = CommandPanel(
@@ -119,6 +128,8 @@ final class CommandPanelController {
     func stop() {
         speaker.stop()
         hud.hide()
+        pendingAdditions = []
+        endCorrections()
         if listening != nil {
             cancel()
         }
@@ -128,6 +139,8 @@ final class CommandPanelController {
 
     func start(_ body: @escaping @MainActor () async -> Void) {
         work?.cancel()
+        workGeneration += 1
+        let generation = workGeneration
         work = Task { [weak self, model] in
             model.activity = nil
             let silent = self?.completedSilently ?? 0
@@ -135,8 +148,11 @@ final class CommandPanelController {
                 await body()
             })
             model.activity = nil
-            guard let self, !Task.isCancelled else { return }
+            guard let self else { return }
+            if generation == workGeneration { endCorrections() }
+            guard !Task.isCancelled else { return }
             await rememberTurn(silentBefore: silent)
+            if runNextAddition() { return }
             guard !panel.isVisible else {
                 followUpIfUseful()
                 return
@@ -158,6 +174,7 @@ final class CommandPanelController {
         case .confirmingPlan(let plan):
             start { [self, engine] in await run(plan.input) { await engine.execute(plan, onStep: $0) } }
         case .idle, .message, .answer:
+            pendingAdditions = []
             let input = model.text
             isVoiceCommand = false
             model.state = .working
@@ -190,7 +207,7 @@ final class CommandPanelController {
         }
     }
 
-    private func handle(_ resolution: Resolution, input: String) async {
+    func handle(_ resolution: Resolution, input: String) async {
         switch resolution {
         case .unrecognized:
             fail(String(localized: "I don't know how to do that yet."), spoken: "I don't know how to do that yet.")
@@ -257,9 +274,11 @@ final class CommandPanelController {
             await run(title, work)
         }
     }
+}
 
+extension CommandPanelController {
     /// Details stay on screen; the voice gets a short phrase in its own language.
-    private func fail(_ message: String, spoken: String = "Something went wrong, details are on screen.") {
+    func fail(_ message: String, spoken: String = "Something went wrong, details are on screen.") {
         model.state = .message(message, isError: true)
         sayPhrase(spoken)
     }
@@ -267,6 +286,8 @@ final class CommandPanelController {
     func cancel() {
         speaker.stop()
         endFollowUp()
+        endCorrections()
+        pendingAdditions = []
         switch model.state {
         case .listening:
             endpoint.cancel()
@@ -295,74 +316,6 @@ final class CommandPanelController {
 }
 
 extension CommandPanelController {
-    /// Hides the panel and shows the HUD while the work drives the Mac; outputs (screen text, command
-    /// results, the agent's summary) come back in the panel.
-    private func run(
-        _ title: String, _ work: (_ onStep: @escaping StepHandler) async -> Result<String?, ActionError>
-    ) async {
-        model.state = .working
-        hide()
-        hud.show(title)
-        isDrivingMac = true
-        // Give focus back to the previous app before posting keyboard or mouse events.
-        try? await Task.sleep(for: .milliseconds(150))
-        let result = await work { [hud] step, request in
-            hud.update("\(step) · \(CommandEngine.describe(request))")
-        }
-        isDrivingMac = false
-        hud.hide()
-        switch result {
-        case .success(let output?):
-            model.state = .idle
-            show()
-            model.state = .answer(.init(text: output))
-            say(String(output.prefix(400)))
-        case .success(nil):
-            model.text = ""
-            model.state = .idle
-            completedSilently += 1
-        case .failure(.cancelled):
-            model.state = .idle
-            show()
-            model.state = .message(ActionError.cancelled.localizedDescription, isError: false)
-            sayPhrase("Stopped.")
-        case .failure(let error):
-            model.state = .idle
-            show()
-            fail(error.localizedDescription)
-        }
-    }
-
-    /// Web research keeps the panel open with the current step; Esc or the kill switch stop it.
-    private func research(_ question: String, query: String) async {
-        model.state = .working
-        switch await engine.runResearch(question, query: query) {
-        case .success(let answer):
-            model.state = .answer(.init(
-                text: answer.text, sources: answer.sourceSites, image: answer.image, chart: answer.chart
-            ))
-            say(answer.text)
-        case .failure(.cancelled):
-            model.state = .idle
-        case .failure(let error):
-            fail(error.localizedDescription)
-        }
-    }
-
-    /// Diagrams open in their own window; the panel keeps a button to reopen them.
-    private func diagram(_ request: String, description: String) async {
-        model.state = .working
-        switch await engine.runDiagram(request, description: description) {
-        case .success(let diagram):
-            model.state = .answer(.init(text: diagram.title, diagram: diagram))
-            openDiagram(diagram)
-        case .failure(.cancelled):
-            model.state = .idle
-        case .failure(let error):
-            fail(error.localizedDescription)
-        }
-    }
-
     func openDiagram(_ diagram: Diagram) {
         diagrams.show(diagram)
     }
@@ -385,13 +338,13 @@ extension CommandPanelController {
     }
 
     /// Model answers, spoken as they are.
-    private func say(_ text: String) {
+    func say(_ text: String) {
         guard isVoiceCommand, voice.speaksAnswers, !isQuiet else { return }
         speaker.speak(text, locale: voice.locale)
     }
 
     /// App phrases, spoken in the voice language even when the interface uses another one.
-    private func sayPhrase(_ key: String) {
+    func sayPhrase(_ key: String) {
         let language = voice.locale.language.languageCode?.identifier ?? "en"
         let bundle = Bundle.main.path(forResource: language, ofType: "lproj").flatMap(Bundle.init(path:))
         say(bundle?.localizedString(forKey: key, value: key, table: nil) ?? key)

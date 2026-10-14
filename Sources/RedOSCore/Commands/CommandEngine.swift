@@ -52,6 +52,7 @@ public struct CommandEngine: Sendable {
     let web: (any WebResearching)?
     let researcher: ResearchAgent?
     let designer: DiagramDesigner?
+    let corrector: CorrectionClassifier?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
@@ -75,6 +76,7 @@ public struct CommandEngine: Sendable {
         web: (any WebResearching)? = nil,
         researcher: ResearchAgent? = nil,
         designer: DiagramDesigner? = nil,
+        corrector: CorrectionClassifier? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -93,6 +95,7 @@ public struct CommandEngine: Sendable {
         self.web = web
         self.researcher = researcher
         self.designer = designer
+        self.corrector = corrector
         self.permissions = permissions
         self.audit = audit
     }

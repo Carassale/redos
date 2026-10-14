@@ -7,14 +7,8 @@ extension CommandPanelController {
     /// Push-to-talk pressed or wake word heard: listen and show the live transcript. `followUp` listens
     /// quietly after a spoken reply, cancelling RedOS's own voice, until the user talks or stays silent.
     func startListening(handsFree: Bool = false, followUp: Bool = false) {
-        if model.isFollowingUp, !followUp {
-            // Push-to-talk during a follow-up: keep the microphone that is already open.
-            endFollowUp(keepsMicrophone: true)
-            speaker.stop()
-            model.state = .listening
-            return
-        }
-        guard listening == nil, model.state != .working else { return }
+        if takesOverBusyMicrophone(handsFree: handsFree, followUp: followUp) { return }
+        guard listening == nil else { return }
         guard SystemPermissionChecker().status(of: .microphone) == .granted else {
             guard !followUp else { return }
             show()
@@ -69,6 +63,22 @@ extension CommandPanelController {
         }
     }
 
+    /// Push-to-talk during a follow-up keeps the microphone already open; while RedOS works, the words are a
+    /// correction.
+    private func takesOverBusyMicrophone(handsFree: Bool, followUp: Bool) -> Bool {
+        if model.isFollowingUp, !followUp {
+            endFollowUp(keepsMicrophone: true)
+            speaker.stop()
+            model.state = .listening
+            return true
+        }
+        if model.state == .working {
+            listenForCorrection(chime: handsFree)
+            return true
+        }
+        return false
+    }
+
     /// Words during a follow-up interrupt RedOS and become the next request.
     private func heard(_ text: String) {
         if model.isFollowingUp, model.state != .listening {
@@ -81,6 +91,7 @@ extension CommandPanelController {
 
     /// Push-to-talk released or pause after the wake word: the transcript is submitted like a typed command.
     func stopListening() {
+        if isCorrecting { return takeCorrection() }
         guard let listening else { return }
         endpoint.cancel()
         model.isFollowingUp = false

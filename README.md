@@ -139,6 +139,7 @@ Everything can be changed later in the other Settings panes.
 | Speak (push-to-talk) | hold **⌃⌥ Space**, speak, release |
 | Speak (hands-free) | say **“Hey Red”**, wait for the tink, say the command; it is sent when you pause |
 | Go on talking | after a spoken reply the microphone stays open: ask a follow-up (“and in Rome?”), answer “yes”, or talk over RedOS to interrupt it; “thanks” / “that's all” closes the panel |
+| Correct it while it works | during a spoken request the microphone stays open (or say “Hey Red” / hold ⌃⌥ Space): “stop” stops, “no, to Luca” changes the task and RedOS plans it again, “and then open Slack” runs after it |
 | Confirm / cancel | Return / Esc, or say “yes” / “no” |
 | Stop everything (kill switch) | **⌃⌥ Esc** or **Stop** in the HUD |
 | History | ↑ / ↓ in the panel |
@@ -490,7 +491,8 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M16 | system, window, file, calendar, reminder, mail and Shortcuts actions | ✅ |
 | M11 | conversation: follow-ups with context, talking over RedOS | ✅ |
 | M17 | notes of calls: live notes, minutes, history | ✅ |
-| M12–M15 | corrections while working, real-time agent, behaviors, proactivity | planned |
+| M12 | corrections while working: stop, change, add | ✅ |
+| M13–M15 | real-time agent, behaviors, proactivity | planned |
 
 Ideas and backlog in [docs/PLAN.md](docs/PLAN.md): teach by demonstration, network triggers, terminal bridge.
 

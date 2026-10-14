@@ -324,7 +324,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M16 | Azioni mancanti: sistema (volume, luminosità, aspetto, media, blocco schermo), finestre, file, Calendario/Promemoria, Mail, Comandi rapidi | ✅ |
 | M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming rimandato) |
 | M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico | ✅ (fasi 1–2) |
-| M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | |
+| M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | ✅ |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | |
 | M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | |
 | M15 | Proattività: calendario, batteria, riunioni, notifiche; Jev decide se interrompere; briefing | |
@@ -456,3 +456,19 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   live arrivano dopo. Chi parla tra "Altri" non si distingue.
 - Fase 3 (da fare): invio della minuta via Mail e promemoria delle azioni, proposta automatica quando parte
   una call, domande sullo storico ("cosa abbiamo deciso ieri con Marco?"), integrazioni esterne.
+
+### M12: correzioni in corsa (14/10/2026)
+
+- **Ascolto**: durante un piano, l'agente sullo schermo, una ricerca o un diagramma chiesti a voce, il
+  microfono resta aperto con cancellazione d'eco (come M11) e attende parole per tutta la durata; con un
+  comando scritto basta "Hey Red" o ⌃⌥Spazio. La frase compare nell'HUD.
+- **Classificazione** (`CorrectionClassifier`): prima regole ("fermati", "no", "lascia stare" → stop;
+  "no, …", "anzi", "invece" → modifica; "e poi …", "aggiungi" → aggiunta), poi una scelta System One fra
+  stop / modifica / aggiunta / non per RedOS: Jev se configurato, altrimenti il modello locale. Sotto 0.6 di
+  probabilità è "non per RedOS" e il lavoro continua. Prova locale su 8 frasi ambigue ("scrivigli che arrivo
+  alle 10 invece che alle 9", "usa Chrome", "Marco ti richiamo dopo"…): tutte sensate, ~1.7 s.
+- **Azioni**: stop annulla il lavoro; modifica lo annulla e System Two ripianifica con richiesta originale,
+  passi già avviati e correzione (`CommandEngine.replan`); aggiunta viene eseguita alla fine tramite System
+  Two con il contesto (`resolveAddition`), così "chiudi anche Slack quando hai finito" diventa `app.quit Slack`.
+- Limite: non verificabile in automatico (la cancellazione d'eco toglie anche la voce di `say`); da provare a
+  voce.
