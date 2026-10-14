@@ -117,6 +117,7 @@ Un unico provider, scelto in Impostazioni > Modelli, svolge più ruoli:
 | **Lettore** | testo selezionato, domande sullo schermo | provider |
 | **Ricerca web** | informazioni attuali (meteo, notizie, cambi, "chi ha diretto…") | provider + strumenti web |
 | **Diagrammi** | "disegna l'architettura…" | provider (con *Velocità* ragiona meno) |
+| **Appunti delle call** | appunti live ogni ~minuto di conversazione e minuta finale ("prendi appunti") | provider |
 
 Il planner restituisce una sola struttura JSON: un **piano** (azioni), una **risposta** testuale, oppure
 "guarda lo schermo", "serve l'agente", "cerca sul web: query", "disegna: descrizione". Le azioni proposte
@@ -185,6 +186,7 @@ app, bozza mail), *dangerous* (comandi di shell).
 - **Codiv**: il testo del comando e le opzioni del catalogo.
 - **Provider di System Two**: la richiesta, il titolo della finestra in primo piano, i fatti ricordati, gli
   ultimi scambi della conversazione e, per le domande sullo schermo o sul testo selezionato, quel contenuto.
+  Durante gli appunti, la trascrizione della call (non l'audio).
   Alla ricerca web non vengono passati i fatti ricordati.
 - **Mai**: chiavi API, audio (riconoscimento vocale e wake word sono sul Mac).
 

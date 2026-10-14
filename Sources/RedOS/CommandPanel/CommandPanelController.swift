@@ -47,6 +47,10 @@ final class CommandPanelController {
     private var reportableRequest: String?
     /// Version and models, appended to feedback.
     var describeSetup: () -> String = { "" }
+    /// While taking notes of a call RedOS does not speak.
+    var isQuiet = false
+    /// Starts (true) or stops the notes; returns a message, or nil when the notes window shows what happened.
+    var onTakeNotes: ((Bool) async -> String?)?
     /// The panel is hidden on purpose while actions drive the Mac (keystrokes must not land in it).
     private var isDrivingMac = false
     /// A result (answer, error, confirmation) arrived while the panel was closed.
@@ -211,8 +215,25 @@ final class CommandPanelController {
         case .answer(let text):
             model.state = .answer(.init(text: text))
             say(text)
+        case .feedback, .takeNotes:
+            await handleRedOSCommand(resolution)
+        }
+    }
+
+    private func handleRedOSCommand(_ resolution: Resolution) async {
+        switch resolution {
         case .feedback(let feedback):
             openFeedback(feedback)
+        case .takeNotes(let start):
+            if let message = await onTakeNotes?(start) {
+                model.state = .message(message, isError: false)
+            } else {
+                completedSilently += 1
+                model.state = .idle
+                hide()
+            }
+        default:
+            break
         }
     }
 
@@ -365,7 +386,7 @@ extension CommandPanelController {
 
     /// Model answers, spoken as they are.
     private func say(_ text: String) {
-        guard isVoiceCommand, voice.speaksAnswers else { return }
+        guard isVoiceCommand, voice.speaksAnswers, !isQuiet else { return }
         speaker.speak(text, locale: voice.locale)
     }
 
@@ -400,7 +421,7 @@ extension CommandPanelController {
         case .ready(let command, _): [command.request]
         case .plan(let plan, _): plan.steps
         case .invalid(let request, _), .denied(let request): [request]
-        case .unrecognized, .unavailable, .answer, .agent, .research, .diagram, .feedback: []
+        case .unrecognized, .unavailable, .answer, .agent, .research, .diagram, .feedback, .takeNotes: []
         }
         let isSensitive = requests.contains { request in
             engine.registry.action(for: request.actionID)?.parameters

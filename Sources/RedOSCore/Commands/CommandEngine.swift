@@ -26,6 +26,8 @@ public enum Resolution: Sendable, Equatable {
     case diagram(String, description: String)
     /// A report or request for the developer, to open for the user to review.
     case feedback(Feedback)
+    /// Start (true) or stop taking notes of a call.
+    case takeNotes(Bool)
 }
 
 /// Progress callback for the HUD: 1-based step number and the action about to run.

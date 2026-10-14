@@ -108,7 +108,7 @@ itself at first launch and whenever a permission is missing.
    |---|---|
    | Accessibility | control mouse, keyboard and app interfaces; read windows |
    | Microphone | push-to-talk and the wake word |
-   | Screen Recording | read the screen when an action needs visual context (restart RedOS after granting) |
+   | Screen Recording | read the screen when an action needs visual context, hear the call when taking notes (restart RedOS after granting) |
    | Calendars, Reminders | asked the first time you use the agenda or a reminder |
    | Automation | asked the first time RedOS controls Mail, System Events or Music |
 2. **Local models (Ollama)** — *Download Ollama* (or `brew install ollama`), *Start*, then *Download All
@@ -240,6 +240,21 @@ progress. A cloud provider gives much better diagrams than local models.
 Triggered routines ask for confirmation when a step is above *safe*. **Settings > Routines** lists them
 with buttons to run them, remove their triggers or delete them.
 
+### Taking notes of calls
+
+Say `prendi appunti` / `take notes` (or menu bar > **Take Notes**) during a Zoom, Meet or Teams call. A
+window next to the call shows **live notes** (topics, decisions, action items, open questions, updated about
+every minute of talk) and the transcript, with your voice (microphone) and the call (system audio) apart.
+Say `smetti di prendere appunti` / `stop taking notes`, press **Stop** or close the window: RedOS writes the
+**minutes** and saves them with the transcript in **Settings > Notes**.
+
+- Transcription runs on the Mac; the notes and minutes use the assistant (Ollama when offline).
+- The audio is never saved. Echo cancellation keeps the other voices out of the microphone, also without
+  headphones.
+- The call audio needs **Screen Recording**; without it only your voice is transcribed.
+- RedOS does not speak while taking notes. Let the participants know that you are taking notes.
+- The title comes from the calendar event going on, when RedOS may read the calendar.
+
 ### Memory and selected text
 
 - `remember that my editor is Visual Studio Code` → later `open my editor` opens VS Code.
@@ -319,6 +334,7 @@ with many tools make the assistant's prompt longer: enable only the ones you nee
 | Integrations | MCP server and MCP servers used by RedOS |
 | Routines | run, remove triggers, delete |
 | Memory | remembered facts, forget |
+| Notes | minutes of calls: open, copy with the transcript, delete |
 
 Changes apply automatically. **Priority: Accuracy** (default) sends unsure commands, plans and the screen
 agent to the assistant; **Speed** keeps plans and the agent on the local model and makes diagrams think less.
@@ -382,6 +398,7 @@ All in `~/Library/Application Support/RedOS/`:
 | `audit.jsonl` | one line per command: input, route, action, outcome |
 | `routines.json` | routines and their triggers |
 | `memory.json` | remembered facts |
+| `Notes/` | minutes and transcripts of calls (no audio) |
 | `usage.json` | cloud requests and tokens per day |
 | `mcp.json` | MCP servers used by RedOS |
 | `Diagrams/` | generated diagrams |
@@ -472,6 +489,7 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M10 | Jev as the decision core (OpenJev on Codiv), local fallback | ✅ |
 | M16 | system, window, file, calendar, reminder, mail and Shortcuts actions | ✅ |
 | M11 | conversation: follow-ups with context, talking over RedOS | ✅ |
+| M17 | notes of calls: live notes, minutes, history | ✅ |
 | M12–M15 | corrections while working, real-time agent, behaviors, proactivity | planned |
 
 Ideas and backlog in [docs/PLAN.md](docs/PLAN.md): teach by demonstration, network triggers, terminal bridge.

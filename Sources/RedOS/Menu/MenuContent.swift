@@ -19,6 +19,11 @@ struct MenuContent: View {
 
         Text("Hold ⌃⌥Space to talk")
 
+        Button(controller.notes.isListening ? "Stop Taking Notes" : "Take Notes") {
+            let start = !controller.notes.isListening
+            Task { await controller.setTakingNotes(start) }
+        }
+
         Button("Show Audit Log") {
             controller.revealAuditLog()
         }

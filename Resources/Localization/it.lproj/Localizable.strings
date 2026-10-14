@@ -285,3 +285,29 @@
 "Open in Browser" = "Apri nel browser";
 "Diagrams are not available." = "I diagrammi non sono disponibili.";
 "The model did not produce a diagram. Try a cloud provider for diagrams." = "Il modello non ha prodotto un diagramma. Per i diagrammi prova un provider cloud.";
+
+/* Notes (M17) */
+"Notes" = "Appunti";
+"Take Notes" = "Prendi appunti";
+"Stop Taking Notes" = "Smetti di prendere appunti";
+"Already taking notes." = "Sto già prendendo appunti.";
+"I'm not taking notes." = "Non sto prendendo appunti.";
+"Minutes saved: %@." = "Minuta salvata: %@.";
+"Nothing was said: no minutes saved." = "Non ho sentito nulla: nessuna minuta salvata.";
+"Only your voice is transcribed: allow Screen Recording for RedOS to hear the call." = "Trascrivo solo la tua voce: consenti la Registrazione schermo a RedOS per sentire la call.";
+"The call audio can't be captured: allow Screen Recording for RedOS." = "Non riesco a catturare l'audio della call: consenti la Registrazione schermo a RedOS.";
+"Say “prendi appunti” or use the menu to start." = "Di' “prendi appunti” o usa il menu per iniziare.";
+"Writing the minutes…" = "Scrivo la minuta…";
+"Let the participants know that you are taking notes." = "Avvisa i partecipanti che stai prendendo appunti.";
+"Notes appear after about a minute of talk." = "Gli appunti compaiono dopo circa un minuto di conversazione.";
+"Live notes" = "Appunti live";
+"Transcript" = "Trascrizione";
+"Copy with Transcript" = "Copia con trascrizione";
+"Me" = "Io";
+"Others" = "Altri";
+"Call" = "Call";
+"Open" = "Apri";
+"Close" = "Chiudi";
+"Say “prendi appunti” during a call: the minutes appear here." = "Di' “prendi appunti” durante una call: qui trovi le minute.";
+"Transcripts stay on this Mac; the audio is never saved." = "Le trascrizioni restano su questo Mac; l'audio non viene mai salvato.";
+"%lld lines" = "%lld righe";

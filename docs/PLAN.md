@@ -323,6 +323,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M10 | Jev come nucleo decisionale: intento + azione in una chiamata (OpenJev su Codiv), fallback locale | ✅ |
 | M16 | Azioni mancanti: sistema (volume, luminosità, aspetto, media, blocco schermo), finestre, file, Calendario/Promemoria, Mail, Comandi rapidi | ✅ |
 | M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming rimandato) |
+| M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico | ✅ (fasi 1–2) |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | |
 | M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | |
@@ -331,7 +332,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 ### Verso un "maggiordomo" (piano del 10/10/2026)
 
 Obiettivo: un assistente con cui parlare in tempo reale, che si può correggere mentre lavora e che
-prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M13 → M14 → M15.
+prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M12 → M13 → M14 → M15.
 
 - **Perché Jev**: risposte tipizzate (choice fino a 255 opzioni, noul, score) lette in un solo passaggio,
   70–500 ms anche con molte domande nella stessa richiesta, probabilità calibrate, nessuna risposta fuori
@@ -433,3 +434,25 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M12 → M
   poi a–z (52). Prove con `make eval`: tutte con cifre in testa 81.9% (le cifre si confondono con i numeri dei
   comandi), tutte minuscole 82.9%, maiuscole 86.7% (attuale); con 29 opzioni (4 azioni fittizie, "più passi"
   e "nessuna" su lettere minuscole) 91.4%, app 95.2%: oltre la Z funziona.
+
+### M17: prendi appunti (14/10/2026)
+
+- "prendi appunti" / "smetti di prendere appunti" (anche "take notes", menu, pulsante Stop, chiusura della
+  finestra). Finestra laterale fluttuante: tempo, appunti live, trascrizione (Io / Altri, frase in corso in
+  grigio), alla fine la minuta.
+- Audio: microfono con cancellazione d'eco (`MicrophoneCapture`, come M11: le voci della call che escono dagli
+  altoparlanti non finiscono nel microfono) e audio di sistema con ScreenCaptureKit (`SystemAudioCapture`,
+  solo audio, esclusi i suoni di RedOS; serve Registrazione schermo, senza si trascrive solo la propria voce).
+  Due `StreamTranscriber` (SpeechAnalyzer) in parallelo, sul Mac. L'audio non viene salvato.
+- Appunti live (`MeetingNotes.update`): appunti attuali + solo le righe nuove, ogni ~120 parole (o 15 dopo
+  90 s): il costo per aggiornamento non cresce con la durata. Minuta finale: titolo (`# …`, o l'evento del
+  Calendario in corso se l'accesso c'è già), sintesi, partecipanti, decisioni, azioni, punti aperti; con
+  trascrizioni oltre ~24k caratteri usa gli appunti live + la parte finale.
+- Storico: un JSON per call in `Application Support/RedOS/Notes` (0600), Impostazioni > Appunti (apri, copia
+  con trascrizione, elimina). RedOS non parla e non resta in ascolto dopo le risposte durante gli appunti.
+- Prova dal vivo (riunione finta letta da `say` + voce dell'utente): righe separate Io / Altri, nessun
+  doppione, 1 aggiornamento live + minuta in 8 s, titolo "Riunione progetto Atlante".
+- Limiti: SpeechTranscriber chiude le frasi alle pause; un monologo senza pause resta "in corso" e gli appunti
+  live arrivano dopo. Chi parla tra "Altri" non si distingue.
+- Fase 3 (da fare): invio della minuta via Mail e promemoria delle azioni, proposta automatica quando parte
+  una call, domande sullo storico ("cosa abbiamo deciso ieri con Marco?"), integrazioni esterne.

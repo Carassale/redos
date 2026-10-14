@@ -63,6 +63,9 @@ extension CommandEngine {
         case .feedback(let kind, let text):
             await record(input, nil, .answered, route: .fastPath)
             return .feedback(await feedback(kind, text: text))
+        case .takeNotes(let start):
+            await record(input, nil, .answered, route: .fastPath)
+            return .takeNotes(start)
         }
     }
 
@@ -88,7 +91,7 @@ extension CommandEngine {
                 return .answer(Self.describe(await store.all()))
             case .scheduleRoutine, .runRoutineOnLaunch:
                 return try await addTrigger(command, store: store)
-            case .remember, .forget, .recall, .feedback:
+            case .remember, .forget, .recall, .feedback, .takeNotes:
                 return .unrecognized
             }
         } catch {

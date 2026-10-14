@@ -132,7 +132,7 @@ extension CommandPanelController {
 
     /// After a spoken reply the microphone stays open, so the user can go on without the wake word.
     func followUpIfUseful() {
-        guard isVoiceCommand, voice.keepsListening, panel.isVisible else { return }
+        guard isVoiceCommand, voice.keepsListening, !isQuiet, panel.isVisible else { return }
         switch model.state {
         case .answer, .message, .confirming, .confirmingPlan: startListening(followUp: true)
         case .idle, .listening, .working: break

@@ -13,6 +13,8 @@ public enum MetaCommand: Sendable, Equatable {
     case recall
     /// "segnala un problema: …", "richiesta allo sviluppatore: …"; the text may be empty.
     case feedback(Feedback.Kind, String)
+    /// "prendi appunti" (true) / "smetti di prendere appunti" (false).
+    case takeNotes(Bool)
     private typealias Builder = @Sendable ([String]) -> MetaCommand?
 
     private static let quote = "[\"'“”«»]?"
@@ -83,6 +85,23 @@ public enum MetaCommand: Sendable, Equatable {
                 + "\\s*[:,.-]?\\s*(.*)$",
             { .feedback(.request, $0[0]) }
         ),
+        (
+            "^(?:prendi|inizia\\s+a\\s+prendere|comincia\\s+a\\s+prendere)\\s+(?:gli\\s+|degli\\s+|le\\s+)?"
+                + "(?:appunti|note)(?:\\s+(?:della|di\\s+questa|in\\s+questa)\\s+(?:call|riunione|chiamata))?$",
+            { _ in .takeNotes(true) }
+        ),
+        (
+            "^(?:take|start\\s+taking)\\s+(?:some\\s+)?(?:notes|minutes)"
+                + "(?:\\s+(?:of|for|in|during)\\s+(?:this|the)\\s+(?:call|meeting))?$",
+            { _ in .takeNotes(true) }
+        ),
+        (
+            "^(?:(?:smetti|finisci|termina)\\s+di\\s+prendere"
+                + "|(?:basta|stop|fine)\\s+(?:con\\s+)?(?:gli\\s+|degli\\s+)?)"
+                + "\\s*(?:gli\\s+)?appunti$",
+            { _ in .takeNotes(false) }
+        ),
+        ("^(?:stop|finish|end)\\s+(?:taking\\s+)?(?:the\\s+)?(?:notes|minutes)$", { _ in .takeNotes(false) }),
     ]
 
     public static func parse(_ input: String) -> MetaCommand? {

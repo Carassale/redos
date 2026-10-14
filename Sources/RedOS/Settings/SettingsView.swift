@@ -89,6 +89,8 @@ struct SettingsView: View {
             .formStyle(.grouped)
         case .memory:
             Form { MemorySection(store: controller.memory) }.formStyle(.grouped)
+        case .notes:
+            NotesHistoryView(store: controller.notes.store)
         }
     }
 
@@ -104,7 +106,7 @@ struct SettingsView: View {
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case setup, general, models, privacy, integrations, routines, memory
+    case setup, general, models, privacy, integrations, routines, memory, notes
 
     var id: String { rawValue }
 
@@ -117,6 +119,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .integrations: "Integrations"
         case .routines: "Routines"
         case .memory: "Memory"
+        case .notes: "Notes"
         }
     }
 
@@ -129,6 +132,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .integrations: "puzzlepiece.extension.fill"
         case .routines: "repeat"
         case .memory: "brain.fill"
+        case .notes: "note.text"
         }
     }
 
@@ -141,6 +145,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .integrations: .indigo
         case .routines: .orange
         case .memory: .pink
+        case .notes: .yellow
         }
     }
 }

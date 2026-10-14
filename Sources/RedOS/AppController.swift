@@ -14,6 +14,10 @@ final class AppController {
     let memory = MemoryStore()
     /// Survives engine rebuilds (settings changes) so a follow-up still has its context.
     let conversation = Conversation()
+    let notes = NoteTaker()
+    @ObservationIgnored lazy var notesWindow = NotesWindowController(taker: notes) { [weak self] in
+        Task { @MainActor in await self?.setTakingNotes(false) }
+    }
     let usage = UsageStore()
     let ollama = OllamaSetup()
     @ObservationIgnored private lazy var triggers = TriggerCenter(routines: routines) { [weak self] routine in
@@ -39,6 +43,7 @@ final class AppController {
     init() {
         commandPanel = CommandPanelController(engine: CommandEngine(registry: registry, audit: FileAuditLog()))
         commandPanel.onUnseenResultChange = { [weak self] in self?.hasUnseenResult = $0 }
+        commandPanel.onTakeNotes = { [weak self] start in await self?.setTakingNotes(start) }
         commandPanel.describeSetup = { [weak self] in
             let system = ProcessInfo.processInfo.operatingSystemVersionString
             return "RedOS \(AppInfo.version) · macOS \(system) · System One: \(self?.systemOneDescription ?? "")"
@@ -84,6 +89,8 @@ final class AppController {
             keepsListening: settings.keepsListening
         )
         let web = WebTools(locale: settings.voiceLocale)
+        notes.client = writer
+        notes.locale = voice.locale
         let designer = diagramDesigner(settings, writer: writer, local: ollama)
         commandPanel.update(
             engine: CommandEngine(
