@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.21.0</title>
+      <pubDate>Wed, 14 Oct 2026 14:41:33 +0000</pubDate>
+      <sparkle:version>71</sparkle:version>
+      <sparkle:shortVersionString>0.21.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>M13 completo: Jev anche nei passi successivi (eval/agent.jsonl), screenshot facoltativi per agente e domande sullo schermo, clic per posizione dallo screenshot</li><li>PLAN: M17 completo (proposta automatica in M15)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.21.0/RedOS-0.21.0.zip" type="application/octet-stream" sparkle:edSignature="iZLJwTWAAfPyIGk8WaseKb2GD0p8skHzVHAYLOJpxcUQH6NcG4nQBIczHYvUuDxxIIsSTuKO9ZgqlPtPkzemAw==" length="13288220"/>
+    </item>
+    <item>
       <title>RedOS 0.20.0</title>
       <pubDate>Wed, 14 Oct 2026 13:17:36 +0000</pubDate>
       <sparkle:version>68</sparkle:version>
