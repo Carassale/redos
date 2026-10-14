@@ -16,9 +16,11 @@ final class AppController {
     /// Survives engine rebuilds (settings changes) so a follow-up still has its context.
     let conversation = Conversation()
     let notes = NoteTaker()
-    @ObservationIgnored lazy var notesWindow = NotesWindowController(taker: notes) { [weak self] in
-        Task { @MainActor in await self?.setTakingNotes(false) }
-    }
+    @ObservationIgnored lazy var notesWindow = NotesWindowController(
+        taker: notes,
+        onStop: { [weak self] in Task { @MainActor in await self?.setTakingNotes(false) } },
+        onCommand: { [weak self] text in self?.commandPanel.submit(typed: text) }
+    )
     @ObservationIgnored lazy var proactive = ProactiveCenter(panel: commandPanel, notes: notes)
     let usage = UsageStore()
     let ollama = OllamaSetup()
@@ -114,6 +116,7 @@ final class AppController {
                 web: web, researcher: ResearchAgent(client: writer, tools: web), designer: designer,
                 corrector: correctionClassifier(settings, local: ollama),
                 behaviors: behaviors, persona: settings.persona.instructions(custom: settings.customPersona),
+                meetings: notes.store,
                 audit: FileAuditLog()
             ),
             voice: voice

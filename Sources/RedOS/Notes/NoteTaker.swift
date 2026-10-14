@@ -80,17 +80,21 @@ final class NoteTaker {
             phase = .idle
             return nil
         }
-        let event = Self.calendarTitle(at: started)
-        var title = event ?? String(localized: "Call")
+        let event = Self.calendarEvent(at: started)
+        var title = event?.title ?? String(localized: "Call")
         var minutes = "# \(title)\n\n\(notes)"
         if let client {
             do {
-                (title, minutes) = try await MeetingNotes(client: client).minutes(of: lines, notes: notes, title: event)
+                (title, minutes) = try await MeetingNotes(client: client)
+                    .minutes(of: lines, notes: notes, title: event?.title)
             } catch {
                 warning = error.localizedDescription
             }
         }
-        let meeting = Meeting(title: title, start: started, end: .now, minutes: minutes, transcript: lines)
+        let meeting = Meeting(
+            title: title, start: started, end: .now, minutes: minutes, transcript: lines,
+            participants: event?.participants
+        )
         do {
             try await store.save(meeting)
         } catch {
@@ -131,16 +135,22 @@ final class NoteTaker {
         }
     }
 
-    /// The calendar event going on when the call started, if RedOS may read the calendar (never asks).
-    private static func calendarTitle(at date: Date) -> String? {
+    /// The calendar event going on when the call started, with the other attendees' email addresses,
+    /// if RedOS may read the calendar (never asks).
+    private static func calendarEvent(at date: Date) -> (title: String, participants: [String])? {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return nil }
         let store = EKEventStore()
         let predicate = store.predicateForEvents(
             withStart: date.addingTimeInterval(-3600), end: date.addingTimeInterval(900), calendars: nil
         )
-        return store.events(matching: predicate)
+        let event = store.events(matching: predicate)
             .filter { !$0.isAllDay && $0.startDate <= date.addingTimeInterval(900) && $0.endDate >= date }
-            .min { abs($0.startDate.timeIntervalSince(date)) < abs($1.startDate.timeIntervalSince(date)) }?
-            .title
+            .min { abs($0.startDate.timeIntervalSince(date)) < abs($1.startDate.timeIntervalSince(date)) }
+        guard let event else { return nil }
+        let participants = (event.attendees ?? []).filter { !$0.isCurrentUser }.compactMap { attendee in
+            attendee.url.scheme == "mailto" ? attendee.url.absoluteString.dropFirst("mailto:".count)
+                .removingPercentEncoding : nil
+        }
+        return (event.title ?? String(localized: "Call"), participants)
     }
 }

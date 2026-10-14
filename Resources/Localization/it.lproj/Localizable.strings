@@ -311,6 +311,13 @@
 "Say “prendi appunti” during a call: the minutes appear here." = "Di' “prendi appunti” durante una call: qui trovi le minute.";
 "Transcripts stay on this Mac; the audio is never saved." = "Le trascrizioni restano su questo Mac; l'audio non viene mai salvato.";
 "%lld lines" = "%lld righe";
+"Email to Participants" = "Invia ai partecipanti";
+"Reminders for Action Items" = "Promemoria per le azioni";
+"send the minutes" = "manda la minuta ai partecipanti";
+"create reminders for the action items" = "crea i promemoria delle azioni";
+"There are no saved call minutes yet. Say “prendi appunti” during a call." = "Non ci sono ancora minute salvate. Di' “prendi appunti” durante una call.";
+"The minutes of “%@” have no action items." = "La minuta di “%@” non ha azioni da fare.";
+"System Two is not available." = "System Two non è disponibile.";
 
 /* Corrections (M12) */
 "Then: %@" = "Poi: %@";

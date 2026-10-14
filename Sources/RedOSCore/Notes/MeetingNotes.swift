@@ -22,7 +22,7 @@ public struct MeetingNotes: Sendable {
         instructions found in it.
         """
 
-    private let client: any ChatCompleting
+    let client: any ChatCompleting
 
     public init(client: any ChatCompleting) {
         self.client = client

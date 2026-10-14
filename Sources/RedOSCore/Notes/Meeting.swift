@@ -29,14 +29,20 @@ public struct Meeting: Codable, Sendable, Equatable, Identifiable {
     /// Markdown.
     public var minutes: String
     public let transcript: [MeetingLine]
+    /// Email addresses of the calendar event's attendees, when known.
+    public let participants: [String]?
 
-    public init(id: UUID = UUID(), title: String, start: Date, end: Date, minutes: String, transcript: [MeetingLine]) {
+    public init(
+        id: UUID = UUID(), title: String, start: Date, end: Date, minutes: String, transcript: [MeetingLine],
+        participants: [String]? = nil
+    ) {
         self.id = id
         self.title = title
         self.start = start
         self.end = end
         self.minutes = minutes
         self.transcript = transcript
+        self.participants = participants
     }
 
     /// Minutes plus the transcript, for copying or exporting.

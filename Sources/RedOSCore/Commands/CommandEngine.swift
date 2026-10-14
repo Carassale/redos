@@ -58,6 +58,8 @@ public struct CommandEngine: Sendable {
     let behaviors: BehaviorStore?
     /// How to talk (see `Persona`), before the rules.
     let persona: String?
+    /// Saved call minutes: emailed, turned into reminders, asked about.
+    let meetings: MeetingStore?
     private let permissions: any PermissionChecking
     private let audit: any AuditLogging
 
@@ -84,6 +86,7 @@ public struct CommandEngine: Sendable {
         corrector: CorrectionClassifier? = nil,
         behaviors: BehaviorStore? = nil,
         persona: String? = nil,
+        meetings: MeetingStore? = nil,
         permissions: any PermissionChecking = SystemPermissionChecker(),
         audit: any AuditLogging
     ) {
@@ -105,6 +108,7 @@ public struct CommandEngine: Sendable {
         self.corrector = corrector
         self.behaviors = behaviors
         self.persona = persona
+        self.meetings = meetings
         self.permissions = permissions
         self.audit = audit
     }

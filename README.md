@@ -256,6 +256,15 @@ Say `smetti di prendere appunti` / `stop taking notes`, press **Stop** or close 
 - RedOS does not speak while taking notes. Let the participants know that you are taking notes.
 - The title comes from the calendar event going on, when RedOS may read the calendar.
 
+After the call:
+
+- `manda la minuta ai partecipanti` / `send the minutes` (or **Email to Participants**): a Mail draft to the
+  event's attendees with the minutes; you send it.
+- `crea i promemoria delle azioni` / `create reminders for the action items` (or **Reminders for Action
+  Items**): one reminder per action item, shown for confirmation first.
+- Ask about past calls: `cosa abbiamo deciso nella call di ieri con Marco?`, `what did we decide in the last
+  meeting?` RedOS answers from the saved minutes.
+
 ### Memory and selected text
 
 - `remember that my editor is Visual Studio Code` → later `open my editor` opens VS Code.
@@ -515,7 +524,7 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M10 | Jev as the decision core (OpenJev on Codiv), local fallback | ✅ |
 | M16 | system, window, file, calendar, reminder, mail and Shortcuts actions | ✅ |
 | M11 | conversation: follow-ups with context, talking over RedOS | ✅ |
-| M17 | notes of calls: live notes, minutes, history | ✅ |
+| M17 | notes of calls: live notes, minutes, history, minutes by email, reminders, questions | ✅ |
 | M12 | corrections while working: stop, change, add | ✅ |
 | M13 | real-time screen agent: Jev picks the first click and when to stop | ✅ partial |
 | M14 | behaviors: rules said by voice, per-app rules, persona | ✅ |

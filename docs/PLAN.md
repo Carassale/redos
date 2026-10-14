@@ -323,7 +323,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M10 | Jev come nucleo decisionale: intento + azione in una chiamata (OpenJev su Codiv), fallback locale | ✅ |
 | M16 | Azioni mancanti: sistema (volume, luminosità, aspetto, media, blocco schermo), finestre, file, Calendario/Promemoria, Mail, Comandi rapidi | ✅ |
 | M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming rimandato) |
-| M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico | ✅ (fasi 1–2) |
+| M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico, minuta via Mail, promemoria delle azioni, domande sulle call passate | ✅ |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | ✅ |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | ✅ parziale (primo passo e "finito" a Jev) |
 | M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | ✅ |
@@ -454,8 +454,28 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   doppione, 1 aggiornamento live + minuta in 8 s, titolo "Riunione progetto Atlante".
 - Limiti: SpeechTranscriber chiude le frasi alle pause; un monologo senza pause resta "in corso" e gli appunti
   live arrivano dopo. Chi parla tra "Altri" non si distingue.
-- Fase 3 (da fare): invio della minuta via Mail e promemoria delle azioni, proposta automatica quando parte
-  una call, domande sullo storico ("cosa abbiamo deciso ieri con Marco?"), integrazioni esterne.
+- Fase 3: fatta (sotto). Integrazioni esterne (Notion, Confluence…) restano fuori: le minute stanno nello
+  storico di RedOS.
+
+#### Fase 3: dopo la call (14/10/2026)
+
+- Partecipanti: dall'evento del Calendario in corso (indirizzi `mailto` degli invitati, escluso l'utente),
+  salvati nella riunione (`participants`, opzionale: i JSON vecchi si leggono ancora).
+- "manda la minuta ai partecipanti" / "send the minutes" (anche pulsante **Invia ai partecipanti**): bozza
+  di Mail con destinatari, oggetto = titolo, testo = minuta senza segni Markdown. Comando diretto: `mail.draft`
+  apre solo la bozza, l'invio resta all'utente. `mail.draft` ora accetta più destinatari separati da virgola.
+- "crea i promemoria delle azioni" / "create reminders for the action items" (anche pulsante): System Two
+  estrae le azioni dalla minuta in JSON (compito, responsabile, oggi/domani), un `reminder.add` per azione
+  ("Marco: …" se non è dell'utente). Piano scritto da un modello: sempre da confermare.
+- Domande sulle call passate ("cosa abbiamo deciso nella call di ieri con Marco?"): riconosciute da una
+  parola di call (call, riunione, meeting, minuta…) + un indizio di passato (ieri, abbiamo deciso, did…),
+  così "che riunioni ho oggi?" resta al calendario. Si scelgono fino a 5 call (giorno citato, poi parole in
+  comune con titolo e minuta) e si risponde con minute e trascrizioni (~24k caratteri) come dati.
+- Prova dal vivo via MCP con una minuta finta di ieri: risposte corrette su decisioni e responsabili; azioni
+  "Marco: aggiornare il piano finanziario (entro venerdì)" e "mandare il preventivo al cliente" (domani),
+  mostrate per conferma.
+- Sicurezza: un comando MCP arrivato con una conferma in sospeso la confermava (`submit()` sullo stato di
+  conferma). Ora con una conferma in sospeso RedOS risponde "occupato": conferma solo l'utente.
 
 ### M12: correzioni in corsa (14/10/2026)
 

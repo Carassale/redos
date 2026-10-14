@@ -39,6 +39,10 @@ extension CommandEngine {
         if let resolution = await resolveSelection(input) {
             return resolution
         }
+        // "cosa abbiamo deciso nella call di ieri?": the saved minutes, not the screen.
+        if let resolution = await resolveMeetingQuestion(input) {
+            return resolution
+        }
         // "a chi è assegnata questa MR?": read the screen and answer, never act.
         if ScreenQuestion.matches(input), let resolution = await resolveLook(input) {
             return resolution
@@ -68,6 +72,8 @@ extension CommandEngine {
             return .takeNotes(start)
         case .briefing:
             return .briefing
+        case .sendMinutes, .minutesReminders:
+            return await handleMeeting(command, input: input)
         case .addBehavior, .listBehaviors, .removeBehaviors:
             guard let behaviors else { return nil }
             let answer = await handleBehavior(command, store: behaviors)
@@ -99,7 +105,7 @@ extension CommandEngine {
             case .scheduleRoutine, .runRoutineOnLaunch:
                 return try await addTrigger(command, store: store)
             case .remember, .forget, .recall, .feedback, .takeNotes, .addBehavior, .listBehaviors, .removeBehaviors,
-                 .briefing:
+                 .briefing, .sendMinutes, .minutesReminders:
                 return .unrecognized
             }
         } catch {

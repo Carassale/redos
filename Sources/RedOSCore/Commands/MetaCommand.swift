@@ -22,6 +22,10 @@ public enum MetaCommand: Sendable, Equatable {
     case removeBehaviors(String)
     /// "fammi il briefing", "com'è la mia giornata?".
     case briefing
+    /// "manda la minuta ai partecipanti": a Mail draft with the last call's minutes.
+    case sendMinutes
+    /// "crea i promemoria delle azioni": one reminder per action item of the last call.
+    case minutesReminders
     private typealias Builder = @Sendable ([String]) -> MetaCommand?
 
     private static let quote = "[\"'“”«»]?"
@@ -29,7 +33,7 @@ public enum MetaCommand: Sendable, Equatable {
     private static let time = "(\\d{1,2})(?:[:.](\\d{2}))?\\s*(am|pm)?"
 
     /// Order matters: the trigger and schedule forms must win over a plain "run routine X", rules over "forget X".
-    private static let patterns: [(String, Builder)] = behaviorPatterns + corePatterns
+    private static let patterns: [(String, Builder)] = behaviorPatterns + notesPatterns + corePatterns
 
     private static let corePatterns: [(String, Builder)] = [
         (

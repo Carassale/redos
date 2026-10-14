@@ -7,11 +7,14 @@ import SwiftUI
 final class NotesWindowController: NSObject, NSWindowDelegate {
     private let taker: NoteTaker
     private let onStop: @MainActor () -> Void
+    private let onCommand: @MainActor (String) -> Void
     private var panel: NSPanel?
 
-    init(taker: NoteTaker, onStop: @escaping @MainActor () -> Void) {
+    /// `onCommand` runs a command as if typed ("send the minutes").
+    init(taker: NoteTaker, onStop: @escaping @MainActor () -> Void, onCommand: @escaping @MainActor (String) -> Void) {
         self.taker = taker
         self.onStop = onStop
+        self.onCommand = onCommand
     }
 
     func show() {
@@ -27,7 +30,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
             panel.hidesOnDeactivate = false
             panel.isReleasedWhenClosed = false
             panel.delegate = self
-            let hosting = NSHostingController(rootView: NotesView(taker: taker, onStop: onStop))
+            let hosting = NSHostingController(rootView: NotesView(taker: taker, onStop: onStop, onCommand: onCommand))
             hosting.sizingOptions = []
             panel.contentViewController = hosting
             panel.setContentSize(NSSize(width: 420, height: 640))
@@ -52,6 +55,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
 private struct NotesView: View {
     let taker: NoteTaker
     let onStop: @MainActor () -> Void
+    let onCommand: @MainActor (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -69,6 +73,15 @@ private struct NotesView: View {
                 ProgressView("Writing the minutes…").frame(maxWidth: .infinity, maxHeight: .infinity)
             case .saved(let meeting):
                 MinutesView(meeting: meeting)
+                HStack {
+                    Button("Email to Participants", systemImage: "envelope") {
+                        onCommand(String(localized: "send the minutes"))
+                    }
+                    Button("Reminders for Action Items", systemImage: "checklist") {
+                        onCommand(String(localized: "create reminders for the action items"))
+                    }
+                }
+                .font(.callout)
             }
         }
         .padding(14)

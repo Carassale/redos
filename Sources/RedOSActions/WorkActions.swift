@@ -139,7 +139,9 @@ struct MailDraftAction: Action {
     let summary = "Open a new email draft in Mail with recipient, subject and text, for the user to send."
     let risk = RiskLevel.moderate
     let parameters = [
-        ActionParameter("to", required: false, description: "Recipient email address or name, only if stated"),
+        ActionParameter(
+            "to", required: false, description: "Recipient email addresses or names, comma-separated, only if stated"
+        ),
         ActionParameter("subject", required: false, description: "Subject, only if stated"),
         ActionParameter("body", required: false, sensitive: true, description: "Message text"),
     ]
@@ -153,9 +155,11 @@ struct MailDraftAction: Action {
                 set draft to make new outgoing message with properties \
                     {subject:\(subject), content:\(body), visible:true}
             """
-        if let recipient = arguments["to"], !recipient.isEmpty {
-            let address = AppleScript.quoted(recipient)
-            script += "\n    tell draft to make new to recipient with properties {address:\(address)}"
+        if let recipients = arguments["to"] {
+            for recipient in recipients.split(whereSeparator: { $0 == "," || $0 == ";" }) {
+                let address = AppleScript.quoted(recipient.trimmingCharacters(in: .whitespaces))
+                script += "\n    tell draft to make new to recipient with properties {address:\(address)}"
+            }
         }
         script += "\n    activate\nend tell"
         try AppleScript.run(script)
