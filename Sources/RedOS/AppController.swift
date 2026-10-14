@@ -97,7 +97,7 @@ final class AppController {
                 registry: ActionRegistry(SystemActions.all + mcpActions), router: router,
                 planner: ModelPlanner(client: thinker),
                 assistant: ModelPlanner(client: writer),
-                agent: ModelAgent(client: thinker), observer: AccessibilityObserver(),
+                agent: screenAgent(settings, thinker: thinker), observer: AccessibilityObserver(),
                 routines: routines, memory: memory, conversation: conversation, writer: writer,
                 web: web, researcher: ResearchAgent(client: writer, tools: web), designer: designer,
                 corrector: correctionClassifier(settings, local: ollama),
@@ -113,6 +113,13 @@ final class AppController {
         if !settings.offlineOnly, let jev = jevClient(settings) { deciders.append(jev) }
         deciders.append(OllamaSystemOne(client: local))
         return CorrectionClassifier(deciders: deciders)
+    }
+
+    /// With Jev, clicks and scrolls are Jev choices (fast); typing, apps and unsure steps stay with System Two.
+    private func screenAgent(_ settings: AppSettings, thinker: any ChatCompleting) -> any Acting {
+        let model = ModelAgent(client: thinker)
+        guard !settings.offlineOnly, let jev = jevClient(settings) else { return model }
+        return JevAgent(jev: jev, fallback: model)
     }
 
     private func diagramDesigner(

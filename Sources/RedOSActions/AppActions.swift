@@ -46,6 +46,8 @@ enum InstalledApps {
         "/Applications", "/Applications/Utilities", "/System/Applications",
         "/System/Applications/Utilities", NSHomeDirectory() + "/Applications",
     ]
+    /// Apps outside the usual folders (CoreServices also holds dozens of helpers that must not match).
+    private static let otherApps = ["/System/Library/CoreServices/Finder.app"]
 
     static func url(named name: String) throws -> URL {
         if let url = match(name, in: catalog) { return url }
@@ -76,7 +78,7 @@ enum InstalledApps {
             let url = URL(filePath: directory, directoryHint: .isDirectory)
             let contents = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
             return (contents ?? []).filter { $0.pathExtension == "app" }
-        }
+        } + otherApps.map { URL(filePath: $0, directoryHint: .isDirectory) }
         return apps.map { app in
             let fileName = app.deletingPathExtension().lastPathComponent
             let names = [fileName, FileManager.default.displayName(atPath: app.path)]

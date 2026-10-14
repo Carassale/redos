@@ -325,7 +325,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming rimandato) |
 | M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico | ✅ (fasi 1–2) |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | ✅ |
-| M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | |
+| M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | ✅ parziale (primo passo e "finito" a Jev) |
 | M14 | Comportamenti: regole dette a voce ("d'ora in poi…"), persona, preferenze per app | |
 | M15 | Proattività: calendario, batteria, riunioni, notifiche; Jev decide se interrompere; briefing | |
 
@@ -472,3 +472,21 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   Two con il contesto (`resolveAddition`), così "chiudi anche Slack quando hai finito" diventa `app.quit Slack`.
 - Limite: non verificabile in automatico (la cancellazione d'eco toglie anche la voce di `say`); da provare a
   voce.
+
+### M13: agente in tempo reale (14/10/2026)
+
+- `JevAgent` (con Jev configurato e non offline) davanti a `ModelAgent`: una richiesta Jev per passo con
+  domande tipizzate sugli elementi numerati dello schermo (fino a 250 opzioni).
+- Misure dal vivo (Finder, 33–67 elementi): passo Jev **0.72–0.96 s** (quasi tutto rete), passo System Two
+  (Copilot) **3.1–4.7 s**.
+- Cosa fa bene Jev: il **primo clic** ("apri il secondo/quarto menu della barra": elemento giusto con
+  p > 0.99). Cosa fa male: capire quando il compito è finito. La domanda sì/no (`noul`) "il compito è
+  completo?" dà ~0 anche a compito fatto; una scelta "continua / finito" va meglio (4 casi su 5 giusti con
+  `curl` su Codiv) ma sbaglia sui compiti con ordinali; lasciato libero, dopo aver aperto un menu Jev ha
+  premuto una voce del menu.
+- Quindi: Jev decide il **primo passo** (clic su un elemento o scroll, se p ≥ 0.7 e l'elemento ≥ 0.6) e, dopo
+  ogni passo, se è **finito** (fermarsi presto è innocuo); tutti gli altri passi, la scrittura, le app e i
+  riassunti restano a System Two. La cronologia dell'agente ora nomina l'elemento premuto
+  (`ui.press target=#2 (menu "File")`), perché i numeri cambiano da una schermata all'altra.
+- Corretto: "apri il Finder" falliva (il Finder sta in `/System/Library/CoreServices`, fuori dal catalogo).
+- Da fare: screenshot opzionali; Jev anche per i passi successivi quando saprà riconoscere il "finito".

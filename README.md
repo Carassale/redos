@@ -492,7 +492,8 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M11 | conversation: follow-ups with context, talking over RedOS | ✅ |
 | M17 | notes of calls: live notes, minutes, history | ✅ |
 | M12 | corrections while working: stop, change, add | ✅ |
-| M13–M15 | real-time agent, behaviors, proactivity | planned |
+| M13 | real-time screen agent: Jev picks the first click and when to stop | ✅ partial |
+| M14–M15 | behaviors, proactivity | planned |
 
 Ideas and backlog in [docs/PLAN.md](docs/PLAN.md): teach by demonstration, network triggers, terminal bridge.
 

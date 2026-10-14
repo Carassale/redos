@@ -113,7 +113,7 @@ Un unico provider, scelto in Impostazioni > Modelli, svolge più ruoli:
 |---|---|---|
 | **Assistente** | domande, richieste che System One non capisce o non è sicuro | provider |
 | **Planner** | richieste in più passi ("apri il progetto, fai pull e lancia i test") → piano di azioni validate | provider con *Precisione*, Ollama con *Velocità* |
-| **Agente sullo schermo** | compiti che richiedono di guardare lo schermo a ogni passo ("compila il modulo") | come il planner |
+| **Agente sullo schermo** | compiti che richiedono di guardare lo schermo a ogni passo ("compila il modulo"); con Jev il primo clic e il "finito" li decide Jev (~0.8 s invece di 3–5 s) | come il planner |
 | **Lettore** | testo selezionato, domande sullo schermo | provider |
 | **Ricerca web** | informazioni attuali (meteo, notizie, cambi, "chi ha diretto…") | provider + strumenti web |
 | **Diagrammi** | "disegna l'architettura…" | provider (con *Velocità* ragiona meno) |

@@ -14,6 +14,7 @@ struct SystemActionTests {
         #expect(try InstalledApps.url(named: "Calcolatrice").lastPathComponent == "Calculator.app")
         #expect(try InstalledApps.url(named: "Calculator").lastPathComponent == "Calculator.app")
         #expect(try InstalledApps.url(named: "Note").lastPathComponent == "Notes.app")
+        #expect(try InstalledApps.url(named: "Finder").lastPathComponent == "Finder.app")
     }
 
     @Test func remindersGetADueDate() throws {

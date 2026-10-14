@@ -321,10 +321,11 @@ extension CommandEngine {
         var succeeded: ActionRequest?
         for number in 1...ModelAgent.maxSteps {
             let request: ActionRequest
+            let screen: String
             switch await nextStep(context, history: history, agent: agent, observer: observer) {
             case .failure(let error): return .failure(error)
-            case .success(.done(let summary)): return .success(summary)
-            case .success(.act(let next)): request = next
+            case .success((.done(let summary), _)): return .success(summary)
+            case .success((.act(let next), let seen)): (request, screen) = (next, seen)
             }
             // Small models tend to redo the last step instead of saying done (a second press would undo it).
             if request == succeeded, request.actionID != "scroll" { return .success(nil) }
@@ -333,7 +334,8 @@ extension CommandEngine {
             guard repeats < 3 else {
                 return .failure(.failed(String(localized: "Stopped: the same step kept repeating.")))
             }
-            let line = Self.describe(request)
+            // Element numbers change from screen to screen: the history also names the element.
+            let line = Self.describe(request) + Self.element(request, in: screen)
             guard isAllowedForAgent(request) else {
                 history.append("\(line) -> refused: not allowed for the agent")
                 continue
@@ -365,13 +367,22 @@ extension CommandEngine {
         return ([request.actionID] + arguments).joined(separator: " ")
     }
 
+    /// " (menu \"File\")" for a "#2" target listed on `screen`.
+    static func element(_ request: ActionRequest, in screen: String) -> String {
+        guard let target = request.arguments["target"], target.hasPrefix("#"),
+              let line = screen.split(separator: "\n").first(where: { $0.hasPrefix("[\(target.dropFirst())] ") })
+        else { return "" }
+        return " (\(line.drop { $0 != " " }.dropFirst()))"
+    }
+
     private func nextStep(
         _ task: String, history: [String], agent: any Acting, observer: any ScreenObserving
-    ) async -> Result<AgentStep, ActionError> {
+    ) async -> Result<(AgentStep, String), ActionError> {
         if Task.isCancelled { return .failure(.cancelled) }
         do {
             let screen = try await observer.observe()
-            return .success(try await agent.next(task: task, history: history, screen: screen, registry: registry))
+            let step = try await agent.next(task: task, history: history, screen: screen, registry: registry)
+            return .success((step, screen))
         } catch {
             if Task.isCancelled { return .failure(.cancelled) }
             let actionError = error as? ActionError ?? .failed(error.localizedDescription)
