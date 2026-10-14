@@ -5,6 +5,16 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.15.0</title>
+      <pubDate>Wed, 14 Oct 2026 08:23:35 +0000</pubDate>
+      <sparkle:version>58</sparkle:version>
+      <sparkle:shortVersionString>0.15.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:channel>beta</sparkle:channel>
+      <description><![CDATA[<ul><li>feat: take notes of calls with live notes and minutes (M17, v0.15.0)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.15.0/RedOS-0.15.0.zip" type="application/octet-stream" sparkle:edSignature="3ldoHclusAcOLkJV0Zn4hTJF8kaP4j3PtPldfzGnCbCBPdSBJu+r665tN9MCy7eUjH90thkurkCZInN+idBdBA==" length="13135589"/>
+    </item>
+    <item>
       <title>RedOS 0.14.1</title>
       <pubDate>Mon, 12 Oct 2026 08:23:08 +0000</pubDate>
       <sparkle:version>56</sparkle:version>
