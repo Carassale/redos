@@ -5,6 +5,15 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.22.0</title>
+      <pubDate>Sat, 17 Oct 2026 17:11:34 +0200</pubDate>
+      <sparkle:version>73</sparkle:version>
+      <sparkle:shortVersionString>0.22.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>MCP client: server HTTP (url+headers, SSE), flag trusted senza conferma, risultati MCP rielaborati dal writer, risposte in Markdown formattato</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.22.0/RedOS-0.22.0.zip" type="application/octet-stream" sparkle:edSignature="lj5ey2qFaoWb7xcgiQhwkmStNdl85GG7ggFXq62i2hGVCyxNLncGQ8hdbShwnkRzaA3mcuJrUh1fcSvKacGuDA==" length="13339019"/>
+    </item>
+    <item>
       <title>RedOS 0.21.0</title>
       <pubDate>Wed, 14 Oct 2026 14:41:33 +0000</pubDate>
       <sparkle:version>71</sparkle:version>
