@@ -343,10 +343,10 @@ extension CommandPanelController {
         sayPhrase("I opened the report in the browser.")
     }
 
-    /// Model answers, spoken as they are.
+    /// Model answers, spoken without their Markdown marks.
     func say(_ text: String) {
         guard isVoiceCommand, voice.speaksAnswers, !isQuiet else { return }
-        speaker.speak(text, locale: voice.locale)
+        speaker.speak(MarkdownText.plain(text), locale: voice.locale)
     }
 
     /// App phrases, spoken in the voice language even when the interface uses another one.

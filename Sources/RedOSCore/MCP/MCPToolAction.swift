@@ -7,13 +7,13 @@ public struct MCPToolAction: ReportingAction {
     public let risk: RiskLevel
     public let parameters: [ActionParameter]
     let tool: MCPToolInfo
-    let client: MCPStdioClient
+    let client: any MCPClient
 
-    public init(server: String, tool: MCPToolInfo, client: MCPStdioClient) {
+    public init(server: String, tool: MCPToolInfo, client: any MCPClient, trusted: Bool = false) {
         id = "mcp.\(Self.identifier(server)).\(Self.identifier(tool.name))"
         summary = "[MCP \(server)] " + tool.description.split(separator: "\n").prefix(2).joined(separator: " ")
         // Read-only tools run like safe actions; MCP tools are destructive unless the server says otherwise.
-        risk = tool.isReadOnly ? .safe : tool.isDestructive ? .dangerous : .moderate
+        risk = trusted || tool.isReadOnly ? .safe : tool.isDestructive ? .dangerous : .moderate
         parameters = Self.parameters(of: tool.inputSchema)
         self.tool = tool
         self.client = client
@@ -83,7 +83,7 @@ public actor MCPHub {
         public let error: String?
     }
 
-    private var clients: [String: (config: MCPServerConfig, client: MCPStdioClient)] = [:]
+    private var clients: [String: (config: MCPServerConfig, client: (any MCPClient)?)] = [:]
     private var actions: [String: [MCPToolAction]] = [:]
     private var errors: [String: String] = [:]
 
@@ -93,7 +93,7 @@ public actor MCPHub {
     public func update(_ configuration: MCPConfiguration) async {
         let enabled = configuration.mcpServers.filter { $0.value.disabled != true }
         for (name, entry) in clients where enabled[name] != entry.config || errors[name] != nil {
-            await entry.client.stop()
+            await entry.client?.stop()
             clients[name] = nil
             actions[name] = nil
             errors[name] = nil
@@ -101,18 +101,20 @@ public actor MCPHub {
         struct Connection: Sendable {
             let name: String
             let config: MCPServerConfig
-            let client: MCPStdioClient
+            let client: (any MCPClient)?
             let result: Result<[MCPToolInfo], any Error>
         }
         await withTaskGroup(of: Connection.self) { group in
             for (name, config) in enabled where clients[name] == nil {
                 group.addTask {
-                    let client = MCPStdioClient(config: config)
+                    var client: (any MCPClient)?
                     let result: Result<[MCPToolInfo], any Error>
                     do {
-                        result = .success(try await client.connect())
+                        let connection = try config.makeClient()
+                        client = connection
+                        result = .success(try await connection.connect())
                     } catch {
-                        await client.stop()
+                        await client?.stop()
                         result = .failure(error)
                     }
                     return Connection(name: name, config: config, client: client, result: result)
@@ -123,7 +125,11 @@ public actor MCPHub {
                 clients[name] = (connection.config, connection.client)
                 switch connection.result {
                 case .success(let tools):
-                    actions[name] = tools.map { MCPToolAction(server: name, tool: $0, client: connection.client) }
+                    guard let client = connection.client else { continue }
+                    let trusted = connection.config.trusted == true
+                    actions[name] = tools.map {
+                        MCPToolAction(server: name, tool: $0, client: client, trusted: trusted)
+                    }
                 case .failure(let error):
                     errors[name] = error.localizedDescription
                 }

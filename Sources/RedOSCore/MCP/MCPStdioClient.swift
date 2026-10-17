@@ -1,17 +1,43 @@
 import Foundation
 
-/// One MCP server RedOS starts, in the `mcpServers` format of Claude Desktop and VS Code.
+/// One MCP server RedOS uses, in the `mcpServers` format of Claude Desktop and VS Code:
+/// started locally (`command`) or reached over Streamable HTTP (`url`).
 public struct MCPServerConfig: Codable, Sendable, Equatable {
-    public var command: String
+    public var command: String?
     public var args: [String]?
     public var env: [String: String]?
+    public var type: String?
+    public var url: String?
+    public var headers: [String: String]?
     public var disabled: Bool?
+    /// Its tools run without asking for confirmation.
+    public var trusted: Bool?
 
-    public init(command: String, args: [String]? = nil, env: [String: String]? = nil, disabled: Bool? = nil) {
+    public init(
+        command: String? = nil, args: [String]? = nil, env: [String: String]? = nil,
+        url: String? = nil, headers: [String: String]? = nil, disabled: Bool? = nil, trusted: Bool? = nil
+    ) {
         self.command = command
         self.args = args
         self.env = env
+        self.type = url == nil ? nil : "http"
+        self.url = url
+        self.headers = headers
         self.disabled = disabled
+        self.trusted = trusted
+    }
+
+    public func makeClient() throws -> any MCPClient {
+        if let url {
+            guard let address = URL(string: url), ["http", "https"].contains(address.scheme) else {
+                throw ProviderError.commandFailed("Invalid MCP server URL: \(url)")
+            }
+            return MCPHTTPClient(url: address, headers: headers ?? [:])
+        }
+        guard let command, !command.isEmpty else {
+            throw ProviderError.commandFailed("MCP server without command or url")
+        }
+        return MCPStdioClient(command: command, args: args ?? [], env: env ?? [:])
     }
 }
 
@@ -46,32 +72,22 @@ public struct MCPToolInfo: Sendable, Equatable {
     public let isDestructive: Bool
 }
 
-/// An MCP server started as a child process, speaking JSON-RPC over stdio (one JSON message per line).
-public actor MCPStdioClient {
-    private let config: MCPServerConfig
-    private var process: Process?
-    private var input: FileHandle?
-    private var buffer = Data()
-    private var nextID = 0
-    private var pending: [Int: CheckedContinuation<JSONValue, any Error>] = [:]
+/// A connection to an MCP server; the transport (stdio, HTTP) only has to carry JSON-RPC messages.
+public protocol MCPClient: Actor {
+    func request(_ method: String, _ params: [String: JSONValue]) async throws -> JSONValue
+    func notify(_ method: String) async throws
+    func stop()
+}
 
-    public init(config: MCPServerConfig) {
-        self.config = config
-    }
-
-    deinit {
-        process?.terminate()
-    }
-
-    /// Starts the server and returns its tools.
+extension MCPClient {
+    /// Opens the session and returns the server's tools.
     public func connect() async throws -> [MCPToolInfo] {
-        try await start()
         _ = try await request("initialize", [
             "protocolVersion": .string(MCPServer.protocolVersion),
             "capabilities": .object([:]),
             "clientInfo": .object(["name": "RedOS", "version": "1"]),
         ])
-        try send(.object(["jsonrpc": "2.0", "method": "notifications/initialized"]))
+        try await notify("notifications/initialized")
         var tools: [MCPToolInfo] = []
         var cursor: JSONValue?
         repeat {
@@ -97,11 +113,6 @@ public actor MCPStdioClient {
         return MCPToolResult(texts.joined(separator: "\n"), isError: result["isError"] == .bool(true))
     }
 
-    public func stop() {
-        process?.terminate()
-        process = nil
-    }
-
     private static func tool(_ value: JSONValue) -> MCPToolInfo? {
         guard let name = value["name"]?.string else { return nil }
         let annotations = value["annotations"]
@@ -114,6 +125,37 @@ public actor MCPStdioClient {
             isDestructive: !readOnly && annotations?["destructiveHint"] != .bool(false)
         )
     }
+}
+
+/// An MCP server started as a child process, speaking JSON-RPC over stdio (one JSON message per line).
+public actor MCPStdioClient: MCPClient {
+    private let command: String
+    private let args: [String]
+    private let env: [String: String]
+    private var process: Process?
+    private var input: FileHandle?
+    private var buffer = Data()
+    private var nextID = 0
+    private var pending: [Int: CheckedContinuation<JSONValue, any Error>] = [:]
+
+    public init(command: String, args: [String] = [], env: [String: String] = [:]) {
+        self.command = command
+        self.args = args
+        self.env = env
+    }
+
+    deinit {
+        process?.terminate()
+    }
+
+    public func stop() {
+        process?.terminate()
+        process = nil
+    }
+
+    public func notify(_ method: String) throws {
+        try send(.object(["jsonrpc": "2.0", "method": .string(method)]))
+    }
 
     private func start() async throws {
         guard process == nil else { return }
@@ -121,10 +163,10 @@ public actor MCPStdioClient {
         let path = await Self.loginPath()
         // `npx`, `uvx`, `node`… are found through the user's PATH, like in Terminal.
         process.executableURL = URL(filePath: "/usr/bin/env")
-        process.arguments = [config.command] + (config.args ?? [])
+        process.arguments = [command] + args
         var environment = ProcessInfo.processInfo.environment
         environment["PATH"] = path
-        environment.merge(config.env ?? [:]) { _, new in new }
+        environment.merge(env) { _, new in new }
         process.environment = environment
         process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         let stdin = Pipe(), stdout = Pipe()
@@ -191,8 +233,9 @@ public actor MCPStdioClient {
         return path
     }
 
-    private func request(_ method: String, _ params: [String: JSONValue], timeout: Duration = .seconds(120))
-        async throws -> JSONValue {
+    public func request(_ method: String, _ params: [String: JSONValue]) async throws -> JSONValue {
+        if method == "initialize" { try await start() }
+        let timeout: Duration = .seconds(120)
         nextID += 1
         let id = nextID
         let watchdog = Task { [weak self] in

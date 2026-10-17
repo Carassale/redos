@@ -9,6 +9,7 @@ struct IntegrationsSettingsView: View {
     @State private var configuration = MCPConfiguration.load()
     @State private var newName = ""
     @State private var newCommand = ""
+    @State private var newToken = ""
     @State private var isConnecting = false
 
     var body: some View {
@@ -49,11 +50,18 @@ struct IntegrationsSettingsView: View {
             ForEach(configuration.mcpServers.keys.sorted(), id: \.self) { name in
                 serverRow(name)
             }
+            // In a grouped Form the title is the (hidden) label: the prompt is the visible placeholder.
             HStack {
-                TextField("Name", text: $newName).frame(width: 120)
-                TextField("Command, e.g. npx -y @modelcontextprotocol/server-memory", text: $newCommand)
+                TextField("Name", text: $newName, prompt: Text("Name")).frame(width: 120)
+                TextField("Command or URL", text: $newCommand, prompt: Text(
+                    "Command or URL, e.g. npx -y @modelcontextprotocol/server-memory"
+                ))
+                if isURL {
+                    SecureField("Token", text: $newToken, prompt: Text("Bearer token (optional)")).frame(width: 160)
+                }
                 Button("Add") { add() }
-                    .disabled(newName.isEmpty || newCommand.isEmpty)
+                    .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty
+                        || newCommand.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             .labelsHidden()
             HStack {
@@ -74,7 +82,7 @@ struct IntegrationsSettingsView: View {
         return HStack {
             VStack(alignment: .leading) {
                 Text(verbatim: name)
-                Text(verbatim: ([config?.command ?? ""] + (config?.args ?? [])).joined(separator: " "))
+                Text(verbatim: config?.url ?? ([config?.command ?? ""] + (config?.args ?? [])).joined(separator: " "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 if let error = status?.error {
                     Text(verbatim: error).font(.caption).foregroundStyle(.red).lineLimit(2)
@@ -86,6 +94,12 @@ struct IntegrationsSettingsView: View {
                 }
             }
             Spacer()
+            Toggle("No confirmation", isOn: Binding(
+                get: { config?.trusted == true },
+                set: { trusted in update { $0.mcpServers[name]?.trusted = trusted ? true : nil } }
+            ))
+            .toggleStyle(.checkbox)
+            .help("Its tools run without asking you to confirm.")
             Toggle("Enabled", isOn: Binding(
                 get: { config?.disabled != true },
                 set: { enabled in update { $0.mcpServers[name]?.disabled = enabled ? nil : true } }
@@ -96,13 +110,27 @@ struct IntegrationsSettingsView: View {
         .controlSize(.small)
     }
 
+    private var isURL: Bool {
+        let text = newCommand.trimmingCharacters(in: .whitespaces).lowercased()
+        return text.hasPrefix("http://") || text.hasPrefix("https://")
+    }
+
     private func add() {
-        let words = Self.split(newCommand)
-        guard let command = words.first else { return }
         let name = newName.trimmingCharacters(in: .whitespaces)
-        update { $0.mcpServers[name] = MCPServerConfig(command: command, args: Array(words.dropFirst())) }
+        if isURL {
+            let token = newToken.trimmingCharacters(in: .whitespaces)
+            let url = newCommand.trimmingCharacters(in: .whitespaces)
+            update { $0.mcpServers[name] = MCPServerConfig(
+                url: url, headers: token.isEmpty ? nil : ["Authorization": "Bearer \(token)"]
+            ) }
+        } else {
+            let words = Self.split(newCommand)
+            guard let command = words.first else { return }
+            update { $0.mcpServers[name] = MCPServerConfig(command: command, args: Array(words.dropFirst())) }
+        }
         newName = ""
         newCommand = ""
+        newToken = ""
     }
 
     private func update(_ change: (inout MCPConfiguration) -> Void) {

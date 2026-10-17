@@ -227,30 +227,6 @@ public struct CommandEngine: Sendable {
         }
     }
 
-    /// Runs the steps in order and stops at the first failure or when the task is cancelled.
-    /// Returns the outputs of reporting actions, if any.
-    public func execute(_ plan: ResolvedPlan, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
-        var outputs: [String] = []
-        for (index, command) in commands(of: plan).enumerated() {
-            if index > 0 {
-                // Let the previous step settle (window focus, page load) before the next one.
-                try? await Task.sleep(for: .milliseconds(400))
-            }
-            await onStep?(index + 1, command.request)
-            switch await execute(command) {
-            case .success(let output):
-                if let output { outputs.append(output) }
-            case .failure(let error):
-                return .failure(error)
-            }
-        }
-        return .success(outputs.isEmpty ? nil : outputs.joined(separator: "\n\n"))
-    }
-
-    func commands(of plan: ResolvedPlan) -> [ResolvedCommand] {
-        plan.steps.map { ResolvedCommand(input: plan.input, request: $0, route: plan.route, confidence: nil) }
-    }
-
     public func execute(_ command: ResolvedCommand) async -> Result<String?, ActionError> {
         do {
             try Task.checkCancellation()
@@ -307,5 +283,35 @@ public struct CommandEngine: Sendable {
             outcome: outcome,
             error: error?.errorDescription
         ))
+    }
+}
+
+extension CommandEngine {
+    /// Runs the steps in order and stops at the first failure or when the task is cancelled.
+    /// Returns the outputs of reporting actions, if any.
+    public func execute(_ plan: ResolvedPlan, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
+        var outputs: [String] = []
+        var usedMCP = false
+        for (index, command) in commands(of: plan).enumerated() {
+            if index > 0 {
+                // Let the previous step settle (window focus, page load) before the next one.
+                try? await Task.sleep(for: .milliseconds(400))
+            }
+            await onStep?(index + 1, command.request)
+            switch await execute(command) {
+            case .success(let output):
+                if let output { outputs.append(output) }
+                usedMCP = usedMCP || registry.action(for: command.request.actionID) is MCPToolAction
+            case .failure(let error):
+                return .failure(error)
+            }
+        }
+        guard !outputs.isEmpty else { return .success(nil) }
+        let text = outputs.joined(separator: "\n\n")
+        return .success(usedMCP ? await explain(text, for: plan.input) : text)
+    }
+
+    func commands(of plan: ResolvedPlan) -> [ResolvedCommand] {
+        plan.steps.map { ResolvedCommand(input: plan.input, request: $0, route: plan.route, confidence: nil) }
     }
 }

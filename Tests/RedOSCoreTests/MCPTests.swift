@@ -139,7 +139,7 @@ struct MCPClientTests {
         let url = FileManager.default.temporaryDirectory.appending(path: "redos-mcp-test-\(UUID().uuidString).py")
         try Self.script.write(to: url, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: url) }
-        let client = MCPStdioClient(config: MCPServerConfig(command: "python3", args: [url.path]))
+        let client = MCPStdioClient(command: "python3", args: [url.path])
         let tools = try await client.connect()
         #expect(tools.map(\.name) == ["add"])
         #expect(tools.first?.isReadOnly == true)
@@ -151,6 +151,45 @@ struct MCPClientTests {
         #expect(action.parameters.first?.kind == .integer)
         #expect(try await action.report(["a": "2", "b": "3.5"]) == "5.5")
         await client.stop()
+    }
+
+    @Test func usesToolsOfAnHTTPServer() async throws {
+        let port: UInt16 = 47_998
+        let tool = MCPServerTool(
+            name: "echo", description: "Repeats the text.",
+            inputSchema: .object(["type": "object", "properties": .object(["text": .object(["type": "string"])])]),
+            isReadOnly: true
+        ) { arguments in MCPToolResult(arguments["text"]?.string ?? "") }
+        let endpoint = MCPHTTPEndpoint(
+            server: MCPServer(name: "test", version: "1", instructions: "", tools: [tool]), token: "secret", port: port
+        )
+        let server = try LocalHTTPServer(port: port) { await endpoint.respond($0) }
+        server.start()
+        defer { server.stop() }
+        try await Task.sleep(for: .milliseconds(200))
+
+        let json = #"{"url": "http://127.0.0.1:47998/mcp", "type": "http", "#
+            + #""headers": {"Authorization": "Bearer secret"}}"#
+        let config = try JSONDecoder().decode(MCPServerConfig.self, from: Data(json.utf8))
+        let client = try config.makeClient()
+        let tools = try await client.connect()
+        #expect(tools.map(\.name) == ["echo"])
+        let action = MCPToolAction(server: "remote", tool: try #require(tools.first), client: client)
+        #expect(try await action.report(["text": "ciao"]) == "ciao")
+
+        let writing = MCPToolInfo(
+            name: "w", description: "", inputSchema: .object([:]), isReadOnly: false, isDestructive: true
+        )
+        #expect(MCPToolAction(server: "remote", tool: writing, client: client).risk == .dangerous)
+        #expect(MCPToolAction(server: "remote", tool: writing, client: client, trusted: true).risk == .safe)
+
+        let wrong = MCPServerConfig(url: "http://127.0.0.1:47998/mcp", headers: ["Authorization": "Bearer nope"])
+        await #expect(throws: ProviderError.self) { try await wrong.makeClient().connect() }
+    }
+
+    @Test func readsEventStreamResponses() {
+        let body = "event: message\r\ndata: {\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{}}\r\n\r\n"
+        #expect(MCPHTTPClient.messages(in: Data(body.utf8)).first?["id"] == .number(3))
     }
 
     @Test func convertsArguments() {

@@ -199,15 +199,45 @@ struct MarkdownText: View {
 
     @ViewBuilder
     private func line(_ text: String) -> some View {
-        if text.hasPrefix("# ") {
-            inline(String(text.dropFirst(2))).font(.title3.bold())
-        } else if text.hasPrefix("## ") || text.hasPrefix("### ") {
-            inline(String(text.drop { $0 == "#" }.dropFirst())).font(.headline).padding(.top, 4)
-        } else if text.trimmingCharacters(in: .whitespaces).isEmpty {
-            Color.clear.frame(height: 2)
-        } else {
-            inline(text)
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        let indent = CGFloat(text.prefix { $0 == " " }.count / 2) * 14
+        Group {
+            if trimmed.hasPrefix("# ") {
+                inline(String(trimmed.dropFirst(2))).font(.title3.bold())
+            } else if trimmed.hasPrefix("##"), trimmed.drop(while: { $0 == "#" }).hasPrefix(" ") {
+                inline(String(trimmed.drop { $0 == "#" }.dropFirst())).font(.headline).padding(.top, 4)
+            } else if trimmed.isEmpty {
+                Color.clear.frame(height: 2)
+            } else if ["---", "***", "___"].contains(trimmed) {
+                Divider()
+            } else if let item = Self.listItem(trimmed) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(verbatim: "•")
+                    inline(item)
+                }
+                .padding(.leading, indent)
+            } else {
+                inline(trimmed).padding(.leading, indent)
+            }
         }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private static func listItem(_ line: String) -> String? {
+        ["- ", "* ", "+ "].first { line.hasPrefix($0) }.map { _ in String(line.dropFirst(2)) }
+    }
+
+    /// The text without Markdown marks, for the voice.
+    static func plain(_ markdown: String) -> String {
+        markdown.split(separator: "\n", omittingEmptySubsequences: false).map { line in
+            var text = line.trimmingCharacters(in: .whitespaces)
+            if ["---", "***", "___"].contains(text) { return "" }
+            text = String(text.drop { $0 == "#" }).trimmingCharacters(in: .whitespaces)
+            text = listItem(text) ?? text
+            let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+            return (try? AttributedString(markdown: text, options: options)).map { String($0.characters) } ?? text
+        }
+        .joined(separator: "\n")
     }
 
     private func inline(_ text: String) -> Text {

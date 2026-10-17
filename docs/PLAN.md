@@ -244,10 +244,12 @@ flowchart LR
   costante), rifiuto di richieste con `Origin` (browser, DNS rebinding) e di Host diversi. Tool
   `run_command` (il comando passa dal pannello come se fosse digitato: stesse conferme, risposta restituita al
   client) e `read_screen` (opzionale). Spento di default; "Copia per VS Code / Claude Code".
-- **Client** (`MCPStdioClient`, `MCPHub`): server stdio da `mcp.json` (formato `mcpServers` di Claude
-  Desktop), PATH della shell di login per `npx`/`uvx`. I tool diventano azioni `mcp.<server>.<tool>` solo per
+- **Client** (`MCPStdioClient`/`MCPHTTPClient`, `MCPHub`): server da `mcp.json` (formato `mcpServers` di Claude
+  Desktop/VS Code): stdio (`command`, PATH della shell di login per `npx`/`uvx`) o Streamable HTTP (`url`,
+  `headers`, risposte JSON o SSE). I tool diventano azioni `mcp.<server>.<tool>` solo per
   System Two (System One resta sul catalogo base): `readOnlyHint` → safe, `destructiveHint: false` →
-  moderate, altrimenti dangerous (conferma). Argomenti convertiti ai tipi dello schema.
+  moderate, altrimenti dangerous (conferma); `"trusted": true` sul server → safe. Argomenti convertiti ai
+  tipi dello schema; i risultati (spesso JSON) passano dal writer prima di essere mostrati.
 - Verifica: 8 test (protocollo, sicurezza HTTP, server Python stdio reale); prova live: curl → `run_command`
   "quanto fa 17 per 23" in 0.3 s; "usa lo strumento MCP add per sommare 1234 e 4321" via MCP → planner Copilot
   → `mcp.calc.add` → "5555" (10 s).

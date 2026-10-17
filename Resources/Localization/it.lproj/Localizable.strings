@@ -136,8 +136,13 @@
 "New Token" = "Nuovo token";
 "MCP servers used by RedOS" = "Server MCP usati da RedOS";
 "Name" = "Nome";
-"Command, e.g. npx -y @modelcontextprotocol/server-memory" = "Comando, es. npx -y @modelcontextprotocol/server-memory";
+"Command or URL" = "Comando o URL";
+"Command or URL, e.g. npx -y @modelcontextprotocol/server-memory" = "Comando o URL, es. npx -y @modelcontextprotocol/server-memory";
+"Token" = "Token";
+"Bearer token (optional)" = "Token Bearer (facoltativo)";
 "Add" = "Aggiungi";
+"No confirmation" = "Senza conferma";
+"Its tools run without asking you to confirm." = "I suoi strumenti vengono eseguiti senza chiederti conferma.";
 "Open mcp.json" = "Apri mcp.json";
 "Reconnect" = "Riconnetti";
 "Off" = "Spento";

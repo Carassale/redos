@@ -9,9 +9,7 @@ struct AnswerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(verbatim: answer.text)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            MarkdownText(markdown: answer.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let chart = answer.chart {
                 AnswerChart(chart: chart)
