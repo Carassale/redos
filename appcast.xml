@@ -5,6 +5,15 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.23.0</title>
+      <pubDate>Mon, 19 Oct 2026 17:46:54 +0200</pubDate>
+      <sparkle:version>75</sparkle:version>
+      <sparkle:shortVersionString>0.23.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>MCP più veloce: Jev sceglie direttamente i tool MCP in sola lettura quando è sicuro (&gt;= 0.95, senza pianificazione Copilot), risposte MCP lette ad alta voce mentre Copilot le scrive</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.23.0/RedOS-0.23.0.zip" type="application/octet-stream" sparkle:edSignature="a+nQucoY0aNMg19pxHIGeVovM0wPUudUHByvTm1fIN/6Yte/IyXWIWC5k7xphJryHFhyStY+7Xy0KlTbHw9SBg==" length="13355260"/>
+    </item>
+    <item>
       <title>RedOS 0.22.0</title>
       <pubDate>Sat, 17 Oct 2026 17:11:34 +0200</pubDate>
       <sparkle:version>73</sparkle:version>
