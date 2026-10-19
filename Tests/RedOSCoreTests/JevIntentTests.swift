@@ -39,6 +39,12 @@ private struct ReplyChat: ChatCompleting {
     func preload() async {}
 }
 
+private actor SilentMCPClient: MCPClient {
+    func request(_ method: String, _ params: [String: JSONValue]) async throws -> JSONValue { .null }
+    func notify(_ method: String) async throws {}
+    func stop() {}
+}
+
 @MainActor
 struct JevIntentTests {
     private let registry = ActionRegistry([
@@ -113,6 +119,37 @@ struct JevIntentTests {
             local: FixedRouter(decision: read), remote: FixedRouter(decision: .screenQuestion(confidence: 0.97))
         )
         #expect(try await screen.route("x") == .screenQuestion(confidence: 0.97))
+    }
+
+    @Test func confidentReadOnlyToolSkipsSystemTwo() async throws {
+        let schema: JSONValue = .object([
+            "type": "object", "properties": .object(["query": .object(["type": "string"])]),
+            "required": .array(["query"]),
+        ])
+        let info = MCPToolInfo(
+            name: "list_case_histories", description: "Case histories.", inputSchema: schema, isReadOnly: true,
+            isDestructive: false
+        )
+        let tool = MCPToolAction(server: "red", tool: info, client: SilentMCPClient())
+        let extractor = ArgumentExtractor(client: ReplyChat(content: #"{"query": "Luxottica"}"#))
+        func route(_ jev: FakeJev) async throws -> RouteDecision {
+            try await JevIntentRouter(registry: ActionRegistry([tool]), jev: jev, extractor: extractor, threshold: 0.8)
+                .route("case history di luxottica")
+        }
+        let request = ActionRequest(tool.id, ["query": "Luxottica"])
+        // Looks like a knowledge question to the kind question, but the tool pick is sure.
+        let sure = FakeJev(kind: "knowledge", action: tool.id, actionProbability: 0.97)
+        #expect(try await route(sure) == .action(request, confidence: 0.97))
+        let unsure = FakeJev(kind: "knowledge", action: tool.id, actionProbability: 0.91)
+        #expect(try await route(unsure) == .noAction(confidence: 0.95))
+        // Several steps: System Two plans them.
+        #expect(try await route(FakeJev(kind: "steps", action: tool.id)) == .multiStep(confidence: 0.95))
+
+        let hybrid = HybridRouter(
+            local: FixedRouter(decision: .noAction(confidence: 0.6)),
+            remote: FixedRouter(decision: .action(request, confidence: 0.95)), remoteOnly: [tool.id]
+        )
+        #expect(try await hybrid.route("x") == .action(request, confidence: 0.95))
     }
 
     @Test func decodesNoulAndScoreAnswers() throws {

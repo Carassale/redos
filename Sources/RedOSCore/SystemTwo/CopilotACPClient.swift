@@ -24,7 +24,7 @@ public struct CopilotACPClient: ChatCompleting, ModelListing {
         }
         let images = messages.flatMap { $0.images ?? [] }
         let text = try await connection.prompt(
-            prompt, images: images, timeout: timeout, progress: ActivityReporter.handler
+            prompt, images: images, timeout: timeout, progress: ActivityReporter.handler, stream: AnswerStream.writing
         )
         guard !text.isEmpty else { throw ProviderError.emptyResponse }
         return ChatResponse(message: .init(content: text), logprobs: nil)
@@ -54,6 +54,8 @@ actor ACPConnection {
     private var replies: [String: String] = [:]
     /// Who wants to see a long reply arriving, by session id.
     private var watchers: [String: ActivityHandler] = [:]
+    /// Who receives the reply as it arrives (to speak it), by session id.
+    private var streams: [String: AsyncStream<String>.Continuation] = [:]
     private let workDirectory = FileManager.default.temporaryDirectory.appending(path: "redos-copilot")
 
     init(executable: URL, model: String?, reasoningEffort: String?) {
@@ -114,7 +116,8 @@ actor ACPConnection {
     }
 
     func prompt(
-        _ text: String, images: [Data] = [], timeout: Duration, progress: ActivityHandler? = nil
+        _ text: String, images: [Data] = [], timeout: Duration, progress: ActivityHandler? = nil,
+        stream: AsyncStream<String>.Continuation? = nil
     ) async throws -> String {
         try await start()
         let session = try await request(
@@ -123,9 +126,11 @@ actor ACPConnection {
         guard case .string(let sessionID) = session["sessionId"] else { throw ProviderError.emptyResponse }
         replies[sessionID] = ""
         watchers[sessionID] = progress
+        streams[sessionID] = stream
         defer {
             replies[sessionID] = nil
             watchers[sessionID] = nil
+            streams[sessionID] = nil
         }
         let watchdog = Task { [weak self] in
             try await Task.sleep(for: timeout)
@@ -206,6 +211,7 @@ actor ACPConnection {
             // Copilot's own notices ("Info: Disabled tools: …") arrive as whole chunks before the reply.
             if before == 0, chunk.hasPrefix("Info: ") { return }
             replies[session, default: ""] += chunk
+            streams[session]?.yield(chunk)
             // Only long replies (diagrams) report progress, every ~1000 characters.
             let after = before + chunk.count
             if after >= 1000, after / 1000 != before / 1000, let watcher = watchers[session] {

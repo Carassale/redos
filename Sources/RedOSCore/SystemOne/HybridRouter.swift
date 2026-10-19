@@ -7,10 +7,13 @@ import Foundation
 public struct HybridRouter: CommandRouting {
     private let local: any CommandRouting
     private let remote: any CommandRouting
+    /// Actions only Jev knows (external tools): its confident pick stands, the local model cannot dispute it.
+    private let remoteOnly: Set<String>
 
-    public init(local: any CommandRouting, remote: any CommandRouting) {
+    public init(local: any CommandRouting, remote: any CommandRouting, remoteOnly: Set<String> = []) {
         self.local = local
         self.remote = remote
+        self.remoteOnly = remoteOnly
     }
 
     public func prepare() async {
@@ -40,6 +43,7 @@ public struct HybridRouter: CommandRouting {
         guard let decision = try? await remoteDecision.value else { return localDecision }
         // A single action the local model did not pick confidently: System Two settles it.
         if case .action(let request, let confidence) = decision {
+            if remoteOnly.contains(request.actionID) { return decision }
             return .uncertain(actionID: request.actionID, confidence: confidence)
         }
         return decision

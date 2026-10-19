@@ -34,6 +34,9 @@ public struct JevIntentRouter: CommandRouting {
     }
 
     public static let noneLabel = "none"
+    /// A read-only external tool (MCP) picked at least this surely runs without System Two's plan (wrong picks
+    /// seen at 0.91).
+    public static let externalToolThreshold = 0.95
 
     private let registry: ActionRegistry
     private let jev: any JevDeciding
@@ -88,6 +91,9 @@ public struct JevIntentRouter: CommandRouting {
             throw SystemOneError.noDecision
         }
         let confidence = kindAnswer.probability
+        if let tool = await externalTool(answers["action"], kind: kind, kindConfidence: confidence, input: input) {
+            return tool
+        }
         guard confidence >= threshold else { return .noAction(confidence: confidence) }
         switch kind {
         case .action:
@@ -99,6 +105,25 @@ public struct JevIntentRouter: CommandRouting {
         case .currentInfo: return .research(confidence: confidence)
         case .diagram: return .diagram(confidence: confidence)
         }
+    }
+
+    /// Questions for a knowledge base often look like "knowledge" to the kind question, yet the action question
+    /// names the right tool: a confident pick runs, unless Jev is sure the request needs more than one tool call.
+    private func externalTool(
+        _ answer: JevAnswer?, kind: Kind, kindConfidence: Double, input: String
+    ) async -> RouteDecision? {
+        let other: Set<Kind> = [.steps, .screenTask, .screenQuestion, .currentInfo, .diagram]
+        guard let answer, let choice = answer.choice,
+              answer.probability >= max(threshold, Self.externalToolThreshold),
+              !(other.contains(kind) && kindConfidence >= threshold),
+              let tool = registry.action(for: choice) as? MCPToolAction, tool.risk == .safe, let extractor,
+              let arguments = try? await extractor.arguments(for: tool, input: input)
+        else { return nil }
+        let decision = SystemOneRouter.refine(
+            ActionRequest(tool.id, arguments), registry: registry, confidence: answer.probability
+        )
+        guard case .action = decision else { return nil }
+        return decision
     }
 
     private func action(_ answer: JevAnswer?, input: String) async throws -> RouteDecision {

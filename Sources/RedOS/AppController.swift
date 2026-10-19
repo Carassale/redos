@@ -170,7 +170,7 @@ final class AppController {
             registry: ActionRegistry(SystemActions.all + mcpActions), jev: jev, extractor: extractor,
             warmUp: [extraction], threshold: threshold
         )
-        return HybridRouter(local: local, remote: remote)
+        return HybridRouter(local: local, remote: remote, remoteOnly: Set(mcpActions.map(\.id)))
     }
 
     func jevClient(_ settings: AppSettings) -> JevHTTPSystemOne? {

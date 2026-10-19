@@ -345,8 +345,12 @@ extension CommandPanelController {
 
     /// Model answers, spoken without their Markdown marks.
     func say(_ text: String) {
-        guard isVoiceCommand, voice.speaksAnswers, !isQuiet else { return }
+        guard speaksAnswers else { return }
         speaker.speak(MarkdownText.plain(text), locale: voice.locale)
+    }
+
+    var speaksAnswers: Bool {
+        isVoiceCommand && voice.speaksAnswers && !isQuiet
     }
 
     /// App phrases, spoken in the voice language even when the interface uses another one.

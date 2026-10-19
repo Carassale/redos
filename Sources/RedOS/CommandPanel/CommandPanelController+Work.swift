@@ -16,11 +16,15 @@ extension CommandPanelController {
         beginCorrections(task: title)
         // Give focus back to the previous app before posting keyboard or mouse events.
         try? await Task.sleep(for: .milliseconds(150))
-        let result = await work { [weak self] step, request in
-            let line = CommandEngine.describe(request)
-            self?.progress.append(line)
-            self?.hud.update("\(step) · \(line)")
+        let speech = speaksAnswers ? StreamedSpeech(speaker: speaker, locale: voice.locale) : nil
+        let result = await AnswerStream.$sink.withValue(speech?.sink) {
+            await work { [weak self] step, request in
+                let line = CommandEngine.describe(request)
+                self?.progress.append(line)
+                self?.hud.update("\(step) · \(line)")
+            }
         }
+        let spokeWhileWriting = await speech?.finish(speaksRest: !Task.isCancelled) ?? false
         isDrivingMac = false
         hud.hide()
         if case .failure(.cancelled) = result, isReplacingWork { return }
@@ -29,7 +33,7 @@ extension CommandPanelController {
             model.state = .idle
             show()
             model.state = .answer(.init(text: output))
-            say(String(output.prefix(400)))
+            if !spokeWhileWriting { say(String(output.prefix(400))) }
         case .success(nil):
             model.text = ""
             model.state = .idle

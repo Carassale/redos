@@ -136,9 +136,7 @@ public struct CommandEngine: Sendable {
             let decision = try await router.route(input)
             switch decision {
             case .action(let request, let confidence):
-                return await check(
-                    ResolvedCommand(input: input, request: request, route: .systemOne, confidence: confidence)
-                )
+                return await checkSystemOne(request, input: input, confidence: confidence)
             case .noAction(let confidence):
                 return await escalate(input, to: assistant ?? planner, guess: nil, confidence: confidence)
             case .multiStep(let confidence):
@@ -156,6 +154,14 @@ public struct CommandEngine: Sendable {
             await record(input, nil, .failed, route: .systemOne, error: actionError)
             return .unavailable(error.localizedDescription)
         }
+    }
+
+    /// External tools return raw data: as a plan their output is explained, like System Two's.
+    private func checkSystemOne(_ request: ActionRequest, input: String, confidence: Double) async -> Resolution {
+        if registry.action(for: request.actionID) is MCPToolAction {
+            return await check(ResolvedPlan(input: input, steps: [request], route: .systemOne))
+        }
+        return await check(ResolvedCommand(input: input, request: request, route: .systemOne, confidence: confidence))
     }
 
     /// Hands the request to System Two (with the remembered facts); without one, System One's verdict is final.

@@ -14,6 +14,13 @@ public final class Speaker {
         synthesizer.speak(utterance)
     }
 
+    /// Speaks after what is already being said (a streamed answer, sentence by sentence).
+    public func enqueue(_ text: String, locale: Locale) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = Self.voice(for: locale)
+        synthesizer.speak(utterance)
+    }
+
     public func stop() {
         synthesizer.stopSpeaking(at: .immediate)
     }
