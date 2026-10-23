@@ -5,6 +5,15 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.25.0</title>
+      <pubDate>Fri, 23 Oct 2026 19:45:50 +0200</pubDate>
+      <sparkle:version>81</sparkle:version>
+      <sparkle:shortVersionString>0.25.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>Domande alle fonti MCP senza planner: Jev indica la fonte aziendale (tool veloci, &#x27;slowTools&#x27; esclusi) e i tool partono subito in parallelo, Copilot/OpenAI scrive solo la risposta; attesa di Jev limitata a 3 s; stato &#x27;Consulto &lt;fonte&gt;…&#x27; nel pannello invece dell&#x27;HUD; risposta nell&#x27;isola alta quanto il testo (fix pannello nero); timing.log con i tempi reali</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.25.0/RedOS-0.25.0.zip" type="application/octet-stream" sparkle:edSignature="dr/c4NEef2gjRk/FhI7HiVcv89/hHG3HpiFjCzbSw5JrdCuyLzfMud3z13PT7JgAkLL4ggCjJ3hhAMlQf3jhDw==" length="13447689"/>
+    </item>
+    <item>
       <title>RedOS 0.24.0</title>
       <pubDate>Fri, 23 Oct 2026 16:01:59 +0000</pubDate>
       <sparkle:version>79</sparkle:version>
