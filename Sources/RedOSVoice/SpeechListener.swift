@@ -20,7 +20,7 @@ public final class SpeechListener {
     /// Called once while the on-device model for a new language is downloaded.
     public var onDownload: (() -> Void)?
 
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
     private var analyzer: SpeechAnalyzer?
     private var input: AsyncStream<AnalyzerInput>.Continuation?
     private var results: Task<Void, Never>?
@@ -146,9 +146,16 @@ public final class SpeechListener {
     }
 
     private func stopAudio() {
-        guard engine.isRunning else { return }
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        let inputNode = engine.inputNode
+        if engine.isRunning {
+            inputNode.removeTap(onBus: 0)
+            engine.stop()
+        }
+        // The voice-processing unit keeps every app's audio in voice-chat mode until its engine is released.
+        guard inputNode.isVoiceProcessingEnabled else { return }
+        try? inputNode.setVoiceProcessingEnabled(false)
+        engine.reset()
+        engine = AVAudioEngine()
     }
 
     private func reset() {

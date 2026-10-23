@@ -6,11 +6,16 @@ import CoreMedia
 /// a call) is removed, so it is not transcribed twice.
 @MainActor
 public final class MicrophoneCapture {
-    private let engine = AVAudioEngine()
+    /// A new engine per session: the voice-processing unit it owns stays alive (and keeps the Mac's audio
+    /// devices in voice-chat mode for every app) until the engine is released.
+    private var engine: AVAudioEngine?
 
     public init() {}
 
     public func start(cancelsEcho: Bool, sink: @escaping AudioSink) throws {
+        stop()
+        let engine = AVAudioEngine()
+        self.engine = engine
         let input = engine.inputNode
         if input.isVoiceProcessingEnabled != cancelsEcho {
             try input.setVoiceProcessingEnabled(cancelsEcho)
@@ -21,21 +26,30 @@ public final class MicrophoneCapture {
             )
         }
         let format = input.outputFormat(forBus: 0)
-        guard format.channelCount > 0 else { throw VoiceError.microphoneUnavailable }
+        guard format.channelCount > 0 else {
+            stop()
+            throw VoiceError.microphoneUnavailable
+        }
         input.installTap(onBus: 0, bufferSize: 4096, format: format, block: Self.tap(sink))
         engine.prepare()
         do {
             try engine.start()
         } catch {
-            input.removeTap(onBus: 0)
+            stop()
             throw error
         }
     }
 
     public func stop() {
-        guard engine.isRunning else { return }
-        engine.inputNode.removeTap(onBus: 0)
+        guard let engine else { return }
+        self.engine = nil
+        let input = engine.inputNode
+        input.removeTap(onBus: 0)
         engine.stop()
+        if input.isVoiceProcessingEnabled {
+            try? input.setVoiceProcessingEnabled(false)
+        }
+        engine.reset()
     }
 
     /// Built outside the main actor: the tap runs on the realtime audio thread.
