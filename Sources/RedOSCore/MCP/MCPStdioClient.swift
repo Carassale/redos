@@ -12,6 +12,9 @@ public struct MCPServerConfig: Codable, Sendable, Equatable {
     public var disabled: Bool?
     /// Its tools run without asking for confirmation.
     public var trusted: Bool?
+    /// Tools that take long (e.g. an assistant writing its own answer): RedOS calls them only when System Two
+    /// picks them, never on a quick guess.
+    public var slowTools: [String]?
 
     public init(
         command: String? = nil, args: [String]? = nil, env: [String: String]? = nil,

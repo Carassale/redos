@@ -9,11 +9,17 @@ public struct HybridRouter: CommandRouting {
     private let remote: any CommandRouting
     /// Actions only Jev knows (external tools): its confident pick stands, the local model cannot dispute it.
     private let remoteOnly: Set<String>
+    /// Jev usually answers in about 1 s; past this (seen: 8 s) the local decision stands.
+    private let remoteLimit: Duration
 
-    public init(local: any CommandRouting, remote: any CommandRouting, remoteOnly: Set<String> = []) {
+    public init(
+        local: any CommandRouting, remote: any CommandRouting, remoteOnly: Set<String> = [],
+        remoteLimit: Duration = .seconds(3)
+    ) {
         self.local = local
         self.remote = remote
         self.remoteOnly = remoteOnly
+        self.remoteLimit = remoteLimit
     }
 
     public func prepare() async {
@@ -40,7 +46,10 @@ public struct HybridRouter: CommandRouting {
             remoteDecision.cancel()
             return localDecision
         }
-        guard let decision = try? await remoteDecision.value else { return localDecision }
+        guard let decision = await Self.value(of: remoteDecision, within: remoteLimit) else {
+            remoteDecision.cancel()
+            return localDecision
+        }
         // A single action the local model did not pick confidently: System Two settles it.
         if case .action(let request, let confidence) = decision {
             if remoteOnly.contains(request.actionID) { return decision }

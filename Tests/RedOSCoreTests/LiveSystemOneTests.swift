@@ -41,7 +41,7 @@ struct LiveSystemOneTests {
         case .noAction: #expect(expected == SystemOneRouter.noneLabel)
         case .multiStep: #expect(expected == SystemOneRouter.multiStepLabel)
         case .uncertain(let actionID, _): Issue.record("Uncertain: \(actionID)")
-        case .screenQuestion, .screenTask, .research, .diagram: Issue.record("Only Jev returns \(decision)")
+        case .screenQuestion, .screenTask, .research, .diagram, .lookUp: Issue.record("Only Jev returns \(decision)")
         }
     }
 

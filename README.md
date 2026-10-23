@@ -354,14 +354,19 @@ same format as Claude Desktop:
   "mcpServers": {
     "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"] },
     "fetch": { "command": "uvx", "args": ["mcp-server-fetch"] },
-    "notes": { "command": "/usr/local/bin/my-server", "env": { "API_TOKEN": "…" }, "disabled": true }
+    "notes": { "command": "/usr/local/bin/my-server", "env": { "API_TOKEN": "…" }, "disabled": true },
+    "kb": { "url": "https://kb.example.com/mcp", "headers": { "Authorization": "Bearer …" },
+            "trusted": true, "slowTools": ["ask"] }
   }
 }
 ```
 
 Their tools become assistant actions named `mcp.<server>.<tool>` and are used in multi-step requests
-(e.g. `use the fetch tool to read example.com`). Tools marked read-only run directly; the others
-ask for confirmation. Commands are found through your login shell's `PATH` (`npx`, `uvx`, nvm…). Servers
+(e.g. `use the fetch tool to read example.com`). Tools marked read-only, or of a `trusted` server, run
+directly; the others ask for confirmation. When Jev recognizes a question for those read-only tools, the one or
+two likeliest run right away, together, and the assistant only writes the answer from their results; tools in
+`slowTools` (e.g. an assistant that writes its own answer) are left out of that guess and run only when the
+assistant picks them. Commands are found through your login shell's `PATH` (`npx`, `uvx`, nvm…). Servers
 with many tools make the assistant's prompt longer: enable only the ones you need.
 
 ## Settings

@@ -10,6 +10,8 @@ public enum RouteDecision: Sendable, Equatable {
     case screenTask(confidence: Double)
     case research(confidence: Double)
     case diagram(confidence: Double)
+    /// A question for external knowledge tools: the likeliest read-only ones run together, without a plan.
+    case lookUp([ActionRequest], confidence: Double)
 }
 
 public protocol CommandRouting: Sendable {

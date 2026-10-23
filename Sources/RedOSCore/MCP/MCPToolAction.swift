@@ -6,20 +6,28 @@ public struct MCPToolAction: ReportingAction {
     public let summary: String
     public let risk: RiskLevel
     public let parameters: [ActionParameter]
+    /// Listed in the server's `slowTools`.
+    public let isSlow: Bool
+    public let server: String
     let tool: MCPToolInfo
     let client: any MCPClient
 
-    public init(server: String, tool: MCPToolInfo, client: any MCPClient, trusted: Bool = false) {
+    public init(
+        server: String, tool: MCPToolInfo, client: any MCPClient, trusted: Bool = false, slow: Bool = false
+    ) {
         id = "mcp.\(Self.identifier(server)).\(Self.identifier(tool.name))"
         summary = "[MCP \(server)] " + tool.description.split(separator: "\n").prefix(2).joined(separator: " ")
         // Read-only tools run like safe actions; MCP tools are destructive unless the server says otherwise.
         risk = trusted || tool.isReadOnly ? .safe : tool.isDestructive ? .dangerous : .moderate
         parameters = Self.parameters(of: tool.inputSchema)
+        isSlow = slow
+        self.server = server
         self.tool = tool
         self.client = client
     }
 
     @MainActor public func report(_ arguments: ActionArguments) async throws -> String {
+        await ActivityReporter.report(.consulting(server))
         let result: MCPToolResult
         do {
             result = try await client.call(tool.name, arguments: Self.arguments(arguments, schema: tool.inputSchema))
@@ -127,8 +135,11 @@ public actor MCPHub {
                 case .success(let tools):
                     guard let client = connection.client else { continue }
                     let trusted = connection.config.trusted == true
+                    let slow = Set(connection.config.slowTools ?? [])
                     actions[name] = tools.map {
-                        MCPToolAction(server: name, tool: $0, client: client, trusted: trusted)
+                        MCPToolAction(
+                            server: name, tool: $0, client: client, trusted: trusted, slow: slow.contains($0.name)
+                        )
                     }
                 case .failure(let error):
                     errors[name] = error.localizedDescription

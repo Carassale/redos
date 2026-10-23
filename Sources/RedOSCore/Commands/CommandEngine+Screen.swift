@@ -78,6 +78,8 @@ extension CommandEngine {
             return .research(input, query: "")
         case .diagram where designer != nil:
             return .diagram(input, description: input)
+        case .lookUp(let requests, _):
+            return await check(ResolvedPlan(input: input, steps: requests, route: .systemOne))
         default:
             break
         }

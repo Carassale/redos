@@ -250,6 +250,10 @@ flowchart LR
   System Two (System One resta sul catalogo base): `readOnlyHint` → safe, `destructiveHint: false` →
   moderate, altrimenti dangerous (conferma); `"trusted": true` sul server → safe. Argomenti convertiti ai
   tipi dello schema; i risultati (spesso JSON) passano dal writer prima di essere mostrati.
+- **Domande per i tool MCP senza planner**: se Jev indica tool MCP safe (≥ 50% della risposta `action`), i
+  1-2 più probabili (solo il primo se ≥ 0.95) partono subito in parallelo con argomenti dal modello locale;
+  il writer risponde dai risultati riusciti. `slowTools` in `mcp.json` (es. `ask_red`, 7-30 s) esclude i tool
+  lenti da questa ipotesi: li sceglie solo il planner. Misurato: "capire + chiamare" da 5-9 s a ~2 s.
 - Verifica: 8 test (protocollo, sicurezza HTTP, server Python stdio reale); prova live: curl → `run_command`
   "quanto fa 17 per 23" in 0.3 s; "usa lo strumento MCP add per sommare 1234 e 4321" via MCP → planner Copilot
   → `mcp.calc.add` → "5555" (10 s).

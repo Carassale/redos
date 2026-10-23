@@ -50,6 +50,51 @@ extension CommandPanelController {
         }
     }
 
+    /// Plans that only ask external tools (MCP) do not drive the Mac: they stay in the panel like a question,
+    /// with the same states (consulting the source, writing the answer).
+    func runPlan(_ plan: ResolvedPlan) async {
+        guard engine.consultsOnly(plan) else {
+            await run(plan.input) { [engine] in await engine.execute(plan, onStep: $0) }
+            return
+        }
+        model.state = .working
+        beginCorrections(task: plan.input)
+        let speech = speaksAnswers ? StreamedSpeech(speaker: speaker, locale: voice.locale) : nil
+        let result = await AnswerStream.$sink.withValue(speech?.sink) { [engine] in await engine.execute(plan) }
+        let spokeWhileWriting = await speech?.finish(speaksRest: !Task.isCancelled) ?? false
+        Timing.note("plan done: \(Self.outcome(of: result)), spoken \(spokeWhileWriting), shown \(isShown)")
+        // The panel may have closed while waiting (a click elsewhere): the answer brings it back, as after run().
+        if !isShown, !Task.isCancelled {
+            model.state = .idle
+            show()
+        }
+        switch result {
+        case .success(let output?):
+            model.state = .answer(.init(text: output))
+            if !spokeWhileWriting { say(String(output.prefix(400))) }
+        case .success(nil):
+            model.state = .message(String(localized: "Done, no output."), isError: false)
+        case .failure(.cancelled):
+            model.state = .idle
+        case .failure(let error):
+            fail(error.localizedDescription)
+        }
+    }
+
+    /// The state's name only, for the timing log (never the text).
+    static func kind(of state: CommandPanelModel.State) -> String {
+        String(String(describing: state).prefix { $0 != "(" })
+    }
+
+    /// For the timing log: the size of the output, never its text.
+    static func outcome(of result: Result<String?, ActionError>) -> String {
+        switch result {
+        case .success(let text?): "\(text.count) chars"
+        case .success(nil): "no output"
+        case .failure(let error): "failed: \(error.errorDescription ?? "")"
+        }
+    }
+
     /// Web research keeps the panel open with the current step; Esc or the kill switch stop it.
     func research(_ question: String, query: String) async {
         model.state = .working

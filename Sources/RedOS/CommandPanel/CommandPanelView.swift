@@ -146,14 +146,13 @@ struct CommandPanelView: View {
                 }
             }
         case .answer(let answer):
-            Label {
-                // Long answers scroll inside the fixed-size panel.
-                ViewThatFits(in: .vertical) {
-                    AnswerView(answer: answer, onOpenDiagram: onOpenDiagram)
-                    ScrollView { AnswerView(answer: answer, onOpenDiagram: onOpenDiagram) }.frame(height: 340)
-                }
-            } icon: {
+            HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "sparkles").foregroundStyle(.red)
+                // As tall as the answer up to 340 points, then it scrolls (ViewThatFits made the island take the
+                // whole window height and pushed the answer out of it).
+                ScrollView { AnswerView(answer: answer, onOpenDiagram: onOpenDiagram) }
+                    .frame(maxHeight: 340)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

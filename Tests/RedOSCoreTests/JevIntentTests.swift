@@ -7,12 +7,23 @@ private struct FakeJev: JevDeciding {
     var kindProbability = 0.95
     var action = "none"
     var actionProbability = 0.95
+    /// The whole action answer, when several options matter.
+    var actions: [String: Double]?
+    /// The company source answer.
+    var sources: [String: Double]?
 
     func decide(state: String, questions: [String: JevQuestion]) async throws -> [String: JevAnswer] {
-        [
+        var answers = [
             "kind": JevAnswer(choice: kind, probabilities: [kind: kindProbability], confidence: 0.9),
-            "action": JevAnswer(choice: action, probabilities: [action: actionProbability], confidence: 0.9),
+            "action": JevAnswer(
+                choice: action, probabilities: actions ?? [action: actionProbability], confidence: 0.9
+            ),
         ]
+        if let sources {
+            let best = sources.max { $0.value < $1.value }?.key
+            answers["source"] = JevAnswer(choice: best, probabilities: sources, confidence: 0.9)
+        }
+        return answers
     }
 }
 
@@ -23,8 +34,12 @@ private struct FailingRouter: CommandRouting {
 
 private struct FixedRouter: CommandRouting {
     let decision: RouteDecision
+    var delay: Duration = .zero
     func prepare() async {}
-    func route(_ input: String) async throws -> RouteDecision { decision }
+    func route(_ input: String) async throws -> RouteDecision {
+        try await Task.sleep(for: delay)
+        return decision
+    }
 }
 
 private struct ReplyChat: ChatCompleting {
@@ -39,8 +54,24 @@ private struct ReplyChat: ChatCompleting {
     func preload() async {}
 }
 
-private actor SilentMCPClient: MCPClient {
-    func request(_ method: String, _ params: [String: JSONValue]) async throws -> JSONValue { .null }
+private struct EchoChat: ChatCompleting {
+    func chat(
+        _ messages: [ChatMessage], format: JSONValue?, maxTokens: Int?, topLogprobs: Int?
+    ) async throws -> ChatResponse {
+        ChatResponse(message: .init(content: messages.last?.content ?? ""), logprobs: nil)
+    }
+
+    func preload() async {}
+}
+
+/// Answers "result of <tool>"; the tool named "broken" fails.
+private actor ScriptedMCPClient: MCPClient {
+    func request(_ method: String, _ params: [String: JSONValue]) async throws -> JSONValue {
+        let name = params["name"]?.string ?? ""
+        if name == "broken" { throw ProviderError.commandFailed("down") }
+        return .object(["content": .array([.object(["type": "text", "text": .string("result of \(name)")])])])
+    }
+
     func notify(_ method: String) async throws {}
     func stop() {}
 }
@@ -112,6 +143,13 @@ struct JevIntentTests {
         // Offline: the local decision stands.
         let offline = HybridRouter(local: FixedRouter(decision: .multiStep(confidence: 0.9)), remote: FailingRouter())
         #expect(try await offline.route("x") == .multiStep(confidence: 0.9))
+        // Jev too slow: the local decision stands.
+        let slow = HybridRouter(
+            local: FixedRouter(decision: .noAction(confidence: 0.6)),
+            remote: FixedRouter(decision: .screenQuestion(confidence: 0.98), delay: .seconds(5)),
+            remoteLimit: .milliseconds(100)
+        )
+        #expect(try await slow.route("x") == .noAction(confidence: 0.6))
 
         // "di cosa parla questa finestra?": a confident screen question beats the local ui.read.
         let read = RouteDecision.action(ActionRequest("ui.read"), confidence: 0.99)
@@ -121,35 +159,69 @@ struct JevIntentTests {
         #expect(try await screen.route("x") == .screenQuestion(confidence: 0.97))
     }
 
-    @Test func confidentReadOnlyToolSkipsSystemTwo() async throws {
-        let schema: JSONValue = .object([
+    private static func tool(_ name: String, slow: Bool = false, parameters: Bool = true) -> MCPToolAction {
+        let schema: JSONValue = parameters ? .object([
             "type": "object", "properties": .object(["query": .object(["type": "string"])]),
             "required": .array(["query"]),
-        ])
+        ]) : .object(["type": "object"])
         let info = MCPToolInfo(
-            name: "list_case_histories", description: "Case histories.", inputSchema: schema, isReadOnly: true,
-            isDestructive: false
+            name: name, description: name, inputSchema: schema, isReadOnly: true, isDestructive: false
         )
-        let tool = MCPToolAction(server: "red", tool: info, client: SilentMCPClient())
+        return MCPToolAction(server: "red", tool: info, client: ScriptedMCPClient(), slow: slow)
+    }
+
+    @Test func externalToolsRunWithoutSystemTwosPlan() async throws {
+        let contacts = Self.tool("search_contacts"), entity = Self.tool("get_entity")
+        let projects = Self.tool("list_projects"), ask = Self.tool("ask_red", slow: true)
+        let mine = Self.tool("my_projects", parameters: false)
+        let registry = ActionRegistry([contacts, entity, projects, ask, mine])
         let extractor = ArgumentExtractor(client: ReplyChat(content: #"{"query": "Luxottica"}"#))
-        func route(_ jev: FakeJev) async throws -> RouteDecision {
-            try await JevIntentRouter(registry: ActionRegistry([tool]), jev: jev, extractor: extractor, threshold: 0.8)
-                .route("case history di luxottica")
+        func router(_ jev: FakeJev) -> JevIntentRouter {
+            JevIntentRouter(registry: registry, jev: jev, extractor: extractor, threshold: 0.8)
         }
-        let request = ActionRequest(tool.id, ["query": "Luxottica"])
-        // Looks like a knowledge question to the kind question, but the tool pick is sure.
-        let sure = FakeJev(kind: "knowledge", action: tool.id, actionProbability: 0.97)
-        #expect(try await route(sure) == .action(request, confidence: 0.97))
-        let unsure = FakeJev(kind: "knowledge", action: tool.id, actionProbability: 0.91)
-        #expect(try await route(unsure) == .noAction(confidence: 0.95))
-        // Several steps: System Two plans them.
-        #expect(try await route(FakeJev(kind: "steps", action: tool.id)) == .multiStep(confidence: 0.95))
+        // The slow assistant and tools that take nothing from the request are never guessed.
+        guard case .choice(_, let options) = router(FakeJev(kind: "knowledge")).questions["source"] else {
+            Issue.record("No source question")
+            return
+        }
+        #expect(Set(options.map(\.label)) == [contacts.id, entity.id, projects.id, "none"])
+        func route(_ sources: [String: Double], kind: String = "knowledge") async throws -> RouteDecision {
+            try await router(FakeJev(kind: kind, sources: sources)).route("in Red chi è il responsabile di Luxottica")
+        }
+        func lookUp(_ tools: MCPToolAction..., confidence: Double) -> RouteDecision {
+            .lookUp(tools.map { ActionRequest($0.id, ["query": "Luxottica"]) }, confidence: confidence)
+        }
+        // Unsure which tool: the two likeliest run together.
+        let unsure = [contacts.id: 0.5, entity.id: 0.25, projects.id: 0.0625, "none": 0.1875]
+        #expect(try await route(unsure) == lookUp(contacts, entity, confidence: 0.8125))
+        #expect(try await route([entity.id: 0.96875, "none": 0.03125]) == lookUp(entity, confidence: 0.96875))
+        // A general question: System Two decides.
+        #expect(try await route(["none": 0.875, contacts.id: 0.125]) == .noAction(confidence: 0.95))
+        // Sure that it needs several steps: System Two plans them.
+        #expect(try await route([contacts.id: 0.96875], kind: "steps") == .multiStep(confidence: 0.95))
 
         let hybrid = HybridRouter(
             local: FixedRouter(decision: .noAction(confidence: 0.6)),
-            remote: FixedRouter(decision: .action(request, confidence: 0.95)), remoteOnly: [tool.id]
+            remote: FixedRouter(decision: lookUp(contacts, confidence: 0.9))
         )
-        #expect(try await hybrid.route("x") == .action(request, confidence: 0.95))
+        #expect(try await hybrid.route("x") == lookUp(contacts, confidence: 0.9))
+    }
+
+    @Test func lookUpRunsTheToolsTogetherAndExplainsWhatCameBack() async throws {
+        let contacts = Self.tool("search_contacts"), broken = Self.tool("broken")
+        let requests = [contacts, broken].map { ActionRequest($0.id, ["query": "Luxottica"]) }
+        let engine = CommandEngine(
+            registry: ActionRegistry([contacts, broken]),
+            router: FixedRouter(decision: .lookUp(requests, confidence: 0.9)), writer: EchoChat(),
+            audit: MemoryAuditLog()
+        )
+        guard case .plan(let plan, false) = await engine.resolve("chi è il responsabile di Luxottica?") else {
+            Issue.record("Expected a plan that runs without confirmation")
+            return
+        }
+        let answer = try #require(try await engine.execute(plan).get())
+        #expect(answer.contains("[\(contacts.id)]\nresult of search_contacts"))
+        #expect(!answer.contains(broken.id))
     }
 
     @Test func decodesNoulAndScoreAnswers() throws {

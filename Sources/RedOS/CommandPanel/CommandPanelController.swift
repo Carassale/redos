@@ -157,10 +157,17 @@ final class CommandPanelController {
         work = Task { [weak self, model] in
             model.activity = nil
             let silent = self?.completedSilently ?? 0
-            await ActivityReporter.$handler.withValue({ activity in model.activity = activity }, operation: {
+            let started = ContinuousClock.now
+            Timing.note("request started")
+            await ActivityReporter.$handler.withValue({ activity in
+                Timing.note("\(Timing.since(started)) s: \(activity.symbol)")
+                model.activity = activity
+            }, operation: {
                 await body()
             })
             model.activity = nil
+            let shown = self?.isShown == true
+            Timing.note("\(Timing.since(started)) s: done, \(Self.kind(of: model.state)), shown \(shown)")
             guard let self else { return }
             if generation == workGeneration { endCorrections() }
             guard !Task.isCancelled else { return }
@@ -185,7 +192,7 @@ final class CommandPanelController {
         case .confirming(let command):
             start { [self, engine] in await run(command.input) { _ in await engine.execute(command) } }
         case .confirmingPlan(let plan):
-            start { [self, engine] in await run(plan.input) { await engine.execute(plan, onStep: $0) } }
+            start { [self] in await runPlan(plan) }
         case .idle, .message, .answer:
             pendingAdditions = []
             let input = model.text
@@ -198,6 +205,7 @@ final class CommandPanelController {
     func resolve(_ input: String) async {
         actionSummary = nil
         let resolution = await engine.resolve(input)
+        Timing.note("resolved: \(String(describing: resolution).prefix { $0 != "(" })")
         if Task.isCancelled {
             model.state = .idle
             return
@@ -228,14 +236,12 @@ final class CommandPanelController {
             fail(Self.reason(resolution))
         case .ready(let command, let needsConfirmation):
             actionSummary = CommandEngine.describe(command.request)
-            await confirmOrRun(needsConfirmation ? .confirming(command) : nil, input) { [engine] _ in
-                await engine.execute(command)
+            await confirmOrRun(needsConfirmation ? .confirming(command) : nil) {
+                await run(input) { [engine] _ in await engine.execute(command) }
             }
         case .plan(let plan, let needsConfirmation):
             actionSummary = plan.steps.map(CommandEngine.describe).joined(separator: " → ")
-            await confirmOrRun(needsConfirmation ? .confirmingPlan(plan) : nil, input) { [engine] in
-                await engine.execute(plan, onStep: $0)
-            }
+            await confirmOrRun(needsConfirmation ? .confirmingPlan(plan) : nil) { await runPlan(plan) }
         case .agent(let task):
             await run(task) { [engine] in await engine.runAgent(task, onStep: $0) }
         case .research(let question, let query):
@@ -280,15 +286,12 @@ final class CommandPanelController {
         }
     }
 
-    private func confirmOrRun(
-        _ confirmation: CommandPanelModel.State?, _ title: String,
-        _ work: (_ onStep: @escaping StepHandler) async -> Result<String?, ActionError>
-    ) async {
+    private func confirmOrRun(_ confirmation: CommandPanelModel.State?, _ work: () async -> Void) async {
         if let confirmation {
             model.state = confirmation
             sayPhrase("Say yes to confirm.")
         } else {
-            await run(title, work)
+            await work()
         }
     }
 }

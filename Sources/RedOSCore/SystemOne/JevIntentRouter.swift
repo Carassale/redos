@@ -34,9 +34,13 @@ public struct JevIntentRouter: CommandRouting {
     }
 
     public static let noneLabel = "none"
-    /// A read-only external tool (MCP) picked at least this surely runs without System Two's plan (wrong picks
-    /// seen at 0.91).
+    /// A read-only external tool (MCP) picked at least this surely runs alone (wrong picks seen at 0.91).
     public static let externalToolThreshold = 0.95
+    /// Below that, when external tools hold at least this much of the action answer, the likeliest fast ones
+    /// (up to `lookUpTools`, each above `lookUpMinimum`) run together and System Two only writes the answer.
+    public static let lookUpMass = 0.5
+    public static let lookUpMinimum = 0.1
+    public static let lookUpTools = 2
 
     private let registry: ActionRegistry
     private let jev: any JevDeciding
@@ -57,7 +61,7 @@ public struct JevIntentRouter: CommandRouting {
     }
 
     public var questions: [String: JevQuestion] {
-        [
+        var questions: [String: JevQuestion] = [
             "kind": .choice(
                 instructions: "What kind of request did the user make to their Mac assistant?",
                 options: Kind.allCases.map { JevOption(label: $0.rawValue, description: $0.summary) }
@@ -69,6 +73,24 @@ public struct JevIntentRouter: CommandRouting {
                     + [JevOption(label: Self.noneLabel, description: "No single action from the list fits.")]
             ),
         ]
+        let sources = quickSources
+        if !sources.isEmpty {
+            questions["source"] = .choice(
+                instructions: "Which of these tools of the user's company finds what the request asks about"
+                    + " (its clients, projects, people, documents)?",
+                options: sources.map { JevOption(label: $0.id, description: $0.summary) } + [JevOption(
+                    label: Self.noneLabel,
+                    description: "None: general knowledge, conversation, news or web, or an action on the Mac."
+                )]
+            )
+        }
+        return questions
+    }
+
+    /// External tools that are read-only, fast and take something from the request: safe to run on a guess.
+    private var quickSources: [MCPToolAction] {
+        registry.all.compactMap { $0 as? MCPToolAction }
+            .filter { $0.risk == .safe && !$0.isSlow && !$0.parameters.isEmpty }
     }
 
     private static var actionExamples: String {
@@ -91,8 +113,8 @@ public struct JevIntentRouter: CommandRouting {
             throw SystemOneError.noDecision
         }
         let confidence = kindAnswer.probability
-        if let tool = await externalTool(answers["action"], kind: kind, kindConfidence: confidence, input: input) {
-            return tool
+        if let tools = await externalTools(answers["source"], kind: kind, kindConfidence: confidence, input: input) {
+            return tools
         }
         guard confidence >= threshold else { return .noAction(confidence: confidence) }
         switch kind {
@@ -107,23 +129,38 @@ public struct JevIntentRouter: CommandRouting {
         }
     }
 
-    /// Questions for a knowledge base often look like "knowledge" to the kind question, yet the action question
-    /// names the right tool: a confident pick runs, unless Jev is sure the request needs more than one tool call.
-    private func externalTool(
+    /// Questions for the company's knowledge tools run them without System Two's plan (it only writes the
+    /// answer), unless Jev is sure the request is of another kind. Asked apart from the action question, where
+    /// the slow assistant tools draw most of the probability.
+    private func externalTools(
         _ answer: JevAnswer?, kind: Kind, kindConfidence: Double, input: String
     ) async -> RouteDecision? {
         let other: Set<Kind> = [.steps, .screenTask, .screenQuestion, .currentInfo, .diagram]
-        guard let answer, let choice = answer.choice,
-              answer.probability >= max(threshold, Self.externalToolThreshold),
-              !(other.contains(kind) && kindConfidence >= threshold),
-              let tool = registry.action(for: choice) as? MCPToolAction, tool.risk == .safe, let extractor,
-              let arguments = try? await extractor.arguments(for: tool, input: input)
-        else { return nil }
-        let decision = SystemOneRouter.refine(
-            ActionRequest(tool.id, arguments), registry: registry, confidence: answer.probability
-        )
-        guard case .action = decision else { return nil }
-        return decision
+        guard let answer, let extractor, !(other.contains(kind) && kindConfidence >= threshold) else { return nil }
+        let sources = Dictionary(uniqueKeysWithValues: quickSources.map { ($0.id, $0) })
+        let candidates = answer.probabilities
+            .compactMap { id, probability in sources[id].map { (tool: $0, probability: probability) } }
+            .sorted { $0.probability > $1.probability }
+        let mass = candidates.reduce(0) { $0 + $1.probability }
+        guard mass >= Self.lookUpMass, let best = candidates.first else { return nil }
+        let chosen = best.probability >= max(threshold, Self.externalToolThreshold)
+            ? [best.tool]
+            : candidates.filter { $0.probability >= Self.lookUpMinimum }.prefix(Self.lookUpTools).map(\.tool)
+        let requests = await withTaskGroup(of: (Int, ActionRequest?).self) { group in
+            for (index, tool) in chosen.enumerated() {
+                group.addTask {
+                    guard let arguments = try? await extractor.arguments(for: tool, input: input) else {
+                        return (index, nil)
+                    }
+                    let request = ActionRequest(tool.id, arguments)
+                    return (index, (try? registry.validate(request)) == nil ? nil : request)
+                }
+            }
+            var requests: [Int: ActionRequest] = [:]
+            for await (index, request) in group { requests[index] = request }
+            return chosen.indices.compactMap { requests[$0] }
+        }
+        return requests.isEmpty ? nil : .lookUp(requests, confidence: min(mass, 1))
     }
 
     private func action(_ answer: JevAnswer?, input: String) async throws -> RouteDecision {

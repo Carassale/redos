@@ -68,8 +68,19 @@ public struct MeteredClient: ChatCompleting {
         if dailyLimit > 0, await store.today().requests >= dailyLimit {
             return try await fallback.chat(messages, format: format, maxTokens: maxTokens, topLogprobs: topLogprobs)
         }
-        let response = try await inner.chat(messages, format: format, maxTokens: maxTokens, topLogprobs: topLogprobs)
+        let start = ContinuousClock.now
+        let response: ChatResponse
+        do {
+            response = try await inner.chat(messages, format: format, maxTokens: maxTokens, topLogprobs: topLogprobs)
+        } catch {
+            Timing.note("cloud call failed after \(Timing.since(start)) s: \(error.localizedDescription)")
+            throw error
+        }
         let characters = messages.reduce(response.message.content.count) { $0 + $1.content.count }
+        Timing.note("""
+            cloud call \(type(of: inner)) \(Timing.since(start)) s, \
+            prompt \(characters - response.message.content.count) chars, reply \(response.message.content.count) chars
+            """)
         try? await store.record(tokens: characters / 4)
         return response
     }

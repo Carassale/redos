@@ -282,6 +282,7 @@
 "Drawing the diagram (%@)…" = "Disegno il diagramma (%@)…";
 "Writing… %lld characters" = "Scrivo… %lld caratteri";
 "Reading the screen: %@" = "Leggo lo schermo: %@";
+"Consulting %@…" = "Consulto %@…";
 "Priority" = "Priorità";
 "Accuracy" = "Precisione";
 "Speed" = "Velocità";

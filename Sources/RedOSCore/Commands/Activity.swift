@@ -14,6 +14,8 @@ public enum Activity: Sendable, Equatable {
     /// A long reply is streaming in.
     case receiving(characters: Int)
     case readingScreen(String)
+    /// Asking a knowledge source (an MCP server) and waiting for its data.
+    case consulting(String)
 
     public var title: String {
         switch self {
@@ -28,6 +30,7 @@ public enum Activity: Sendable, Equatable {
         case .drawing(let type): String(localized: "Drawing the diagram (\(type))…")
         case .receiving(let characters): String(localized: "Writing… \(characters) characters")
         case .readingScreen(let app): String(localized: "Reading the screen: \(app)")
+        case .consulting(let source): String(localized: "Consulting \(source)…")
         }
     }
 
@@ -45,6 +48,7 @@ public enum Activity: Sendable, Equatable {
         case .drawing: "chart.xyaxis.line"
         case .receiving: "text.append"
         case .readingScreen: "macwindow"
+        case .consulting: "point.3.filled.connected.trianglepath.dotted"
         }
     }
 }

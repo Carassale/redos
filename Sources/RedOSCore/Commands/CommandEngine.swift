@@ -146,7 +146,7 @@ public struct CommandEngine: Sendable {
                     input, to: assistant ?? planner, guess: ActionRequest(actionID), confidence: confidence
                 )
             case .screenQuestion(let confidence), .screenTask(let confidence), .research(let confidence),
-                 .diagram(let confidence):
+                 .diagram(let confidence), .lookUp(_, let confidence):
                 return await resolveKind(of: input, decision, confidence: confidence)
             }
         } catch {
@@ -296,9 +296,14 @@ extension CommandEngine {
     /// Runs the steps in order and stops at the first failure or when the task is cancelled.
     /// Returns the outputs of reporting actions, if any.
     public func execute(_ plan: ResolvedPlan, onStep: StepHandler? = nil) async -> Result<String?, ActionError> {
+        let commands = commands(of: plan)
+        let external = commands.allSatisfy { registry.action(for: $0.request.actionID) is MCPToolAction }
+        if plan.route == .systemOne, external {
+            return await lookUp(commands, input: plan.input, onStep: onStep)
+        }
         var outputs: [String] = []
         var usedMCP = false
-        for (index, command) in commands(of: plan).enumerated() {
+        for (index, command) in commands.enumerated() {
             if index > 0 {
                 // Let the previous step settle (window focus, page load) before the next one.
                 try? await Task.sleep(for: .milliseconds(400))
@@ -319,5 +324,34 @@ extension CommandEngine {
 
     func commands(of plan: ResolvedPlan) -> [ResolvedCommand] {
         plan.steps.map { ResolvedCommand(input: plan.input, request: $0, route: plan.route, confidence: nil) }
+    }
+
+    /// Only external tools (MCP): nothing happens on the Mac while the plan runs.
+    public func consultsOnly(_ plan: ResolvedPlan) -> Bool {
+        !plan.steps.isEmpty && plan.steps.allSatisfy { registry.action(for: $0.actionID) is MCPToolAction }
+    }
+
+    /// The tools System One guessed for a question run together; those that fail are left out of the answer.
+    private func lookUp(
+        _ commands: [ResolvedCommand], input: String, onStep: StepHandler?
+    ) async -> Result<String?, ActionError> {
+        if let first = commands.first { await onStep?(1, first.request) }
+        let results = await withTaskGroup(of: (Int, Result<String?, ActionError>).self) { group in
+            for (index, command) in commands.enumerated() {
+                group.addTask { (index, await execute(command)) }
+            }
+            var results: [Int: Result<String?, ActionError>] = [:]
+            for await (index, result) in group { results[index] = result }
+            return commands.indices.compactMap { results[$0] }
+        }
+        let outputs = zip(commands, results).compactMap { command, result -> String? in
+            guard case .success(let output?) = result else { return nil }
+            return commands.count > 1 ? "[\(command.request.actionID)]\n\(output)" : output
+        }
+        guard !outputs.isEmpty else {
+            for case .failure(let error) in results { return .failure(error) }
+            return .success(nil)
+        }
+        return .success(await explain(outputs.joined(separator: "\n\n"), for: input))
     }
 }
