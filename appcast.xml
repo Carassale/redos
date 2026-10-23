@@ -5,6 +5,15 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.24.0</title>
+      <pubDate>Fri, 23 Oct 2026 16:01:59 +0000</pubDate>
+      <sparkle:version>79</sparkle:version>
+      <sparkle:shortVersionString>0.24.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>Versione 0.24.0: UI nel notch</li><li>UI nel notch: pannello comandi, HUD e appunti diventano un&#x27;isola che cresce dal notch (orb animato, livello reale del microfono, stato &#x27;sto parlando&#x27;); appunti come live activity compatta durante la chiamata, espandibile con un clic</li><li>Audio: dopo l&#x27;echo cancellation il VPIO viene rilasciato (nuovo AVAudioEngine a ogni sessione), così microfono e audio delle altre app non restano in modalità chiamata</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.24.0/RedOS-0.24.0.zip" type="application/octet-stream" sparkle:edSignature="HTJSJ2//vrHOsFqaaDV5LWe5ceDgeFuP+9tPnXAOJl2xcEvMFue8YAvic1CteNSaZYCK4LuegdAtCLmaOWyFCQ==" length="13389185"/>
+    </item>
+    <item>
       <title>RedOS 0.23.0</title>
       <pubDate>Mon, 19 Oct 2026 17:46:54 +0200</pubDate>
       <sparkle:version>75</sparkle:version>
