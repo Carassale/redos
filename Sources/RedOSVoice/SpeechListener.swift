@@ -1,3 +1,4 @@
+import Accelerate
 @preconcurrency import AVFoundation
 import Speech
 
@@ -19,6 +20,8 @@ public final class SpeechListener {
     public var onTranscript: ((String) -> Void)?
     /// Called once while the on-device model for a new language is downloaded.
     public var onDownload: (() -> Void)?
+    /// Microphone level from 0 (silence) to 1 (loud voice), about ten times a second.
+    public var onLevel: ((Float) -> Void)?
 
     private var engine = AVAudioEngine()
     private var analyzer: SpeechAnalyzer?
@@ -119,9 +122,14 @@ public final class SpeechListener {
         guard microphoneFormat.channelCount > 0,
               let converter = AVAudioConverter(from: microphoneFormat, to: format)
         else { throw VoiceError.microphoneUnavailable }
+        let level: @Sendable (Float) -> Void = { [weak self] rms in
+            // -50 dB is silence, -10 dB a loud voice.
+            let normalized = min(max((20 * log10(max(rms, 1e-6)) + 50) / 40, 0), 1)
+            Task { @MainActor in self?.onLevel?(normalized) }
+        }
         inputNode.installTap(
             onBus: 0, bufferSize: 4096, format: microphoneFormat,
-            block: Self.tap(converter: converter, format: format, continuation: continuation)
+            block: Self.tap(converter: converter, format: format, continuation: continuation, level: level)
         )
         engine.prepare()
         try engine.start()
@@ -146,6 +154,7 @@ public final class SpeechListener {
     }
 
     private func stopAudio() {
+        onLevel?(0)
         let inputNode = engine.inputNode
         if engine.isRunning {
             inputNode.removeTap(onBus: 0)
@@ -166,10 +175,16 @@ public final class SpeechListener {
 
     /// Built outside the main actor: the tap runs on the realtime audio thread.
     private nonisolated static func tap(
-        converter: AVAudioConverter, format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation
+        converter: AVAudioConverter, format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation,
+        level: @escaping @Sendable (Float) -> Void
     ) -> AVAudioNodeTapBlock {
         let converter = UncheckedBox(converter)
         return { buffer, _ in
+            if let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 {
+                var rms: Float = 0
+                vDSP_rmsqv(samples, 1, &rms, vDSP_Length(buffer.frameLength))
+                level(rms)
+            }
             let ratio = format.sampleRate / buffer.format.sampleRate
             let capacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up)) + 1
             guard let converted = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return }

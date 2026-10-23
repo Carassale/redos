@@ -6,43 +6,62 @@ import SwiftUI
 @Observable
 final class HUDModel {
     var text = ""
+    var isOpen = false
+    var notch = NotchGeometry()
     @ObservationIgnored var onStop: () -> Void = {}
 }
 
 struct HUDView: View {
-    static let size = CGSize(width: 460, height: 56)
+    static let size = CGSize(width: 600, height: 120)
 
     let model: HUDModel
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "record.circle.fill")
-                .foregroundStyle(.red)
-                .symbolEffect(.pulse, options: .repeating)
-            Text(verbatim: model.text)
-                .font(.callout)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            Spacer(minLength: 8)
-            Button("Stop", action: model.onStop)
-                .controlSize(.small)
-            Text(verbatim: "⌃⌥⎋")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        NotchIsland(notch: model.notch, isOpen: model.isOpen, width: 500) {
+            HStack(spacing: 7) {
+                Image(systemName: "record.circle.fill")
+                    .foregroundStyle(.red)
+                    .symbolEffect(.pulse, options: .repeating)
+                Text(verbatim: "RedOS")
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .font(.system(size: 12, weight: .semibold))
+        } trailing: {
+            Button(action: model.onStop) {
+                Label("Stop", systemImage: "stop.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 3)
+                    .background(.red, in: .capsule)
+            }
+            .buttonStyle(.plain)
+        } content: {
+            HStack(spacing: 8) {
+                Text(verbatim: model.text)
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .contentTransition(.opacity)
+                Spacer(minLength: 8)
+                Text(verbatim: "⌃⌥⎋")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .animation(.smooth(duration: 0.2), value: model.text)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(width: 440)
-        .background(.regularMaterial, in: .capsule)
-        .frame(width: Self.size.width, height: Self.size.height)
+        .frame(width: Self.size.width, height: Self.size.height, alignment: .top)
+        .ignoresSafeArea()
     }
 }
 
-/// Always-visible indicator while RedOS drives the Mac, with a Stop button (same as the kill switch).
+/// Always-visible island in the notch while RedOS drives the Mac, with a Stop button (same as the kill switch).
 @MainActor
 final class HUDController {
     private let model = HUDModel()
     private var pending: Task<Void, Never>?
+    private var closing: Task<Void, Never>?
     private lazy var panel: NSPanel = {
         let panel = HUDPanel(
             contentRect: .zero,
@@ -50,10 +69,10 @@ final class HUDController {
             backing: .buffered,
             defer: false
         )
-        panel.level = .statusBar
+        panel.level = .notch
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
@@ -71,13 +90,23 @@ final class HUDController {
     /// Delayed so instant commands do not flash it.
     func show(_ text: String, after delay: Duration = .milliseconds(250)) {
         model.text = text
+        if closing != nil {
+            closing?.cancel()
+            closing = nil
+            model.isOpen = true
+            return
+        }
         guard !panel.isVisible, pending == nil else { return }
         pending = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard let self, !Task.isCancelled else { return }
             pending = nil
-            position()
+            if let screen = NotchGeometry.screen {
+                model.notch = NotchGeometry(screen: screen)
+                panel.pinToNotch(of: screen)
+            }
             panel.orderFrontRegardless()
+            model.isOpen = true
         }
     }
 
@@ -88,15 +117,14 @@ final class HUDController {
     func hide() {
         pending?.cancel()
         pending = nil
-        panel.orderOut(nil)
-    }
-
-    /// Top right, under the menu bar: away from most content the agent clicks.
-    private func position() {
-        guard let screen = NSScreen.main else { return }
-        let size = HUDView.size
-        let frame = screen.visibleFrame
-        panel.setFrameOrigin(NSPoint(x: frame.maxX - size.width - 8, y: frame.maxY - size.height - 4))
+        guard panel.isVisible, closing == nil else { return }
+        model.isOpen = false
+        closing = Task { [weak self] in
+            try? await Task.sleep(for: NotchMotion.closeDelay)
+            guard let self, !Task.isCancelled else { return }
+            closing = nil
+            panel.orderOut(nil)
+        }
     }
 }
 

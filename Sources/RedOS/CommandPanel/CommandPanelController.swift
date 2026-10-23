@@ -83,13 +83,22 @@ final class CommandPanelController {
             )
         )
         panel.onKeyDown = { [weak self] event in self?.handleKey(event) ?? false }
+        panel.onResignKey = { [weak self] in
+            // Also called by our own orderOut: by then the island is already closed.
+            guard let self, model.isOpen else { return }
+            collapse()
+        }
         return panel
     }()
+    /// Orders the panel out once the island has shrunk back into the notch.
+    private var closing: Task<Void, Never>?
 
     init(engine: CommandEngine, defaults: UserDefaults = .standard) {
         self.engine = engine
         self.defaults = defaults
         self.history = CommandHistory(entries: defaults.stringArray(forKey: Self.historyKey) ?? [])
+        listener.onLevel = { [model] in model.level = $0 }
+        speaker.onSpeakingChange = { [model] in model.isSpeaking = $0 }
     }
 
     func update(engine: CommandEngine, voice: VoiceSettings) {
@@ -98,7 +107,7 @@ final class CommandPanelController {
     }
 
     func toggle() {
-        if panel.isVisible {
+        if isShown {
             hide()
         } else {
             show()
@@ -118,12 +127,14 @@ final class CommandPanelController {
         }
         position()
         panel.makeKeyAndOrderFront(nil)
+        model.isOpen = true
         model.focusRequest += 1
     }
 
-    func hide() {
+    /// `animated: false` when keystrokes are about to be posted: the panel must stop being key at once.
+    func hide(animated: Bool = true) {
         endFollowUp()
-        panel.orderOut(nil)
+        collapse(animated: animated)
     }
 
     /// Kill switch: stops listening, speaking and whatever RedOS is doing.
@@ -155,7 +166,7 @@ final class CommandPanelController {
             guard !Task.isCancelled else { return }
             await rememberTurn(silentBefore: silent)
             if runNextAddition() { return }
-            guard !panel.isVisible else {
+            guard !isShown else {
                 followUpIfUseful()
                 return
             }
@@ -401,12 +412,36 @@ extension CommandPanelController {
         defaults.set(history.entries, forKey: Self.historyKey)
     }
 
+}
+
+// MARK: - The island in the notch
+
+extension CommandPanelController {
+    /// Visible and not shrinking away.
+    var isShown: Bool {
+        panel.isVisible && model.isOpen
+    }
+
+    private func collapse(animated: Bool = true) {
+        model.isOpen = false
+        closing?.cancel()
+        closing = nil
+        guard animated, panel.isVisible else {
+            panel.orderOut(nil)
+            return
+        }
+        closing = Task { [panel] in
+            try? await Task.sleep(for: NotchMotion.closeDelay)
+            guard !Task.isCancelled else { return }
+            panel.orderOut(nil)
+        }
+    }
+
     private func position() {
-        guard let screen = NSScreen.main else { return }
-        let frame = screen.visibleFrame
-        // The card sits at the top of the transparent panel, about a quarter below the top of the screen.
-        let top = frame.minY + frame.height * 0.75
-        let size = CommandPanelView.size
-        panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: top - size.height))
+        closing?.cancel()
+        closing = nil
+        guard let screen = NotchGeometry.screen else { return }
+        model.notch = NotchGeometry(screen: screen)
+        panel.pinToNotch(of: screen)
     }
 }

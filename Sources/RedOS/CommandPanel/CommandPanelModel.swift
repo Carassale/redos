@@ -31,4 +31,10 @@ final class CommandPanelModel {
     /// What a running request is doing (understanding, searching the web…).
     var activity: Activity?
     var focusRequest = 0
+    /// The island is grown out of the notch; false while it shrinks back before the panel hides.
+    var isOpen = false
+    var notch = NotchGeometry()
+    /// Microphone level, 0...1.
+    var level: Float = 0
+    var isSpeaking = false
 }

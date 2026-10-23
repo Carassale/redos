@@ -4,8 +4,17 @@ import AVFoundation
 @MainActor
 public final class Speaker {
     private let synthesizer = AVSpeechSynthesizer()
+    private let observer = SpeakingObserver()
 
-    public init() {}
+    /// RedOS started (true) or stopped (false) talking.
+    public var onSpeakingChange: (@MainActor (Bool) -> Void)? {
+        get { observer.onChange }
+        set { observer.onChange = newValue }
+    }
+
+    public init() {
+        synthesizer.delegate = observer
+    }
 
     public func speak(_ text: String, locale: Locale) {
         synthesizer.stopSpeaking(at: .immediate)
@@ -36,5 +45,26 @@ public final class Speaker {
             (region.map { voice.language.hasSuffix($0) } == true ? 10 : 0) + voice.quality.rawValue
         }
         return candidates.max { score($0) < score($1) } ?? AVSpeechSynthesisVoice(language: locale.identifier)
+    }
+}
+
+private final class SpeakingObserver: NSObject, AVSpeechSynthesizerDelegate, @unchecked Sendable {
+    var onChange: (@MainActor (Bool) -> Void)?
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        report(true)
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        report(false)
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        report(false)
+    }
+
+    private func report(_ speaking: Bool) {
+        let onChange = onChange
+        Task { @MainActor in onChange?(speaking) }
     }
 }

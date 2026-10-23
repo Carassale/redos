@@ -1,10 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Borderless, non-activating panel: typing goes here while the previous app stays frontmost.
+/// Borderless, non-activating panel hanging from the notch: typing goes here while the previous app stays frontmost.
 final class CommandPanel: NSPanel {
     /// Returns true when the key was handled (e.g. history navigation) and must not reach the text field.
     var onKeyDown: ((NSEvent) -> Bool)?
+    /// Clicking elsewhere: the island shrinks back into the notch.
+    var onResignKey: (() -> Void)?
 
     init(rootView: some View) {
         super.init(
@@ -14,12 +16,12 @@ final class CommandPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        level = .floating
+        level = .notch
         backgroundColor = .clear
         isOpaque = false
-        hasShadow = true
+        // The island draws its own shadow: the window one would not follow its shape as it grows.
+        hasShadow = false
         hidesOnDeactivate = false
-        isMovableByWindowBackground = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
 
         let hosting = NSHostingController(rootView: rootView)
@@ -38,6 +40,10 @@ final class CommandPanel: NSPanel {
 
     override func resignKey() {
         super.resignKey()
-        orderOut(nil)
+        if let onResignKey {
+            onResignKey()
+        } else {
+            orderOut(nil)
+        }
     }
 }

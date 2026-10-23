@@ -10,7 +10,7 @@ extension CommandPanelController {
         _ title: String, _ work: (_ onStep: @escaping StepHandler) async -> Result<String?, ActionError>
     ) async {
         model.state = .working
-        hide()
+        hide(animated: false)
         hud.show(title)
         isDrivingMac = true
         beginCorrections(task: title)

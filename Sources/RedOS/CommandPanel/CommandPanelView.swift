@@ -1,9 +1,12 @@
 import RedOSCore
 import SwiftUI
 
+/// The assistant as an island grown out of the notch: RedOS's orb and state beside the camera, the request and
+/// its result below.
 struct CommandPanelView: View {
-    /// The panel never resizes: the card grows inside a fixed transparent window.
-    static let size = CGSize(width: 640, height: 460)
+    /// The panel never resizes: the island grows inside a fixed transparent window hanging from the notch.
+    static let size = CGSize(width: 720, height: 540)
+    private static let islandWidth: CGFloat = 640
 
     @Bindable var model: CommandPanelModel
     let onSubmit: () -> Void
@@ -13,40 +16,26 @@ struct CommandPanelView: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        card
-            .frame(width: Self.size.width, height: Self.size.height, alignment: .top)
-    }
-
-    private var card: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                if model.state == .listening || model.isFollowingUp {
-                    Image(systemName: "waveform.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(model.state == .listening ? .red : .secondary)
-                        .symbolEffect(.variableColor.iterative, options: .repeating)
-                } else {
-                    Image(systemName: "circle.hexagongrid.fill")
-                        .font(.title2)
-                        .foregroundStyle(.red)
-                }
-                TextField(model.state == .listening ? "Listening…" : "Ask RedOS…", text: $model.text)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 22))
-                    .focused($isFocused)
-                    .onSubmit(onSubmit)
-                if model.state == .working {
-                    ProgressView().controlSize(.small)
-                }
+        NotchIsland(notch: model.notch, isOpen: model.isOpen, width: Self.islandWidth) {
+            HStack(spacing: 8) {
+                RedOrb(mode: mode, level: model.level)
+                Text(verbatim: modeTitle)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1)
+                    .contentTransition(.opacity)
             }
-            status
+        } trailing: {
+            trailingWing
+                .font(.system(size: 13, weight: .semibold))
+        } content: {
+            card
         }
-        .padding(18)
-        .frame(width: Self.size.width, alignment: .leading)
-        // Plain material: .glassEffect and a self-sizing window both crashed with layout recursion (macOS 26).
-        .background(.regularMaterial, in: .rect(cornerRadius: 22))
+        .animation(.smooth(duration: 0.3), value: model.state)
+        .animation(.smooth(duration: 0.2), value: mode)
+        .frame(width: Self.size.width, height: Self.size.height, alignment: .top)
+        .ignoresSafeArea()
         .onExitCommand(perform: onCancel)
-        .onAppear { isFocused = true }
         .onChange(of: model.focusRequest) { isFocused = true }
         .onChange(of: model.text) {
             switch model.state {
@@ -54,6 +43,62 @@ struct CommandPanelView: View {
             default: break
             }
         }
+    }
+
+    private var mode: RedOrb.Mode {
+        if model.state == .listening { return .listening }
+        if model.isSpeaking { return .speaking }
+        if model.state == .working { return .thinking }
+        return model.isFollowingUp ? .listening : .idle
+    }
+
+    private var modeTitle: String {
+        switch mode {
+        case .listening: String(localized: "Listening…")
+        case .thinking: String(localized: "Thinking…")
+        case .speaking: String(localized: "Speaking…")
+        case .idle: "RedOS"
+        }
+    }
+
+    @ViewBuilder
+    private var trailingWing: some View {
+        switch mode {
+        case .listening:
+            LevelBars(level: model.level)
+        case .speaking:
+            LevelBars()
+        case .thinking:
+            Image(systemName: model.activity?.symbol ?? "sparkles")
+                .foregroundStyle(.orange)
+                .symbolEffect(.pulse, options: .repeating)
+                .contentTransition(.symbolEffect(.replace))
+        case .idle:
+            switch model.state {
+            case .answer: Image(systemName: "sparkles").foregroundStyle(.red)
+            case .message(_, let isError):
+                Image(systemName: isError ? "xmark.octagon.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(isError ? .red : .green)
+            case .confirming, .confirmingPlan:
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            case .idle, .listening, .working: EmptyView()
+            }
+        }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            TextField(model.state == .listening ? "Listening…" : "Ask RedOS…", text: $model.text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.white)
+                .focused($isFocused)
+                .onSubmit(onSubmit)
+            status
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // The card appears each time the island opens.
+        .onAppear { isFocused = true }
     }
 
     @ViewBuilder

@@ -2,13 +2,51 @@ import AppKit
 import RedOSCore
 import SwiftUI
 
-/// The floating window next to the call: live notes on top, the transcript below, the minutes at the end.
 @MainActor
-final class NotesWindowController: NSObject, NSWindowDelegate {
+@Observable
+final class NotesIslandModel {
+    var isOpen = false
+    /// Compact (timer and activity beside the camera) during the call; expanded on click and for the minutes.
+    var isExpanded = false
+    var notch = NotchGeometry()
+}
+
+/// The notes as a live activity in the notch: compact during the call, the live notes and the transcript on
+/// click, the minutes at the end.
+@MainActor
+final class NotesWindowController {
+    private static let compactWidth: CGFloat = 520
+    private static let expandedSize = CGSize(width: 720, height: 640)
+
     private let taker: NoteTaker
     private let onStop: @MainActor () -> Void
     private let onCommand: @MainActor (String) -> Void
-    private var panel: NSPanel?
+    private let model = NotesIslandModel()
+    private var closing: Task<Void, Never>?
+    private var shrinking: Task<Void, Never>?
+    private lazy var panel: NSPanel = {
+        let panel = NotesPanel(
+            contentRect: .zero,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.level = .notch
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = false
+        panel.hidesOnDeactivate = false
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        let hosting = NSHostingController(rootView: NotesView(
+            taker: taker, model: model, onStop: onStop, onCommand: onCommand,
+            onExpand: { [weak self] in self?.setExpanded($0) },
+            onClose: { [weak self] in self?.close() }
+        ))
+        hosting.sizingOptions = []
+        panel.contentViewController = hosting
+        return panel
+    }()
 
     /// `onCommand` runs a command as if typed ("send the minutes").
     init(taker: NoteTaker, onStop: @escaping @MainActor () -> Void, onCommand: @escaping @MainActor (String) -> Void) {
@@ -18,61 +56,165 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        if panel == nil {
-            let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 420, height: 640),
-                styleMask: [.titled, .closable, .resizable, .utilityWindow],
-                backing: .buffered,
-                defer: false
-            )
-            panel.title = String(localized: "Notes")
-            panel.level = .floating
-            panel.hidesOnDeactivate = false
-            panel.isReleasedWhenClosed = false
-            panel.delegate = self
-            let hosting = NSHostingController(rootView: NotesView(taker: taker, onStop: onStop, onCommand: onCommand))
-            hosting.sizingOptions = []
-            panel.contentViewController = hosting
-            panel.setContentSize(NSSize(width: 420, height: 640))
-            if let screen = NSScreen.main?.visibleFrame {
-                panel.setFrameTopLeftPoint(NSPoint(x: screen.maxX - 440, y: screen.maxY - 20))
-            }
-            self.panel = panel
+        closing?.cancel()
+        closing = nil
+        if !panel.isVisible {
+            if let screen = NotchGeometry.screen { model.notch = NotchGeometry(screen: screen) }
+            resize()
+            panel.orderFrontRegardless()
         }
-        panel?.orderFrontRegardless()
+        model.isOpen = true
     }
 
-    /// Closing the window while listening ends the notes, so nothing keeps listening unseen.
-    func windowWillClose(_ notification: Notification) {
-        if taker.isListening {
-            onStop()
-        } else {
-            taker.dismiss()
+    /// The window grows before the island and shrinks after it, so it never blocks clicks around a compact island.
+    private func setExpanded(_ expanded: Bool) {
+        guard expanded != model.isExpanded else { return }
+        shrinking?.cancel()
+        shrinking = nil
+        if expanded {
+            model.isExpanded = true
+            resize()
+            return
+        }
+        model.isExpanded = false
+        shrinking = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard let self, !Task.isCancelled else { return }
+            resize()
+        }
+    }
+
+    private func resize() {
+        let size = model.isExpanded ? Self.expandedSize : CGSize(width: Self.compactWidth, height: model.notch.height)
+        panel.setContentSize(size)
+        if let screen = NotchGeometry.screen { panel.pinToNotch(of: screen) }
+    }
+
+    private func close() {
+        taker.dismiss()
+        model.isOpen = false
+        closing?.cancel()
+        closing = Task { [weak self] in
+            try? await Task.sleep(for: NotchMotion.closeDelay)
+            guard let self, !Task.isCancelled else { return }
+            closing = nil
+            panel.orderOut(nil)
+            setExpanded(false)
         }
     }
 }
 
+private final class NotesPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
 private struct NotesView: View {
     let taker: NoteTaker
+    let model: NotesIslandModel
     let onStop: @MainActor () -> Void
     let onCommand: @MainActor (String) -> Void
+    let onExpand: (Bool) -> Void
+    let onClose: () -> Void
 
     var body: some View {
+        NotchIsland(
+            notch: model.notch, isOpen: model.isOpen, width: model.isExpanded ? 640 : 440,
+            showsContent: model.isExpanded
+        ) {
+            leading
+                .contentShape(.rect)
+                .onTapGesture { onExpand(!model.isExpanded) }
+        } trailing: {
+            trailing
+        } content: {
+            content
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea()
+        .onChange(of: taker.phase) {
+            switch taker.phase {
+            case .listening, .writingMinutes: onExpand(false)
+            case .saved: onExpand(true)
+            case .idle: onClose()
+            }
+        }
+    }
+
+    private var isSomeoneTalking: Bool {
+        taker.hearing.values.contains { !$0.isEmpty }
+    }
+
+    @ViewBuilder
+    private var leading: some View {
+        HStack(spacing: 6) {
+            switch taker.phase {
+            case .listening:
+                Image(systemName: "record.circle.fill")
+                    .foregroundStyle(.red)
+                    .symbolEffect(.pulse, options: .repeating)
+                if let started = taker.started {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let elapsed = Duration.seconds(context.date.timeIntervalSince(started))
+                        Text(elapsed.formatted(.time(pattern: .hourMinuteSecond))).monospacedDigit()
+                    }
+                }
+            case .writingMinutes:
+                ProgressView().controlSize(.mini)
+            case .saved, .idle:
+                Image(systemName: "note.text").foregroundStyle(.orange)
+                Text("Notes")
+            }
+        }
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(.white.opacity(0.85))
+    }
+
+    @ViewBuilder
+    private var trailing: some View {
+        HStack(spacing: 8) {
+            if model.isExpanded {
+                if taker.isListening {
+                    Button("Stop", systemImage: "stop.fill", action: onStop)
+                        .keyboardShortcut(".", modifiers: .command)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+                        .controlSize(.mini)
+                }
+                Button("Close", systemImage: taker.isListening ? "chevron.up" : "xmark") {
+                    if taker.isListening { onExpand(false) } else { onClose() }
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            } else {
+                if taker.isUpdatingNotes {
+                    Image(systemName: "pencil.line")
+                        .foregroundStyle(.orange)
+                        .symbolEffect(.pulse, options: .repeating)
+                }
+                LevelBars(level: isSomeoneTalking ? nil : 0.08)
+            }
+        }
+        .font(.system(size: 12, weight: .semibold))
+        .contentShape(.rect)
+        .onTapGesture { if !model.isExpanded { onExpand(true) } }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
-            header
             if let warning = taker.warning {
                 Label(warning, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange)
             }
             switch taker.phase {
             case .idle:
-                Text("Say “prendi appunti” or use the menu to start.").foregroundStyle(.secondary)
-                Spacer()
+                EmptyView()
             case .listening:
                 live
             case .writingMinutes:
-                ProgressView("Writing the minutes…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView("Writing the minutes…").frame(maxWidth: .infinity, minHeight: 80)
             case .saved(let meeting):
-                MinutesView(meeting: meeting)
+                MinutesView(meeting: meeting).frame(maxHeight: 420)
                 HStack {
                     Button("Email to Participants", systemImage: "envelope") {
                         onCommand(String(localized: "send the minutes"))
@@ -84,26 +226,7 @@ private struct NotesView: View {
                 .font(.callout)
             }
         }
-        .padding(14)
-        .frame(minWidth: 320, minHeight: 360)
-    }
-
-    private var header: some View {
-        HStack {
-            if taker.isListening, let started = taker.started {
-                Image(systemName: "record.circle").foregroundStyle(.red).symbolEffect(.pulse, options: .repeating)
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    let elapsed = Duration.seconds(context.date.timeIntervalSince(started))
-                    Text(elapsed.formatted(.time(pattern: .hourMinuteSecond))).monospacedDigit()
-                }
-                Spacer()
-                Button("Stop", action: onStop).keyboardShortcut(".", modifiers: .command)
-            } else {
-                Image(systemName: "note.text")
-                Text("Notes").font(.headline)
-                Spacer()
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var live: some View {
@@ -124,11 +247,11 @@ private struct NotesView: View {
                     if taker.isUpdatingNotes { ProgressView().controlSize(.mini) }
                 }
             }
-            .frame(maxHeight: .infinity)
+            .frame(height: 230)
             GroupBox("Transcript") {
                 TranscriptView(lines: taker.lines, hearing: taker.hearing)
             }
-            .frame(maxHeight: .infinity)
+            .frame(height: 190)
         }
     }
 }
