@@ -1,47 +1,13 @@
 import Foundation
 
-/// The bundled diagram-design skill (MIT, Cathryn Lavery): style guide, primitives, 44 visual types with examples.
-public struct DiagramLibrary: Sendable {
-    public struct VisualType: Sendable, Equatable {
-        public let id: String
-        public let name: String
-        public let use: String
-    }
-
-    public let directory: URL
-    public let types: [VisualType]
-
-    public init?(directory: URL) {
-        guard let skill = try? String(contentsOf: directory.appending(path: "SKILL.md"), encoding: .utf8) else {
-            return nil
-        }
-        self.directory = directory
-        types = Self.types(in: skill)
-        guard !types.isEmpty else { return nil }
-    }
-
-    /// Rows of the skill's visual-type guide: "| If you're showing… | **Name** | [type-id.md](…) |".
-    static func types(in skill: String) -> [VisualType] {
-        skill.split(separator: "\n").compactMap { line in
-            let row = /^\|\s*(.+?)\s*\|\s*\*\*(.+?)\*\*\s*\|\s*\[type-([a-z-]+)\.md\]/
-            guard let match = line.firstMatch(of: row) else { return nil }
-            return VisualType(id: String(match.3), name: String(match.2), use: String(match.1))
-        }
-    }
-
-    func reference(_ name: String) -> String {
-        (try? String(contentsOf: directory.appending(path: "references/\(name).md"), encoding: .utf8)) ?? ""
-    }
-
-    func example(_ type: String) -> String {
-        (try? String(contentsOf: directory.appending(path: "assets/example-\(type).html"), encoding: .utf8)) ?? ""
-    }
-}
-
 public struct Diagram: Sendable, Equatable {
     public let title: String
-    public let type: String
+    /// Mermaid code.
+    public let source: String
+    /// The diagram as a page for the browser (Mermaid from its CDN).
     public let file: URL
+    /// Markdown written with the diagram when the request also asks to explain.
+    public var explanation: String?
 }
 
 public enum DiagramError: Error, LocalizedError, Equatable {
@@ -52,90 +18,59 @@ public enum DiagramError: Error, LocalizedError, Equatable {
     }
 }
 
-/// Draws a diagram as a self-contained HTML/SVG file following the diagram-design style.
+/// Draws a diagram as Mermaid code, with an explanation when asked: one reply instead of a hand-made SVG page.
 public struct DiagramDesigner: Sendable {
     private let client: any ChatCompleting
-    private let library: DiagramLibrary
     private let output: URL
 
     public init(
-        client: any ChatCompleting, library: DiagramLibrary,
-        output: URL = URL.applicationSupportDirectory.appending(path: "RedOS/Diagrams")
+        client: any ChatCompleting, output: URL = URL.applicationSupportDirectory.appending(path: "RedOS/Diagrams")
     ) {
         self.client = client
-        self.library = library
         self.output = output
     }
 
-    private struct Choice: Decodable {
-        let type: String?
-        let title: String?
-    }
-
-    public func draw(_ request: String) async throws -> Diagram {
-        await ActivityReporter.report(.thinking)
-        let choice = try await choose(request)
-        let type = library.types.first { $0.id == choice.type } ?? library.types.first { $0.id == "flowchart" }!
-        await ActivityReporter.report(.drawing(type.name))
-        let response = try await client.chat(
-            [.system(designPrompt(for: type)), .user(request)], format: nil, maxTokens: 16000, topLogprobs: nil
-        )
-        guard let html = Self.document(in: response.message.content) else { throw DiagramError.noDiagram }
-        let title = choice.title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? type.name
-        return Diagram(title: title, type: type.name, file: try save(html, title: title))
-    }
-
-    private func choose(_ request: String) async throws -> Choice {
-        let list = library.types.map { "- \($0.id): \($0.name) — \($0.use)" }.joined(separator: "\n")
-        let prompt = """
-            Pick the visual type that best fits the user's diagram request.
-            \(list)
-            Reply with compact JSON only: {"type":"<id>","title":"<short title in the user's language>"}
-            """
-        let response = try await client.chat(
-            [.system(prompt), .user(request)], format: .string("json"), maxTokens: 120, topLogprobs: nil
-        )
-        let json = JSONText.firstObject(in: response.message.content) ?? "{}"
-        return (try? JSONDecoder().decode(Choice.self, from: Data(json.utf8))) ?? Choice(type: nil, title: nil)
-    }
-
-    func designPrompt(for type: DiagramLibrary.VisualType) -> String {
+    static let prompt = """
+        You draw one diagram as Mermaid 11 code. Pick the kind that fits: flowchart (processes, decisions), \
+        sequenceDiagram (messages between actors), stateDiagram-v2, classDiagram, erDiagram, timeline, gantt, \
+        pie (shares), xychart-beta (bars or lines of numbers), mindmap, quadrantChart, journey.
+        Rules: every label in the user's language; only the data and names the user gave, never invent figures; \
+        put labels with punctuation in double quotes, e.g. A["Verifica (2FA)"]; no style, classDef, click or \
+        %%{init} lines; at most 30 nodes.
+        If the request also asks to explain, describe or tell about the subject, first write the explanation in \
+        Markdown in the user's language (at most 200 words, short paragraphs or a list), then the diagram. \
+        Otherwise write only the diagram, with no text around it.
+        The diagram goes in one ```mermaid code block whose first line is:
+        %% title: <short title in the user's language>
         """
-        You draw one diagram as a single self-contained HTML file with inline SVG, following this design \
-        system exactly. Use the user's language for every label. Use only the data and names the user gave; \
-        do not invent figures. No JavaScript. External resources: only the Google Fonts link of the example.
-        Reply with the complete HTML document only, from <!DOCTYPE html> to </html>.
 
-        # Style guide
-        \(library.reference("style-guide"))
+    static let kinds = [
+        "flowchart", "graph", "sequenceDiagram", "stateDiagram", "classDiagram", "erDiagram", "timeline", "gantt",
+        "pie", "xychart", "mindmap", "quadrantChart", "journey", "gitGraph", "sankey", "block",
+    ]
 
-        # Primitives
-        \(library.reference("primitives-core"))
-
-        # Visual type: \(type.name)
-        \(library.reference("type-\(type.id)"))
-
-        # Example of this type (structure and style to follow; replace all content)
-        \(library.example(type.id))
-        """
+    /// A line that opens a diagram: its first word is a kind, like `flowchart` or `stateDiagram-v2`.
+    static func startsDiagram(_ line: Substring) -> Bool {
+        let word = line.drop { $0.isWhitespace }.prefix { !$0.isWhitespace }
+        return kinds.contains { word == $0 || word.hasPrefix($0 + "-") }
     }
 
-    /// The HTML document in a reply, without scripts; nil when there is no SVG.
-    static func document(in reply: String) -> String? {
-        let start = reply.range(of: "<!DOCTYPE html", options: .caseInsensitive)
-            ?? reply.range(of: "<html", options: .caseInsensitive)
-        var html: String
-        if let start, let end = reply.range(of: "</html>", options: [.caseInsensitive, .backwards]),
-           start.lowerBound < end.upperBound {
-            html = String(reply[start.lowerBound..<end.upperBound])
-        } else if let svg = reply.range(of: "<svg", options: .caseInsensitive),
-                  let end = reply.range(of: "</svg>", options: [.caseInsensitive, .backwards]) {
-            html = "<!DOCTYPE html><html><body>" + reply[svg.lowerBound..<end.upperBound] + "</body></html>"
-        } else {
-            return nil
-        }
-        html = html.replacing(/(?is)<script\b.*?<\/script>/, with: "")
-        return html.range(of: "<svg", options: .caseInsensitive) == nil ? nil : html
+    /// `request` is what the user said, when `description` (what to draw) was written by the planner.
+    public func draw(_ description: String, request: String? = nil) async throws -> Diagram {
+        await ActivityReporter.report(.drawing)
+        let message = request.map { $0 == description ? description : "Request: \($0)\nWhat to draw: \(description)" }
+            ?? description
+        let response = try await client.chat(
+            [.system(Self.prompt), .user(message)], format: nil, maxTokens: 3000, topLogprobs: nil
+        )
+        guard let reply = MermaidReply(response.message.content) else { throw DiagramError.noDiagram }
+        let name = reply.title ?? String(localized: "Diagram")
+        let page = MermaidPage.html(
+            reply.source, title: name, scriptURL: "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"
+        )
+        return Diagram(
+            title: name, source: reply.source, file: try save(page, title: name), explanation: reply.explanation
+        )
     }
 
     private func save(_ html: String, title: String) throws -> URL {
@@ -152,4 +87,64 @@ public struct DiagramDesigner: Sendable {
 
 extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
+/// A reply split into its Mermaid diagram (without init directives), its title and the prose around it.
+struct MermaidReply: Equatable {
+    let title: String?
+    let source: String
+    let explanation: String?
+
+    init?(_ reply: String) {
+        var reader = Reader()
+        for line in reply.split(separator: "\n", omittingEmptySubsequences: false) { reader.read(line) }
+        reader.finish()
+        guard let diagram = reader.diagram else { return nil }
+        title = reader.title
+        source = diagram.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        explanation = reader.prose.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    private struct Reader {
+        var title: String?
+        var prose: [Substring] = []
+        var diagram: [Substring]?
+        /// The open code block, from its fence.
+        var block: [Substring]?
+
+        mutating func read(_ line: Substring) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if let match = trimmed.firstMatch(of: /^%%\s*title:\s*(.+)$/) {
+                title = title ?? String(match.1).trimmingCharacters(in: .whitespaces).nilIfEmpty
+            } else if trimmed.hasPrefix("%%{") {
+                return
+            } else if trimmed.hasPrefix("```") {
+                if block == nil { block = [line] } else { close(with: line) }
+            } else if block != nil {
+                block?.append(line)
+            } else {
+                prose.append(line)
+            }
+        }
+
+        /// The first block holding a diagram is the diagram; other blocks (code examples) stay in the prose.
+        mutating func close(with fence: Substring?) {
+            guard let open = block else { return }
+            block = nil
+            let body = open.dropFirst()
+            if diagram == nil, let start = body.firstIndex(where: DiagramDesigner.startsDiagram) {
+                diagram = Array(body[start...])
+            } else {
+                prose += open + (fence.map { [$0] } ?? [])
+            }
+        }
+
+        /// A cut-off block still counts; in a reply without fences the diagram starts at its first line.
+        mutating func finish() {
+            close(with: nil)
+            guard diagram == nil, let start = prose.firstIndex(where: DiagramDesigner.startsDiagram) else { return }
+            diagram = Array(prose[start...])
+            prose = Array(prose[..<start])
+        }
+    }
 }

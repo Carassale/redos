@@ -189,23 +189,41 @@ struct ResearchTests {
         #expect(result.diagram == "Flusso di login")
     }
 
-    @Test func diagramLibraryReadsTheBundledSkill() throws {
-        let directory = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appending(path: "Resources/DiagramDesign")
-        let library = try #require(DiagramLibrary(directory: directory))
-        #expect(library.types.count == 44)
-        #expect(library.types.contains { $0.id == "flowchart" && $0.name == "Flowchart" })
-        let prompt = DiagramDesigner(client: ScriptedChat([]), library: library)
-            .designPrompt(for: try #require(library.types.first { $0.id == "bar" }))
-        #expect(prompt.contains("# Visual type: Bar chart"))
-        #expect(prompt.contains("<svg"))
+    @Test func extractsMermaid() throws {
+        let reply = "Ecco:\n```mermaid\n%% title: Login\n%%{init: {}}%%\nflowchart TD\n  A --> B\n```"
+        let diagram = try #require(MermaidReply(reply))
+        #expect(diagram.title == "Login")
+        #expect(diagram.source == "flowchart TD\n  A --> B")
+        #expect(diagram.explanation == "Ecco:")
+        #expect(MermaidReply("pie\n  \"A\": 1")?.title == nil)
+        #expect(MermaidReply("pieno di cose") == nil)
+        #expect(MermaidReply("no diagram") == nil)
     }
 
-    @Test func extractsDiagramHTML() {
-        let reply = "Ecco:\n```html\n<!DOCTYPE html><html><body><svg></svg><script>alert(1)</script></body></html>\n```"
-        #expect(DiagramDesigner.document(in: reply) == "<!DOCTYPE html><html><body><svg></svg></body></html>")
-        #expect(DiagramDesigner.document(in: "<svg viewBox='0 0 1 1'></svg>")?.hasPrefix("<!DOCTYPE html>") == true)
-        #expect(DiagramDesigner.document(in: "no diagram") == nil)
+    @Test func keepsTheExplanationAndItsCodeExamples() throws {
+        let reply = """
+            OIDC aggiunge l'identità a OAuth 2.0.
+
+            ```http
+            GET /authorize?response_type=code
+            ```
+
+            ```mermaid
+            %% title: Login OIDC
+            sequenceDiagram
+              Utente->>App: accede
+            """
+        let diagram = try #require(MermaidReply(reply))
+        #expect(diagram.title == "Login OIDC")
+        #expect(diagram.source == "sequenceDiagram\n  Utente->>App: accede")
+        #expect(diagram.explanation?.hasPrefix("OIDC aggiunge") == true)
+        #expect(diagram.explanation?.contains("```http\nGET /authorize?response_type=code\n```") == true)
+    }
+
+    @Test func mermaidPageCannotCloseItsScript() {
+        let page = MermaidPage.html("flowchart TD\n  A[\"</script><b>\"] --> B", title: "<T>")
+        #expect(!page.contains("</script><b>"))
+        #expect(page.contains("<title>&lt;T&gt;</title>"))
     }
 }
 

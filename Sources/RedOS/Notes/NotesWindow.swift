@@ -115,6 +115,7 @@ private struct NotesView: View {
     let onCommand: @MainActor (String) -> Void
     let onExpand: (Bool) -> Void
     let onClose: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NotchIsland(
@@ -150,8 +151,8 @@ private struct NotesView: View {
             switch taker.phase {
             case .listening:
                 Image(systemName: "record.circle.fill")
-                    .foregroundStyle(.red)
-                    .symbolEffect(.pulse, options: .repeating)
+                    .foregroundStyle(RedPalette.signal)
+                    .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
                 if let started = taker.started {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         let elapsed = Duration.seconds(context.date.timeIntervalSince(started))
@@ -161,12 +162,12 @@ private struct NotesView: View {
             case .writingMinutes:
                 ProgressView().controlSize(.mini)
             case .saved, .idle:
-                Image(systemName: "note.text").foregroundStyle(.orange)
+                Image(systemName: "note.text").foregroundStyle(.secondary)
                 Text("Notes")
             }
         }
         .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(.white.opacity(0.85))
+        .foregroundStyle(RedPalette.text)
     }
 
     @ViewBuilder
@@ -174,23 +175,20 @@ private struct NotesView: View {
         HStack(spacing: 8) {
             if model.isExpanded {
                 if taker.isListening {
-                    Button("Stop", systemImage: "stop.fill", action: onStop)
+                    StopButton(action: onStop)
                         .keyboardShortcut(".", modifiers: .command)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.red)
-                        .controlSize(.mini)
                 }
                 Button("Close", systemImage: taker.isListening ? "chevron.up" : "xmark") {
                     if taker.isListening { onExpand(false) } else { onClose() }
                 }
                 .labelStyle(.iconOnly)
-                .buttonStyle(.plain)
+                .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
             } else {
                 if taker.isUpdatingNotes {
                     Image(systemName: "pencil.line")
-                        .foregroundStyle(.orange)
-                        .symbolEffect(.pulse, options: .repeating)
+                        .foregroundStyle(.secondary)
+                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
                 }
                 LevelBars(level: isSomeoneTalking ? nil : 0.08)
             }
@@ -204,7 +202,8 @@ private struct NotesView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let warning = taker.warning {
-                Label(warning, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange)
+                Label(warning, systemImage: "exclamationmark.triangle").font(.callout)
+                    .foregroundStyle(RedPalette.warning)
             }
             switch taker.phase {
             case .idle:
@@ -232,7 +231,12 @@ private struct NotesView: View {
     private var live: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Let the participants know that you are taking notes.").font(.caption).foregroundStyle(.secondary)
-            GroupBox {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    sectionTitle("Live notes")
+                    if taker.isUpdatingNotes { ProgressView().controlSize(.mini) }
+                }
+                Divider()
                 ScrollView {
                     if taker.notes.isEmpty {
                         Text("Notes appear after about a minute of talk.")
@@ -241,18 +245,19 @@ private struct NotesView: View {
                         MarkdownText(markdown: taker.notes).frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-            } label: {
-                HStack {
-                    Text("Live notes")
-                    if taker.isUpdatingNotes { ProgressView().controlSize(.mini) }
-                }
             }
             .frame(height: 230)
-            GroupBox("Transcript") {
+            VStack(alignment: .leading, spacing: 6) {
+                sectionTitle("Transcript")
+                Divider()
                 TranscriptView(lines: taker.lines, hearing: taker.hearing)
             }
             .frame(height: 190)
         }
+    }
+
+    private func sectionTitle(_ title: LocalizedStringKey) -> some View {
+        Text(title).font(.callout.weight(.semibold)).foregroundStyle(.secondary)
     }
 }
 
@@ -280,7 +285,8 @@ private struct TranscriptView: View {
     }
 
     private func row(_ speaker: MeetingLine.Speaker, _ text: String, final: Bool) -> some View {
-        (Text(verbatim: speaker.name + ": ").bold().foregroundStyle(speaker == .user ? .blue : .orange)
+        (Text(verbatim: speaker.name + ": ").bold()
+            .foregroundStyle(speaker == .user ? AnyShapeStyle(.primary) : AnyShapeStyle(RedPalette.signal))
             + Text(verbatim: text).foregroundStyle(final ? .primary : .secondary))
             .font(.callout)
             .textSelection(.enabled)

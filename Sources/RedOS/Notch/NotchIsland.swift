@@ -95,6 +95,8 @@ struct NotchIsland<Leading: View, Trailing: View, Content: View>: View {
 
     private var shoulder: CGFloat { isOpen ? 14 : 6 }
     private var corner: CGFloat { isOpen && showsContent ? 28 : 12 }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private static var grow: AnyTransition { .opacity.combined(with: .scale(scale: 0.92, anchor: .top)) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -110,7 +112,7 @@ struct NotchIsland<Leading: View, Trailing: View, Content: View>: View {
                     content
                         .padding(.top, 8)
                         .padding(.bottom, 18)
-                        .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .top)))
+                        .transition(reduceMotion ? .opacity : Self.grow)
                 }
             }
         }
@@ -121,7 +123,7 @@ struct NotchIsland<Leading: View, Trailing: View, Content: View>: View {
         .clipShape(NotchShape(shoulder: shoulder, corner: corner))
         .shadow(color: .black.opacity(isOpen && showsContent ? 0.5 : 0), radius: 20, y: 10)
         .environment(\.colorScheme, .dark)
-        .animation(isOpen ? NotchMotion.open : NotchMotion.close, value: isOpen)
-        .animation(NotchMotion.open, value: showsContent)
+        .animation(reduceMotion ? nil : isOpen ? NotchMotion.open : NotchMotion.close, value: isOpen)
+        .animation(reduceMotion ? nil : NotchMotion.open, value: showsContent)
     }
 }

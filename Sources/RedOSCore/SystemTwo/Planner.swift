@@ -103,7 +103,8 @@ public struct ModelPlanner: Planning {
         Requests to see photos or pictures of someone or something also need the web (research).
         Requests to draw, diagram, chart or visualize something (flows, architectures, timelines, org
         charts, comparisons, data the user gives) reply {"steps":[],"diagram":"<what to draw, with all
-        names, steps and numbers from the request>"}.
+        names, steps and numbers from the request>"}. Asking to explain something with a diagram is a
+        diagram request too: the explanation comes with the diagram.
         Never invent real-time facts.
         """
 
@@ -138,6 +139,8 @@ public struct ModelPlanner: Planning {
         inserimento password, verifica, codice 2FA, accesso o errore"}
         "grafico a barre delle vendite: gennaio 10, febbraio 15, marzo 12" -> {"steps":[],\
         "diagram":"Grafico a barre delle vendite: gennaio 10, febbraio 15, marzo 12"}
+        "spiegami il flusso OAuth, aggiungi anche un diagramma" -> {"steps":[],"diagram":\
+        "Spiegazione e diagramma del flusso OAuth"}
         "quando esce il prossimo film di Nolan?" -> {"steps":[],"research":\
         "prossimo film Christopher Nolan data di uscita"}
         "di cosa parla Inception?" -> {"steps":[],"answer":"Un ladro che ruba segreti nei sogni deve \

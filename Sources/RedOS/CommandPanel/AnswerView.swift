@@ -24,7 +24,10 @@ struct AnswerView: View {
                 }
             }
             if let diagram = answer.diagram {
-                Button("Open Diagram", systemImage: "rectangle.on.rectangle") { onOpenDiagram(diagram) }
+                DiagramPreview(diagram: diagram) { onOpenDiagram(diagram) }
+                Button("Open Diagram", systemImage: "arrow.up.left.and.arrow.down.right") { onOpenDiagram(diagram) }
+                    .buttonStyle(.borderless)
+                    .font(.callout)
             }
             if !answer.sources.isEmpty {
                 Text("Sources: \(answer.sources.joined(separator: ", "))")

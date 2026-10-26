@@ -221,16 +221,13 @@ enum LiveSystemTwo {
     static func expectDiagram(_ request: String, client: any ChatCompleting) async throws {
         let directory = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent()
-        let library = try #require(DiagramLibrary(directory: directory.appending(path: "Resources/DiagramDesign")))
         let start = ContinuousClock.now
-        let diagram = try await DiagramDesigner(
-            client: client, library: library, output: directory.appending(path: "build/diagrams")
-        ).draw(request)
+        let diagram = try await DiagramDesigner(client: client, output: directory.appending(path: "build/diagrams"))
+            .draw(request)
         let elapsed = (ContinuousClock.now - start)
             .formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 0)))
-        print("[live] diagram \(elapsed) \(diagram.type) \(diagram.title) -> \(diagram.file.path)")
-        let html = try String(contentsOf: diagram.file, encoding: .utf8)
-        #expect(html.contains("<svg"))
+        print("[live] diagram \(elapsed) \(diagram.title) -> \(diagram.file.path)\n\(diagram.source)")
+        #expect(DiagramDesigner.kinds.contains { diagram.source.hasPrefix($0) })
     }
     static func expectPlan(_ input: String, client: any ChatCompleting, registry: ActionRegistry) async throws {
         let result = try await timed(input) { try await ModelPlanner(client: client).plan(input, registry: registry) }

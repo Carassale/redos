@@ -197,13 +197,11 @@ flowchart LR
 - **Risposte ricche**: testo, grafico Swift Charts (`ChartSpec`: meteo min/max automatico, cambio ultimo mese,
   serie numeriche proposte dal modello e validate), immagine (og:image delle pagine lette: solo URL presenti
   nei risultati, https pubblici) e fonti.
-- **Diagrammi** con [diagram-design](https://github.com/cathrynlavery/diagram-design) (MIT, v2.6): guida di
-  stile, primitive, riferimenti e un esempio per ciascuno dei 44 tipi in `Resources/DiagramDesign` (1.2 MB).
-  Il planner risponde `{"diagram":"…"}`; `DiagramDesigner` sceglie il tipo (1 chiamata) e genera l'HTML/SVG con
-  guida + tipo + esempio come contesto (~20k token), salvato in `Application Support/RedOS/Diagrams` e mostrato
-  in una finestra WebKit senza JavaScript (link nel browser). Copilot `claude-haiku-5.5`: flowchart del login
-  con 2FA in ~90 s, fedele allo stile. Con Ollama il contesto si allarga da solo (`num_ctx` fino a 32k) ma
-  la qualità è inferiore: per i diagrammi conviene un provider cloud.
+- **Diagrammi** in [Mermaid](https://mermaid.js.org) 11 (MIT, `Resources/Mermaid`, 3.5 MB). Il planner risponde
+  `{"diagram":"…"}`; `DiagramDesigner` chiede al modello solo il codice Mermaid (1 chiamata, risposta breve,
+  `%% title:` in prima riga), disegnato nella risposta da una WKWebView con Mermaid iniettato (offline,
+  `securityLevel: strict`, tema scuro dell'isola); clic = finestra grande. Salvata anche una pagina HTML per il
+  browser (Mermaid da CDN). Prima: diagram-design (HTML/SVG a mano, ~20k token di contesto, ~90 s).
 
 ### Comprensione e velocità (09/10/2026)
 

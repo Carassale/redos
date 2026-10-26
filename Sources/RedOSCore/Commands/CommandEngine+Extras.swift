@@ -218,7 +218,7 @@ extension CommandEngine {
     public func runDiagram(_ request: String, description: String) async -> Result<Diagram, ActionError> {
         guard let designer else { return .failure(.failed(String(localized: "Diagrams are not available."))) }
         do {
-            let diagram = try await designer.draw(description)
+            let diagram = try await designer.draw(description, request: request)
             await record(request, nil, .answered, route: .systemTwo)
             return .success(diagram)
         } catch {

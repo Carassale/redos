@@ -112,14 +112,14 @@ extension CommandPanelController {
         }
     }
 
-    /// Diagrams open in their own window; the panel keeps a button to reopen them.
+    /// Diagrams are drawn in the answer; a click opens them in their own window.
     func diagram(_ request: String, description: String) async {
         model.state = .working
         beginCorrections(task: request)
         switch await engine.runDiagram(request, description: description) {
         case .success(let diagram):
-            model.state = .answer(.init(text: diagram.title, diagram: diagram))
-            openDiagram(diagram)
+            model.state = .answer(.init(text: diagram.explanation ?? diagram.title, diagram: diagram))
+            if let explanation = diagram.explanation { say(explanation) }
         case .failure(.cancelled):
             model.state = .idle
         case .failure(let error):

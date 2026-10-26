@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// RedOS's presence in the notch: breathes when idle, follows the voice, spins while thinking, pulses while talking.
+/// RedOS's presence in the notch: still when idle, follows the voice, spins while thinking, pulses while talking.
 struct RedOrb: View {
     enum Mode: Equatable {
         case idle, listening, thinking, speaking
@@ -9,30 +9,40 @@ struct RedOrb: View {
     let mode: Mode
     var level: Float = 0
     var size: CGFloat = 18
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            let time = context.date.timeIntervalSinceReferenceDate
-            Circle()
-                .fill(AngularGradient(
-                    colors: [.red, .orange, .pink, .red],
-                    center: .center,
-                    angle: .degrees(time * (mode == .thinking ? 320 : 40))
-                ))
-                .overlay(Circle().fill(RadialGradient(
-                    colors: [.white.opacity(0.6), .clear], center: UnitPoint(x: 0.32, y: 0.28),
-                    startRadius: 0, endRadius: size * 0.45
-                )))
-                .scaleEffect(scale(at: time))
-                .shadow(color: .red.opacity(0.85), radius: glow(at: time))
-                .animation(.easeOut(duration: 0.12), value: level)
+        Group {
+            if reduceMotion || mode == .idle {
+                orb(at: 0, still: true)
+            } else {
+                TimelineView(.animation(minimumInterval: 1 / 30)) { context in
+                    orb(at: context.date.timeIntervalSinceReferenceDate, still: false)
+                }
+            }
         }
         .frame(width: size, height: size)
     }
 
+    private func orb(at time: Double, still: Bool) -> some View {
+        Circle()
+            .fill(AngularGradient(
+                colors: RedPalette.orb,
+                center: .center,
+                angle: .degrees(time * (mode == .thinking ? 320 : 40))
+            ))
+            .overlay(Circle().fill(RadialGradient(
+                colors: [.white.opacity(0.6), .clear], center: UnitPoint(x: 0.32, y: 0.28),
+                startRadius: 0, endRadius: size * 0.45
+            )))
+            .scaleEffect(still ? 0.92 : scale(at: time))
+            .shadow(color: RedPalette.signal.opacity(0.85), radius: glow(at: time))
+            .animation(still ? nil : .easeOut(duration: 0.12), value: level)
+    }
+
     private func scale(at time: Double) -> CGFloat {
         switch mode {
-        case .idle: 0.92 + 0.05 * sin(time * 2)
+        case .idle: 0.92
         case .listening: 0.8 + 0.45 * CGFloat(level)
         case .thinking: 0.9 + 0.04 * sin(time * 5)
         case .speaking: 0.9 + 0.14 * abs(sin(time * 7))
@@ -52,24 +62,35 @@ struct RedOrb: View {
 /// Five bars: the microphone level when `level` is set, a talking rhythm otherwise.
 struct LevelBars: View {
     var level: Float?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            let time = context.date.timeIntervalSinceReferenceDate
-            HStack(spacing: 2.5) {
-                ForEach(0..<5, id: \.self) { index in
-                    Capsule()
-                        .fill(LinearGradient(colors: [.orange, .red], startPoint: .top, endPoint: .bottom))
-                        .frame(width: 3, height: 3 + 13 * height(index, at: time))
+        Group {
+            if reduceMotion {
+                bars(at: nil)
+            } else {
+                TimelineView(.animation(minimumInterval: 1 / 30)) { context in
+                    bars(at: context.date.timeIntervalSinceReferenceDate)
                 }
             }
-            .animation(.easeOut(duration: 0.12), value: level)
         }
         .frame(height: 16)
     }
 
-    private func height(_ index: Int, at time: Double) -> CGFloat {
-        let wave = 0.5 + 0.5 * sin(time * 8 + Double(index) * 1.4)
+    /// Without a time the bars stand still: the level alone sets them.
+    private func bars(at time: Double?) -> some View {
+        HStack(spacing: 2.5) {
+            ForEach(0..<5, id: \.self) { index in
+                Capsule()
+                    .fill(LinearGradient(colors: RedPalette.bars, startPoint: .top, endPoint: .bottom))
+                    .frame(width: 3, height: 3 + 13 * height(index, at: time))
+            }
+        }
+        .animation(time == nil ? nil : .easeOut(duration: 0.12), value: level)
+    }
+
+    private func height(_ index: Int, at time: Double?) -> CGFloat {
+        let wave = time.map { 0.5 + 0.5 * sin($0 * 8 + Double(index) * 1.4) } ?? 0.5
         guard let level else { return 0.25 + 0.65 * wave }
         let envelope = [0.55, 0.8, 1, 0.8, 0.55][index]
         return CGFloat(level) * envelope * (0.7 + 0.3 * wave)

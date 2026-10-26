@@ -171,7 +171,11 @@ extension CommandPanelController {
         guard let request = currentRequest, let conversation = engine.conversation else { return }
         let reply: String
         switch model.state {
-        case .answer(let answer): reply = answer.diagram.map { "Drew the diagram \"\($0.title)\"" } ?? answer.text
+        case .answer(let answer):
+            reply = answer.diagram.map { diagram in
+                let drawn = "Drew the diagram \"\(diagram.title)\""
+                return [diagram.explanation, drawn].compactMap(\.self).joined(separator: "\n")
+            } ?? answer.text
         case .message(let text, _): reply = text
         case .idle where completedSilently > silentBefore: reply = "Done: \(actionSummary ?? "")"
         case .idle, .listening, .working, .confirming, .confirmingPlan: return

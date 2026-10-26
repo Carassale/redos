@@ -229,10 +229,9 @@ click what it sees in the image, inside the frontmost window only.
 - `project timeline: analysis in January, development in March, release in June`
 - `bar chart: January 10, February 15, March 12`
 
-RedOS picks one of 44 visual types of [diagram-design](https://github.com/cathrynlavery/diagram-design) and
-generates a self-contained HTML/SVG page, shown in a window (no JavaScript) and saved in
-`~/Library/Application Support/RedOS/Diagrams`. Long diagrams take up to a minute; the panel shows the
-progress. A cloud provider gives much better diagrams than local models.
+RedOS writes the diagram as [Mermaid](https://mermaid.js.org) code (one short reply) and draws it in the
+answer with the bundled Mermaid; a click opens it large in a window. A page for the browser is saved in
+`~/Library/Application Support/RedOS/Diagrams`. A cloud provider gives better diagrams than local models.
 
 ### Routines and triggers
 
@@ -484,7 +483,7 @@ Sources/
   RedOS/          menu bar app: panel, HUD, settings, setup, updates
   RedOSEval/      evaluation tool for routing accuracy and latency
 Tests/            unit and live tests (Swift Testing)
-Resources/        Info.plist, localizations, diagram-design, wake word models
+Resources/        Info.plist, localizations, Mermaid, wake word models
 eval/             evaluation datasets
 ```
 
@@ -550,8 +549,8 @@ RedOS is released under the [MIT License](LICENSE) © 2026 Gabriele Carassale.
 
 Third-party components:
 
-- [diagram-design](https://github.com/cathrynlavery/diagram-design) by Cathryn Lavery — MIT, bundled in
-  `Resources/DiagramDesign` with its [license](Resources/DiagramDesign/LICENSE).
+- [Mermaid](https://github.com/mermaid-js/mermaid) 11.17.2 — MIT, bundled in `Resources/Mermaid` with its
+  [license](Resources/Mermaid/LICENSE).
 - [openWakeWord](https://github.com/dscripka/openWakeWord) feature models — Apache 2.0, in `Resources/WakeWord`.
 - [ONNX Runtime](https://github.com/microsoft/onnxruntime) — MIT.
 - [Sparkle](https://sparkle-project.org) — MIT.

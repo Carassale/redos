@@ -28,7 +28,7 @@ public struct JevIntentRouter: CommandRouting {
             case .currentInfo:
                 "A question about anything current or to check online: news, weather, prices,"
                     + " exchange rates, sports results, people and facts that change."
-            case .diagram: "Draw a diagram, flowchart, timeline, chart or graph."
+            case .diagram: "Draw a diagram, flowchart, timeline, chart or graph, also with an explanation."
             }
         }
     }

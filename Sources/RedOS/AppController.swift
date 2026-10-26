@@ -141,14 +141,12 @@ final class AppController {
 
     private func diagramDesigner(
         _ settings: AppSettings, writer: any ChatCompleting, local: OllamaClient
-    ) -> DiagramDesigner? {
+    ) -> DiagramDesigner {
         // Speed: diagrams think less (about 15% faster with Copilot); accuracy keeps the default effort.
         let drawer = settings.prefersAccuracy
             ? writer
             : (try? systemTwoClient(settings, local: local, reasoningEffort: "low")) ?? writer
-        return Bundle.main.resourceURL
-            .flatMap { DiagramLibrary(directory: $0.appending(path: "DiagramDesign")) }
-            .map { DiagramDesigner(client: drawer, library: $0) }
+        return DiagramDesigner(client: drawer)
     }
 
     /// The local model picks single actions; Jev (Codiv or a custom server) recognizes every other kind of

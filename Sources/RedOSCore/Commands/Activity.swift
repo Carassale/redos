@@ -10,7 +10,7 @@ public enum Activity: Sendable, Equatable {
     case checkingWeather(String)
     case checkingRates(String)
     case writing
-    case drawing(String)
+    case drawing
     /// A long reply is streaming in.
     case receiving(characters: Int)
     case readingScreen(String)
@@ -27,7 +27,7 @@ public enum Activity: Sendable, Equatable {
         case .checkingWeather(let place): String(localized: "Checking the weather: \(place)")
         case .checkingRates(let pair): String(localized: "Checking exchange rates: \(pair)")
         case .writing: String(localized: "Writing the answer…")
-        case .drawing(let type): String(localized: "Drawing the diagram (\(type))…")
+        case .drawing: String(localized: "Drawing the diagram…")
         case .receiving(let characters): String(localized: "Writing… \(characters) characters")
         case .readingScreen(let app): String(localized: "Reading the screen: \(app)")
         case .consulting(let source): String(localized: "Consulting \(source)…")

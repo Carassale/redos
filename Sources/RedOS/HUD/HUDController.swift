@@ -15,32 +15,25 @@ struct HUDView: View {
     static let size = CGSize(width: 600, height: 120)
 
     let model: HUDModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NotchIsland(notch: model.notch, isOpen: model.isOpen, width: 500) {
             HStack(spacing: 7) {
                 Image(systemName: "record.circle.fill")
-                    .foregroundStyle(.red)
-                    .symbolEffect(.pulse, options: .repeating)
+                    .foregroundStyle(RedPalette.signal)
+                    .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
                 Text(verbatim: "RedOS")
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(RedPalette.text)
             }
             .font(.system(size: 12, weight: .semibold))
         } trailing: {
-            Button(action: model.onStop) {
-                Label("Stop", systemImage: "stop.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3)
-                    .background(.red, in: .capsule)
-            }
-            .buttonStyle(.plain)
+            StopButton(action: model.onStop)
         } content: {
             HStack(spacing: 8) {
                 Text(verbatim: model.text)
                     .font(.callout)
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(RedPalette.text)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .contentTransition(.opacity)

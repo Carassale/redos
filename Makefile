@@ -39,7 +39,7 @@ app: build
 	plutil -replace CFBundleShortVersionString -string "$(VERSION)" "$(PLIST)"
 	plutil -replace CFBundleVersion -string "$(BUILD)" "$(PLIST)"
 	cp -R Resources/Localization/*.lproj "$(CONTENTS)/Resources/"
-	cp -R Resources/DiagramDesign "$(CONTENTS)/Resources/"
+	cp -R Resources/Mermaid "$(CONTENTS)/Resources/"
 	cp -R Resources/WakeWord "$(CONTENTS)/Resources/"
 	@$(MAKE) --no-print-directory sign
 
