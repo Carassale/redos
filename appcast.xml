@@ -5,6 +5,15 @@
     <description>RedOS updates</description>
     <language>en</language>
     <item>
+      <title>RedOS 0.26.0</title>
+      <pubDate>Mon, 26 Oct 2026 14:34:44 +0100</pubDate>
+      <sparkle:version>83</sparkle:version>
+      <sparkle:shortVersionString>0.26.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>Diagrammi in Mermaid (una sola risposta breve invece dell&#x27;SVG di diagram-design, rimosso) disegnati direttamente nella risposta con Mermaid incluso nell&#x27;app, clic per aprirli grandi; &#x27;spiegami… con un diagramma&#x27; dà testo e diagramma insieme; isola più pulita: palette unica, un solo pulsante Stop, rispetto di &#x27;Riduci movimento&#x27;, orb fermo a riposo, conferme leggibili (&#x27;Vuoi chiudere un&#x27;app?&#x27;)</li></ul>]]></description>
+      <enclosure url="https://github.com/Carassale/redos/releases/download/v0.26.0/RedOS-0.26.0.zip" type="application/octet-stream" sparkle:edSignature="+mP5QsyzP550huXvxsCbuHW7M4mze78nyid+/gAC2EDzzxmSCjJraxM0TZ5R6a/TXlN9S4368xQVGbypc/uOBA==" length="14060249"/>
+    </item>
+    <item>
       <title>RedOS 0.25.0</title>
       <pubDate>Fri, 23 Oct 2026 19:45:50 +0200</pubDate>
       <sparkle:version>81</sparkle:version>
