@@ -45,8 +45,8 @@ changes something asks first, and a kill switch stops everything at once.
 
 ## Features
 
-- **Text and voice**: command panel on **⌥ Space**, push-to-talk on **⌃⌥ Space**, wake word **“Hey Red”**.
-  Speech is recognized on the Mac (SpeechAnalyzer); answers can be read aloud.
+- **Text and voice**: an island that grows out of the notch on **⌥ Space**, push-to-talk on **⌃⌥ Space**, wake word
+  **“Hey Red”**. Speech is recognized on the Mac (SpeechAnalyzer); answers can be read aloud.
 - **Mac control**: open and quit apps, open websites, type text, click, scroll, press buttons and fill
   fields by name (Accessibility), read the screen, run shell commands (always confirmed).
 - **Fast and local first**: a deterministic fast path and a small local model (Ollama, *System One*)
@@ -55,11 +55,12 @@ changes something asks first, and a kill switch stops everything at once.
   GitHub Copilot, OpenAI, Anthropic Claude or Google Gemini.
 - **Screen questions**: “what does this page say about pricing?”, “summarize this email” —
   answered by reading the frontmost window, never by acting on it.
-- **Screen agent**: tasks like “open the second result” look at the screen, act, and repeat, with a HUD
-  showing each step and a kill switch (**⌃⌥ Esc**).
+- **Screen agent**: tasks like “open the second result” look at the screen, act, and repeat, with each step
+  shown in the notch and a kill switch (**⌃⌥ Esc**).
 - **Web research** with sources, images and charts: news, weather, exchange rates, any web page — no API keys.
 - **Instant answers**: arithmetic, percentages, unit and currency conversions without any model.
-- **Diagrams**: flowcharts, sequences, timelines, quadrants and 40 more types as self-contained HTML/SVG.
+- **Diagrams**: flowcharts, sequences, timelines, charts and more, drawn with Mermaid right in the answer.
+- **Notes of calls**: live notes, minutes, reminders for the action items, questions about past calls.
 - **Routines** with time and app-launch triggers, **memory** of personal facts, actions on **selected text**.
 - **MCP**: other apps (VS Code, Claude Code…) can drive RedOS, and RedOS can use the tools of any MCP server.
 - **Guided setup**, automatic **updates** (Sparkle, stable and beta channels), **audit log** of every command.
@@ -141,8 +142,13 @@ Everything can be changed later in the other Settings panes.
 | Go on talking | after a spoken reply the microphone stays open: ask a follow-up (“and in Rome?”), answer “yes”, or talk over RedOS to interrupt it; “thanks” / “that's all” closes the panel |
 | Correct it while it works | during a spoken request the microphone stays open (or say “Hey Red” / hold ⌃⌥ Space): “stop” stops, “no, to Luca” changes the task and RedOS plans it again, “and then open Slack” runs after it |
 | Confirm / cancel | Return / Esc, or say “yes” / “no” |
-| Stop everything (kill switch) | **⌃⌥ Esc** or **Stop** in the HUD |
+| Stop everything (kill switch) | **⌃⌥ Esc** or **Stop** in the island |
 | History | ↑ / ↓ in the panel |
+
+RedOS lives in the notch (screens without one get a virtual notch as tall as the menu bar): the island grows
+from it with the request and the answer, and a red orb beside the camera shows what RedOS is doing — still
+when idle, the microphone level while listening, spinning while thinking, pulsing while speaking. Typing goes
+to the island while the previous app stays in front. With **Reduce Motion** on, the animations are dropped.
 
 ### Controlling the Mac
 
@@ -217,7 +223,8 @@ Requests that need to look at the screen go to the **screen agent**, which reads
 repeats: `open the first menu`, `open the second result`. With Jev configured, Jev decides the quick steps
 (which element to click, whether the task is done) in under a second; anything else goes to the assistant.
 While it works the
-panel hides and a **HUD** shows each step; **Stop** or **⌃⌥ Esc** halts it immediately. The agent can only
+island stays small in the notch with the current step and a **Stop** button; **Stop** or **⌃⌥ Esc** halts it
+immediately. The agent can only
 press, fill, read, scroll and open apps or links: it never types into the focused app, never runs shell
 commands and ignores instructions written on screen. When it may see the screen (setting above) it can also
 click what it sees in the image, inside the frontmost window only.
@@ -232,6 +239,7 @@ click what it sees in the image, inside the frontmost window only.
 RedOS writes the diagram as [Mermaid](https://mermaid.js.org) code (one short reply) and draws it in the
 answer with the bundled Mermaid; a click opens it large in a window. A page for the browser is saved in
 `~/Library/Application Support/RedOS/Diagrams`. A cloud provider gives better diagrams than local models.
+`spiegami … con un diagramma` / `explain … with a diagram` gives the explanation and the diagram together.
 
 ### Routines and triggers
 
@@ -249,10 +257,11 @@ with buttons to run them, remove their triggers or delete them.
 
 ### Taking notes of calls
 
-Say `prendi appunti` / `take notes` (or menu bar > **Take Notes**) during a Zoom, Meet or Teams call. A
-window next to the call shows **live notes** (topics, decisions, action items, open questions, updated about
-every minute of talk) and the transcript, with your voice (microphone) and the call (system audio) apart.
-Say `smetti di prendere appunti` / `stop taking notes`, press **Stop** or close the window: RedOS writes the
+Say `prendi appunti` / `take notes` (or menu bar > **Take Notes**) during a Zoom, Meet or Teams call. The
+notes become a **live activity** in the notch: a timer beside the camera during the call; a click expands it
+to the **live notes** (topics, decisions, action items, open questions, updated about every minute of talk)
+and the transcript, with your voice (microphone) and the call (system audio) apart.
+Say `smetti di prendere appunti` / `stop taking notes` or press **Stop**: RedOS writes the
 **minutes** and saves them with the transcript in **Settings > Notes**.
 
 - Transcription runs on the Mac; the notes and minutes use the assistant (Ollama when offline).
@@ -365,7 +374,8 @@ Their tools become assistant actions named `mcp.<server>.<tool>` and are used in
 directly; the others ask for confirmation. When Jev recognizes a question for those read-only tools, the one or
 two likeliest run right away, together, and the assistant only writes the answer from their results; tools in
 `slowTools` (e.g. an assistant that writes its own answer) are left out of that guess and run only when the
-assistant picks them. Commands are found through your login shell's `PATH` (`npx`, `uvx`, nvm…). Servers
+assistant picks them. While the assistant writes an answer from MCP results, RedOS already reads it aloud
+sentence by sentence (GitHub Copilot). Commands are found through your login shell's `PATH` (`npx`, `uvx`, nvm…). Servers
 with many tools make the assistant's prompt longer: enable only the ones you need.
 
 ## Settings
@@ -441,6 +451,7 @@ All in `~/Library/Application Support/RedOS/`:
 | File | Content |
 |---|---|
 | `audit.jsonl` | one line per command: input, route, action, outcome |
+| `timing.log` | where requests spend their time (events and durations only, never the text) |
 | `routines.json` | routines and their triggers |
 | `memory.json` | remembered facts |
 | `behaviors.json` | rules said by voice |
@@ -480,7 +491,7 @@ Sources/
   RedOSActions/   Mac actions: apps, input, Accessibility screen reading, shell
   RedOSVoice/     speech recognition and synthesis
   RedOSWakeWord/  openWakeWord on ONNX Runtime
-  RedOS/          menu bar app: panel, HUD, settings, setup, updates
+  RedOS/          menu bar app: notch island (panel, agent steps, notes), settings, setup, updates
   RedOSEval/      evaluation tool for routing accuracy and latency
 Tests/            unit and live tests (Swift Testing)
 Resources/        Info.plist, localizations, Mermaid, wake word models
@@ -534,7 +545,7 @@ or locally with `make release` (zip + dmg + appcast item, `CHANNEL=beta` for bet
 | M7–M9 | Sparkle updates, routines, memory, triggers, costs, CI/CD | ✅ |
 | M10 | Jev as the decision core (OpenJev on Codiv), local fallback | ✅ |
 | M16 | system, window, file, calendar, reminder, mail and Shortcuts actions | ✅ |
-| M11 | conversation: follow-ups with context, talking over RedOS | ✅ |
+| M11 | conversation: follow-ups with context, talking over RedOS; voice while writing for MCP answers | ✅ |
 | M17 | notes of calls: live notes, minutes, history, minutes by email, reminders, questions | ✅ |
 | M12 | corrections while working: stop, change, add | ✅ |
 | M13 | real-time screen agent: Jev picks clicks and when to stop, optional screenshots | ✅ |

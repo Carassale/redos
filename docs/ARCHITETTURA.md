@@ -190,7 +190,8 @@ app, bozza mail), *dangerous* (comandi di shell).
 | "chi ha scritto i Promessi Sposi?" | System Two (assistente) | risposta | ~2 s |
 | "apri il progetto, fai pull e lancia i test" | Jev "più passi" → planner (senza Jev il locale può scambiarla per un comando di shell, che va comunque confermato) | piano, conferma | 2–3 s + conferma |
 | "compila il modulo di iscrizione" | Jev (compito sullo schermo) o planner | agente sullo schermo | 10–60 s |
-| "disegna l'architettura di RedOS" | Jev (diagramma) o planner | diagramma in finestra | 40–90 s |
+| "disegna l'architettura di RedOS" | Jev (diagramma) o planner | codice Mermaid (una risposta breve), disegnato nella risposta | il tempo di una risposta di System Two |
+| "cosa dice la knowledge base sulle ferie?" | Jev (tool MCP in sola lettura) | tool MCP subito, in parallelo; System Two scrive la risposta, letta mentre la scrive | ~2 s + la fonte |
 | "e a Roma?" (dopo il meteo) | System Two con la conversazione recente | meteo di Roma | 5–10 s |
 
 ## Configurazioni tipiche

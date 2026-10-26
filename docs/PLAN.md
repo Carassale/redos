@@ -326,7 +326,7 @@ comando?"), server MCP per pilotare RedOS da VS Code / altri agenti.
 | M9 | CI/CD GitHub Actions | ✅ |
 | M10 | Jev come nucleo decisionale: intento + azione in una chiamata (OpenJev su Codiv), fallback locale | ✅ |
 | M16 | Azioni mancanti: sistema (volume, luminosità, aspetto, media, blocco schermo), finestre, file, Calendario/Promemoria, Mail, Comandi rapidi | ✅ |
-| M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming rimandato) |
+| M11 | Conversazione: ascolto continuo dopo la risposta, contesto del dialogo, interruzione mentre parla, voce a frasi in streaming | ✅ (streaming solo per le risposte dai tool MCP) |
 | M17 | Prendi appunti: trascrizione della call (io / altri), appunti live, minuta nello storico, minuta via Mail, promemoria delle azioni, domande sulle call passate | ✅ |
 | M12 | Correzioni in corsa: ascolto durante l'esecuzione, Jev classifica stop / modifica / aggiunta, ripianificazione | ✅ |
 | M13 | Agente in tempo reale: ogni passo è una scelta Jev tra gli elementi a schermo (~100 ms), screenshot opzionali | ✅ |
@@ -406,8 +406,10 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   minimo). Misura: la voce di RedOS letta dal microfono passa da -38 dB a -66 dB (silenzio -61 dB); trascritta
   senza cancellazione è la frase intera, con cancellazione è vuota. Quindi qualsiasi parola trascritta è
   dell'utente: RedOS smette di parlare e ascolta.
-- **Rimandato**: voce in streaming mentre il modello scrive (serve lo streaming nei 5 provider e nel JSON del
-  planner); AVSpeechSynthesizer comincia già subito, il ritardo è tutto nel modello.
+- **Voce in streaming** (v0.23, in parte): `AnswerStream` porta il testo della risposta finale mentre il modello
+  lo scrive (oggi solo Copilot ACP, e solo per la risposta scritta dai risultati dei tool MCP); `SpokenSentences`
+  lo taglia in righe e frasi pronunciabili e `StreamedSpeech` le legge subito. Da fare: gli altri provider e le
+  altre risposte (domande, ricerca, schermo); il JSON del planner resta non in streaming.
 - Nota sviluppo: ogni build locale cambia il cdhash e il Portachiavi (partition list) chiede di nuovo il
   permesso; finché la finestra è aperta l'app è bloccata all'avvio (lettura della chiave Jev nel main thread).
   Risolto in 0.14 (sotto).
@@ -568,3 +570,20 @@ prende l'iniziativa al momento giusto. Ordine: M10 → M16 → M11 → M17 → M
   l'accesso al Calendario se non deciso. Prova dal vivo (senza accesso al Calendario): risposta corretta con
   la sola batteria al 44%.
 - Non fatto: leggere le notifiche delle altre app (macOS non lo permette alle app normali).
+
+### Isola nel notch e rifiniture (v0.22–v0.26, 15–26/10/2026)
+
+- **UI nel notch** (v0.24): pannello comandi, passi dell'agente (ex HUD) e appunti sono un'isola nera che cresce
+  dal notch (`NotchIsland`; sugli schermi senza notch uno virtuale alto quanto la barra dei menu). `RedOrb`
+  accanto alla fotocamera: fermo a riposo, livello reale del microfono in ascolto, gira mentre pensa, pulsa
+  mentre parla. Appunti come live activity compatta durante la call (timer), espandibile con un clic.
+- **Rifiniture** (v0.26): una sola palette (`RedPalette`: un rosso, arancio solo per gli avvisi, grigi), un
+  solo pulsante Stop, rispetto di "Riduci movimento", conferme in linguaggio naturale ("Vuoi chiudere un'app?").
+- **Audio** (v0.24): dopo la cancellazione d'eco il voice processing (VPIO) viene rilasciato con un nuovo
+  `AVAudioEngine` a ogni sessione: microfono e audio delle altre app non restano in modalità chiamata.
+- **MCP** (v0.22–v0.25, dettagli in M6): server HTTP, `trusted`, `slowTools`, tool scelti da Jev senza planner
+  (attesa di Jev al massimo 3 s), stato "Consulto <fonte>…" nell'isola.
+- **Tempi** (v0.25): `Timing` scrive in `Application Support/RedOS/timing.log` eventi e durate (mai il testo),
+  perché il log di sistema richiede i permessi di amministratore.
+- **Diagrammi** (v0.26): Mermaid al posto di diagram-design (vedi "Risposte ricche e diagrammi"); "spiegami …
+  con un diagramma" dà testo e diagramma insieme.
